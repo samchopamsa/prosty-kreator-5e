@@ -24,17 +24,17 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const STEP_CONFIG = {
   species: {
     itemTypes: ["race", "species"],
-    buttonType: "race",
+    buttonTypes: ["race", "species"],
     labels: ["add species", "add race"]
   },
   background: {
     itemTypes: ["background"],
-    buttonType: "background",
+    buttonTypes: ["background"],
     labels: ["add background"]
   },
   class: {
     itemTypes: ["class"],
-    buttonType: "class",
+    buttonTypes: ["class"],
     labels: ["add class"]
   }
 };
@@ -96,45 +96,64 @@ async function confirmRemoval(message) {
   return window.confirm(message);
 }
 
-/** Finds an "Add X" button on the sheet, by data-type first, then by label. */
-function findAddButton(root, type, labels) {
+/**
+ * Finds an "Add X" button on the sheet.
+ *
+ * The sheet marks these with data-item-type ("class", "race", "background").
+ * Matching on that is language independent; the label match below is only a
+ * fallback for sheet versions that omit the attribute.
+ */
+function findAddButton(root, types, labels) {
   if (!root) return null;
   const candidates = Array.from(root.querySelectorAll("[data-action='findItem']"));
-  const byType = candidates.find(
-    (b) => String(b.dataset.type ?? "").toLowerCase() === type
-  );
+
+  const byType = candidates.find((b) => {
+    const value = String(b.dataset.itemType ?? b.dataset.type ?? "").toLowerCase();
+    return value && types.includes(value);
+  });
   if (byType) return byType;
+
   return candidates.find((b) => {
     const text = `${b.textContent ?? ""} ${b.dataset.tooltip ?? ""}`.trim().toLowerCase();
     return labels.some((label) => text.includes(label));
   });
 }
 
+/** Puts the sheet into edit mode, where the "Add X" buttons exist at all. */
+async function ensureEditMode(actor) {
+  const sheet = actor.sheet;
+  const MODES = sheet.constructor?.MODES;
+  if (MODES?.EDIT === undefined || sheet._mode === MODES.EDIT) return;
+
+  const toggle = sheet.element?.querySelector("[data-action='changeMode']");
+  if (!toggle) return;
+  toggle.click();
+  await wait(400);
+}
+
 /**
  * Clicks the sheet's own button. Opens the sheet if needed and flips it into
  * edit mode when the button is not visible in play mode.
  */
-async function pressSheetButton(actor, type, labels) {
+async function pressSheetButton(actor, types, labels) {
   const sheet = actor.sheet;
   if (!sheet.rendered) {
     await sheet.render(true);
-    await wait(250);
+    await wait(300);
   }
 
-  let button = findAddButton(sheet.element, type, labels);
+  await ensureEditMode(actor);
 
+  let button = findAddButton(actor.sheet.element, types, labels);
   if (!button) {
-    const modeToggle = sheet.element?.querySelector("[data-action='changeMode']");
-    if (modeToggle) {
-      modeToggle.click();
-      await wait(350);
-      button = findAddButton(actor.sheet.element, type, labels);
-    }
+    // The sheet may still be redrawing after the mode switch.
+    await wait(400);
+    button = findAddButton(actor.sheet.element, types, labels);
   }
 
   if (!button) {
     ui.notifications.warn(
-      "Could not find that button on the sheet. Switch the sheet to edit mode and try again."
+      "That button is not on the sheet right now. Put the sheet into edit mode and try again."
     );
     return false;
   }
@@ -333,7 +352,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   async addFor(step) {
     const config = STEP_CONFIG[step];
     if (!config || !this.actor) return false;
-    return pressSheetButton(this.actor, config.buttonType, config.labels);
+    return pressSheetButton(this.actor, config.buttonTypes, config.labels);
   }
 
   /**
