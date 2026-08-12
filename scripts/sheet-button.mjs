@@ -1,8 +1,9 @@
 /**
  * sheet-button.mjs
  * ---------------------------------------------------------------------------
- * Puts a "Complete Character" button on the character sheet, shown only while
- * the sheet is in edit mode.
+ * Puts a single button on the character sheet that opens the creation panel.
+ * Visible in both play and edit mode: a new player should not have to find the
+ * edit toggle before they can build their character.
  *
  * ApplicationV2 fires its render hook under the concrete class name, and the
  * dnd5e sheet class has been renamed across versions, so we listen on every
@@ -15,7 +16,6 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
-import { CompleteCharacter } from "./complete.mjs";
 import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
 
 /** Actors whose panel has already been offered in this browser session. */
@@ -53,20 +53,6 @@ const ANCHORS = [
   ".sheet-body"
 ];
 
-/**
- * Whether the sheet is currently in edit mode.
- * Returns true when we cannot tell, so the button is never silently lost.
- */
-function inEditMode(app, root) {
-  const MODES = app.constructor?.MODES;
-  if (MODES?.EDIT !== undefined && typeof app._mode === "number") {
-    return app._mode === MODES.EDIT;
-  }
-  const toggle = root.querySelector(".mode-slider, [name='mode'], .sheet-mode-toggle");
-  if (toggle && "checked" in toggle) return !!toggle.checked;
-  return true;
-}
-
 function inject(app, html) {
   if (!game.settings.get(MODULE_ID, "sheetButton")) return;
 
@@ -79,11 +65,7 @@ function inject(app, html) {
   root.querySelectorAll(".pk5e-sheet-button").forEach((el) => el.remove());
 
   const incomplete = isIncomplete(actor);
-  const editing = inEditMode(app, root);
-
-  // The creation button stays visible in play mode too: a new player should not
-  // have to discover the edit toggle before they can build their character.
-  if (!editing && !incomplete) return;
+  const outstanding = missingSteps(actor).length;
 
   // There are two rest buttons (short and long). Take the LAST match so we land
   // to the right of Long Rest rather than between the two.
@@ -112,28 +94,15 @@ function inject(app, html) {
     return el;
   };
 
-  const buttons = [];
+  // One button, one destination. The panel already contains the ability score
+  // step, so a second button straight to it only made the player guess which
+  // one they wanted. Wording follows the state.
+  let label = "Character creation panel";
+  if (incomplete) label = outstanding >= 4 ? "Start creation" : "Resume creation";
 
-  // Only offered while something is still outstanding, so finished sheets stay
-  // uncluttered. "Start" until the first step lands, "Resume" afterwards.
-  if (incomplete) {
-    const started = missingSteps(actor).length < 4;
-    buttons.push(
-      make("fa-list-check", started ? "Resume creation" : "Start creation", () =>
-        CreationGuide.open(actor.id)
-      )
-    );
-  }
-
-  if (editing) {
-    buttons.push(
-      make("fa-wand-magic-sparkles", "Complete Character: ability scores and languages", () =>
-        new CompleteCharacter({ actorId: actor.id }).render(true)
-      )
-    );
-  }
-
-  if (!buttons.length) return;
+  const buttons = [
+    make("fa-hat-wizard", label, () => CreationGuide.open(actor.id))
+  ];
 
   if (restButton) {
     // Match the neighbouring rest buttons exactly, then mark them as ours.

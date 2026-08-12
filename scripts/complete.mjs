@@ -42,6 +42,14 @@ const CORE_LANGUAGES = [
 
 const normalise = (value) => String(value ?? "").toLowerCase().replace(/[^a-z]/g, "");
 
+/** The config key for Common, whatever this system version calls it. */
+function commonLanguageKey() {
+  const entry = flattenLanguages().find(
+    (l) => normalise(l.key) === "common" || normalise(l.plainLabel ?? l.label) === "common"
+  );
+  return entry?.key ?? null;
+}
+
 function isCoreLanguage(entry) {
   return (
     CORE_LANGUAGES.includes(normalise(entry.key)) ||
@@ -83,6 +91,24 @@ function groupLanguages(selected) {
   ].filter((g) => g.languages.length);
 
   return { groups, total: all.length, selected: all.filter((l) => l.checked).length };
+}
+
+/**
+ * Puts the sheet back into play mode once the character is finished, so the
+ * player is not left looking at the editing interface.
+ */
+function returnToPlayMode(actor) {
+  setTimeout(() => {
+    try {
+      const sheet = actor.sheet;
+      const MODES = sheet?.constructor?.MODES;
+      if (!sheet?.rendered || MODES?.PLAY === undefined) return;
+      if (sheet._mode === MODES.PLAY) return;
+      sheet.element?.querySelector("[data-action='changeMode']")?.click();
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not switch the sheet back to play mode`, err);
+    }
+  }, 350);
 }
 
 export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -274,7 +300,14 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     });
 
     const known = actor?.system?.traits?.languages?.value;
+    const first = !this.languages;
     const current = this.languages ?? new Set(known ? Array.from(known) : []);
+
+    // Everyone speaks Common, so tick it rather than making each player find it.
+    if (first) {
+      const common = commonLanguageKey();
+      if (common) current.add(common);
+    }
     this.languages = current;
     const grouped = groupLanguages(current);
 
@@ -454,9 +487,19 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
 
     try {
       await actor.update(update);
+
+      // Constitution may have changed, so maximum hit points are only correct
+      // after the first update has been applied. Then top the character up.
+      const max = Number(actor.system?.attributes?.hp?.max ?? 0);
+      const value = Number(actor.system?.attributes?.hp?.value ?? 0);
+      if (max > 0 && value < max) {
+        await actor.update({ "system.attributes.hp.value": max });
+      }
+
       ui.notifications.info(`Updated "${actor.name}".`);
       this.close();
       actor.sheet.render(true);
+      returnToPlayMode(actor);
     } catch (err) {
       console.error(`${MODULE_ID} | Could not update actor`, err);
       ui.notifications.error(`Character Creator: ${err.message}`);
