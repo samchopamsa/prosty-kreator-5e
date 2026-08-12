@@ -564,3 +564,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.pk5e-guide-actions { display: flex; gap: 12px; }

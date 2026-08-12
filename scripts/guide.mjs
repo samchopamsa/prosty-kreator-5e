@@ -20,6 +20,42 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** What each step adds, and how to find its button and its item. */
+const STEP_CONFIG = {
+  species: {
+    itemTypes: ["race", "species"],
+    buttonType: "race",
+    labels: ["add species", "add race"]
+  },
+  background: {
+    itemTypes: ["background"],
+    buttonType: "background",
+    labels: ["add background"]
+  },
+  class: {
+    itemTypes: ["class"],
+    buttonType: "class",
+    labels: ["add class"]
+  }
+};
+
+/** Confirmation dialog, tolerant of the API differing between versions. */
+async function confirmRemoval(message) {
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+  if (DialogV2?.confirm) {
+    try {
+      return await DialogV2.confirm({
+        window: { title: "Remove" },
+        content: `<p>${message}</p>`,
+        modal: true
+      });
+    } catch (err) {
+      console.warn(`${MODULE_ID} | DialogV2 unavailable, falling back`, err);
+    }
+  }
+  return window.confirm(message);
+}
+
 /** Finds an "Add X" button on the sheet, by data-type first, then by label. */
 function findAddButton(root, type, labels) {
   if (!root) return null;
@@ -85,9 +121,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     },
     position: { width: 380, height: 560 },
     actions: {
-      addSpecies: CreationGuide.onAddSpecies,
-      addBackground: CreationGuide.onAddBackground,
-      addClass: CreationGuide.onAddClass,
+      addStep: CreationGuide.onAddStep,
+      replaceStep: CreationGuide.onReplaceStep,
+      removeStep: CreationGuide.onRemoveStep,
       openSheet: CreationGuide.onOpenSheet,
       finalise: CreationGuide.onFinalise
     }
@@ -137,7 +173,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "species",
         number: 2,
         label: "Species",
-        action: "addSpecies",
+        removable: true,
         done: !!species,
         result: species?.name ?? "",
         img: species?.img ?? "",
@@ -147,7 +183,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "background",
         number: 3,
         label: "Background",
-        action: "addBackground",
+        removable: true,
         done: !!background,
         result: background?.name ?? "",
         img: background?.img ?? "",
@@ -157,7 +193,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "class",
         number: 4,
         label: "Class",
-        action: "addClass",
+        removable: true,
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
         img: cls?.img ?? "",
@@ -167,7 +203,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "abilities",
         number: 5,
         label: "Ability scores and languages",
-        action: "finalise",
+        removable: false,
         done: abilitiesDone,
         result: abilitiesDone
           ? Object.entries(actor.system?.abilities ?? {})
@@ -247,16 +283,63 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     return super.close(options);
   }
 
-  static async onAddSpecies() {
-    if (this.actor) await pressSheetButton(this.actor, "race", ["add species", "add race"]);
+  /** Items on the actor belonging to a given step. */
+  itemsFor(step) {
+    const config = STEP_CONFIG[step];
+    if (!config || !this.actor) return [];
+    return this.actor.items.filter((i) => config.itemTypes.includes(i.type));
   }
 
-  static async onAddBackground() {
-    if (this.actor) await pressSheetButton(this.actor, "background", ["add background"]);
+  async addFor(step) {
+    const config = STEP_CONFIG[step];
+    if (!config || !this.actor) return false;
+    return pressSheetButton(this.actor, config.buttonType, config.labels);
   }
 
-  static async onAddClass() {
-    if (this.actor) await pressSheetButton(this.actor, "class", ["add class"]);
+  /**
+   * Removes what the step added. Necessary because the sheet's own "Add Class"
+   * button always ADDS - clicking it with a class already present starts a
+   * multiclass rather than replacing anything.
+   */
+  async removeFor(step, { confirm = true } = {}) {
+    const items = this.itemsFor(step);
+    if (!items.length) return true;
+
+    if (confirm) {
+      const names = items.map((i) => i.name).join(", ");
+      const ok = await confirmRemoval(
+        `Remove ${names}? Features granted by it are removed as well.`
+      );
+      if (!ok) return false;
+    }
+
+    try {
+      await this.actor.deleteEmbeddedDocuments(
+        "Item",
+        items.map((i) => i.id)
+      );
+      return true;
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not remove the ${step}`, err);
+      ui.notifications.error(`Could not remove the ${step}: ${err.message}`);
+      return false;
+    }
+  }
+
+  static async onAddStep(event, target) {
+    await this.addFor(target.dataset.step);
+  }
+
+  static async onReplaceStep(event, target) {
+    const step = target.dataset.step;
+    const removed = await this.removeFor(step);
+    if (!removed) return;
+    await wait(200);
+    await this.addFor(step);
+  }
+
+  static async onRemoveStep(event, target) {
+    await this.removeFor(target.dataset.step);
   }
 
   static onOpenSheet() {
@@ -264,7 +347,15 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static onFinalise() {
-    if (!this.actor) return;
-    new CompleteCharacter({ actorId: this.actorId }).render(true);
+    if (!this.actor) {
+      ui.notifications.warn("That character no longer exists.");
+      return;
+    }
+    try {
+      new CompleteCharacter({ actorId: this.actorId }).render(true);
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not open the finaliser`, err);
+      ui.notifications.error(`Could not open the finaliser: ${err.message}`);
+    }
   }
 }

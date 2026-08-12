@@ -75,11 +75,17 @@ function inject(app, html) {
   root.querySelector(".pk5e-sheet-button")?.remove();
   if (!inEditMode(app, root)) return;
 
+  // There are two rest buttons (short and long). Take the LAST match so we land
+  // to the right of Long Rest rather than between the two.
   let restButton = null;
   for (const selector of REST_SELECTORS) {
-    restButton = root.querySelector(selector);
-    if (restButton?.parentElement) break;
-    restButton = null;
+    const matches = Array.from(root.querySelectorAll(selector)).filter(
+      (el) => el.parentElement
+    );
+    if (matches.length) {
+      restButton = matches[matches.length - 1];
+      break;
+    }
   }
 
   const button = document.createElement("button");
