@@ -353,12 +353,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
       players: game.users
-        .filter((u) => !u.isGM && u.active !== undefined)
+        .filter((u) => !u.isGM)
         .map((u) => ({
           id: u.id,
           name: u.name,
-          owner: ownership[u.id] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
-        })),
+          selected: ownership[u.id] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
       folders: game.folders
         .filter((f) => f.type === "Actor")
         .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
@@ -387,19 +388,23 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    this.element.querySelectorAll("input[data-owner]").forEach((cb) => {
-      cb.addEventListener("change", async (ev) => {
-        const userId = ev.currentTarget.dataset.owner;
-        const level = ev.currentTarget.checked
-          ? CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
-          : CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE;
-        try {
-          await this.actor?.update({ [`ownership.${userId}`]: level });
-        } catch (err) {
-          console.error(`${MODULE_ID} | Could not change ownership`, err);
-          ui.notifications.error(`Could not change ownership: ${err.message}`);
-        }
-      });
+    this.element.querySelector("select[data-owner]")?.addEventListener("change", async (ev) => {
+      const chosen = ev.currentTarget.value;
+      const { OWNER, NONE } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
+
+      // One character, one player. Every other player is reset, so reassigning
+      // does not silently leave the previous owner with access.
+      const update = {};
+      for (const user of game.users.filter((u) => !u.isGM)) {
+        update[`ownership.${user.id}`] = user.id === chosen ? OWNER : NONE;
+      }
+
+      try {
+        await this.actor?.update(update);
+      } catch (err) {
+        console.error(`${MODULE_ID} | Could not change ownership`, err);
+        ui.notifications.error(`Could not change ownership: ${err.message}`);
+      }
     });
 
     this.element.querySelector("select[data-folder]")?.addEventListener("change", async (ev) => {

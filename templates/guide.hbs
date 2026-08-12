@@ -13,15 +13,14 @@
       <details class="pk5e-details" open>
         <summary>Ownership and filing</summary>
 
-        <p class="pk5e-note">Players who can open and edit this character.</p>
-        <div class="pk5e-packs">
+        <label class="pk5e-label" for="pk5e-owner">Player</label>
+        <select id="pk5e-owner" data-owner>
+          <option value="">— nobody yet —</option>
           {{#each players}}
-          <label class="pk5e-pack">
-            <input type="checkbox" data-owner="{{id}}" {{#if owner}}checked{{/if}}>
-            <span class="pk5e-pack-name">{{name}}</span>
-          </label>
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
           {{/each}}
-        </div>
+        </select>
+        <p class="pk5e-note">Who can open and edit this character.</p>
 
         <label class="pk5e-label" for="pk5e-folder">Folder</label>
         <select id="pk5e-folder" data-folder>
