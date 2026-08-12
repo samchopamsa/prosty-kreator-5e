@@ -147,6 +147,12 @@
 
             {{#if selected}}
               {{#each parts}}
+                {{#if unavailable}}
+                <div class="pk5e-equip-pick">
+                  <label>{{name}}</label>
+                  <span class="pk5e-note">No matching item in your enabled compendiums - add it by hand later.</span>
+                </div>
+                {{/if}}
                 {{#if needsPick}}
                 <div class="pk5e-equip-pick">
                   <label>{{name}}{{#if fallback}} (showing all){{/if}}</label>

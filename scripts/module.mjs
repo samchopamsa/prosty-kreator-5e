@@ -5,6 +5,7 @@
 import { MODULE_ID } from "./sources.mjs";
 import { CharacterCreator } from "./creator.mjs";
 import { SourceConfig } from "./source-config.mjs";
+import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "enabledPacks", {
@@ -61,6 +62,15 @@ Hooks.once("init", () => {
     default: false
   });
 
+  game.settings.register(MODULE_ID, "narrowBrowserTooltips", {
+    name: "Narrow tooltips in the Compendium Browser",
+    hint: "Shows the item preview only when hovering the name or icon, so the popup stops covering the selection checkbox. Adjusts another package's interface, so switch it off if anything looks wrong.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, "allowPlayers", {
     name: "Players may open the creator",
     hint: "Players also need the 'Create New Actors' permission in User Configuration.",
@@ -70,6 +80,8 @@ Hooks.once("init", () => {
     default: true
   });
 });
+
+registerBrowserTweaks();
 
 Hooks.once("ready", () => {
   const api = {

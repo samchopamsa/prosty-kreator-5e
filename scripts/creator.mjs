@@ -604,14 +604,17 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       const plan = await this.getEquipmentPlan();
       if (!plan.length) return;
 
-      const { items, gold } = await resolveEquipment(plan, this.wizard.equipment);
+      const { items, currency } = await resolveEquipment(plan, this.wizard.equipment);
 
       if (items.length) await actor.createEmbeddedDocuments("Item", items);
 
-      if (gold > 0) {
-        const current = actor.system?.currency?.gp ?? 0;
-        await actor.update({ "system.currency.gp": current + gold });
+      const update = {};
+      for (const [key, amount] of Object.entries(currency)) {
+        if (!amount) continue;
+        const current = actor.system?.currency?.[key] ?? 0;
+        update[`system.currency.${key}`] = current + amount;
       }
+      if (Object.keys(update).length) await actor.update(update);
     } catch (err) {
       console.error(`${MODULE_ID} | Could not grant starting equipment`, err);
       ui.notifications.warn(

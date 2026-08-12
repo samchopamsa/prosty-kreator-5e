@@ -75,6 +75,38 @@ async function getCandidatePool() {
   return pool;
 }
 
+/** Currency keys understood by the system (gp, sp, cp, ep, pp). */
+function currencyKeys() {
+  const cfg = CONFIG.DND5E?.currencies;
+  return cfg ? Object.keys(cfg) : ["pp", "gp", "ep", "sp", "cp"];
+}
+
+function isCurrencyNode(node) {
+  return node.type === "currency" || currencyKeys().includes(node.key);
+}
+
+/** Normalises an id or UUID from CONFIG.DND5E lookups into a full UUID. */
+function toUuid(raw) {
+  const value = typeof raw === "string" ? raw : (raw?.uuid ?? raw?.id ?? "");
+  if (!value) return "";
+  return value.startsWith("Compendium.") ? value : `Compendium.dnd5e.items.Item.${value}`;
+}
+
+/**
+ * Curated candidate ids the system publishes for focuses and tools. Using these
+ * is far better than guessing, which previously offered every magic item in the
+ * world when a "holy focus" was requested.
+ */
+function curatedIds(node) {
+  const C = CONFIG.DND5E ?? {};
+  let source = null;
+  if (node.type === "focus") source = C.focusTypes?.[node.key]?.itemIds;
+  else if (node.type === "tool") source = C.toolIds ?? null;
+  if (!source) return [];
+  const values = source instanceof Map ? Array.from(source.values()) : Object.values(source);
+  return values.map(toUuid).filter(Boolean);
+}
+
 /** Which document type a startingEquipment category node maps to. */
 function docTypeFor(nodeType) {
   switch (nodeType) {
@@ -100,16 +132,47 @@ async function candidatesFor(node) {
   const docType = docTypeFor(node.type);
   if (!docType) return { list: [], fallback: false };
 
+  // 1. Curated list published by the system (focuses, tools).
+  const curated = curatedIds(node);
+  if (curated.length) {
+    const known = new Map(
+      Object.values(pool.byType)
+        .flat()
+        .map((i) => [i.uuid, i])
+    );
+    const list = [];
+    for (const uuid of curated) {
+      const hit = known.get(uuid);
+      if (hit) {
+        list.push(hit);
+        continue;
+      }
+      const doc = await fromUuid(uuid).catch(() => null);
+      if (doc) list.push({ uuid, name: doc.name, docType: doc.type, category: "" });
+    }
+    if (list.length) {
+      list.sort((a, b) => a.name.localeCompare(b.name));
+      return { list, fallback: false };
+    }
+  }
+
+  // 2. Exact category match, e.g. weapon:martialM or equipment:shield.
   const exact = pool.byCategory[`${docType}:${node.key}`] ?? [];
   if (exact.length) return { list: exact, fallback: false };
 
-  // "sim" / "mar" proficiency keys cover several concrete categories.
+  // 3. Proficiency-level keys covering several concrete categories.
   if (node.type === "weapon" && /^(sim|mar)$/.test(node.key)) {
     const prefix = node.key === "sim" ? "simple" : "martial";
     const merged = (pool.byType.weapon ?? []).filter((i) =>
       String(i.category).startsWith(prefix)
     );
     if (merged.length) return { list: merged, fallback: false };
+  }
+
+  // 4. Focus nodes at least stay within focus items rather than all equipment.
+  if (node.type === "focus") {
+    const foci = pool.byCategory[`${docType}:focus`] ?? [];
+    if (foci.length) return { list: foci, fallback: true };
   }
 
   return { list: pool.byType[docType] ?? [], fallback: true };
@@ -168,6 +231,19 @@ async function planForSource(kind, entry) {
         }
       ];
     }
+    if (isCurrencyNode(node)) {
+      return [
+        {
+          id: node._id,
+          kind: "currency",
+          currency: node.key,
+          name: `${node.count ?? 0} ${String(node.key).toUpperCase()}`,
+          count: node.count ?? 0,
+          needsPick: false
+        }
+      ];
+    }
+
     const { list, fallback } = await candidatesFor(node);
     return [
       {
@@ -175,7 +251,9 @@ async function planForSource(kind, entry) {
         kind: "category",
         name: categoryLabel(node),
         count: node.count ?? 1,
-        needsPick: true,
+        // An empty list must never block the wizard.
+        needsPick: list.length > 0,
+        unavailable: list.length === 0,
         fallback,
         candidates: list.map((c) => ({ uuid: c.uuid, name: c.name }))
       }
@@ -246,11 +324,15 @@ export async function buildEquipmentPlan(wizard) {
  */
 export async function resolveEquipment(plan, state) {
   const items = [];
-  let gold = 0;
+  const currency = {};
+  const addCurrency = (key, amount) => {
+    if (!amount) return;
+    currency[key] = (currency[key] ?? 0) + amount;
+  };
 
   for (const source of plan) {
     if (state.mode?.[source.kind] === "gold") {
-      gold += await evaluateWealth(source.wealth);
+      addCurrency("gp", await evaluateWealth(source.wealth));
       continue;
     }
 
@@ -262,6 +344,10 @@ export async function resolveEquipment(plan, state) {
       if (!option) continue;
 
       for (const part of option.parts) {
+        if (part.kind === "currency") {
+          addCurrency(part.currency, Number(part.count) || 0);
+          continue;
+        }
         const uuid = part.needsPick ? state.picks?.[part.id] : part.uuid;
         if (!uuid) continue;
         const doc = await fromUuid(uuid).catch(() => null);
@@ -274,7 +360,7 @@ export async function resolveEquipment(plan, state) {
     }
   }
 
-  return { items, gold };
+  return { items, currency };
 }
 
 /** Starting wealth may be a plain number or a dice formula. */

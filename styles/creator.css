@@ -298,8 +298,9 @@
 
 /* Foundry buttons centre their content by default, which made list rows
    look indented at random. Force left alignment. */
-.pk5e-option,
-.pk5e-launch {
+/* Only list rows need left alignment; the sidebar button stays centred
+   so it matches Create Actor / Create Folder above it. */
+.pk5e-option {
   justify-content: flex-start;
 }
 

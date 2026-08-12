@@ -55,12 +55,23 @@ export class SourceConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    // Restore the scroll offset after a bulk action rebuilt the list.
+    const scroller = this.element.querySelector(".pk5e-src-groups");
+    if (scroller && this._scrollTop) scroller.scrollTop = this._scrollTop;
+    if (scroller) {
+      scroller.addEventListener("scroll", () => {
+        this._scrollTop = scroller.scrollTop;
+      });
+    }
+
     this.element.querySelectorAll("[data-pack]").forEach((cb) => {
       cb.addEventListener("change", (ev) => {
         const id = ev.currentTarget.dataset.pack;
         if (ev.currentTarget.checked) this.selection.add(id);
         else this.selection.delete(id);
-        this.render();
+        // Patch the counters in place instead of re-rendering, which would
+        // reset both the scroll position and the search filter.
+        this.refreshCounters();
       });
     });
 
@@ -79,6 +90,24 @@ export class SourceConfig extends HandlebarsApplicationMixin(ApplicationV2) {
         });
       });
     }
+  }
+
+  /** Updates the "n/m" labels without rebuilding the DOM. */
+  refreshCounters() {
+    const el = this.element;
+    const total = el.querySelectorAll("[data-pack]").length;
+    const summary = el.querySelector("[data-summary]");
+    if (summary) {
+      summary.textContent = `${this.selection.size} of ${total} compendiums enabled.`;
+    }
+    el.querySelectorAll(".pk5e-src-group").forEach((group) => {
+      const boxes = Array.from(group.querySelectorAll("[data-pack]"));
+      const on = boxes.filter((b) => this.selection.has(b.dataset.pack)).length;
+      const counter = group.querySelector(".pk5e-src-count");
+      if (counter) counter.textContent = `${on}/${boxes.length}`;
+      const toggle = group.querySelector("[data-action='toggleGroup']");
+      if (toggle) toggle.textContent = on === boxes.length ? "Deselect group" : "Select group";
+    });
   }
 
   static onSelectAll() {
