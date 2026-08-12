@@ -29,7 +29,10 @@
           {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
         </div>
         {{#if done}}
-          <p class="pk5e-guide-result">{{result}}</p>
+          <div class="pk5e-guide-chosen">
+            {{#if img}}<img src="{{img}}" alt="">{{/if}}
+            <span class="pk5e-guide-result">{{result}}</span>
+          </div>
           <button type="button" class="pk5e-link" data-action="{{action}}">Change</button>
         {{else}}
           <p class="pk5e-note">{{blurb}}</p>

@@ -539,3 +539,28 @@
 .pk5e-guide-tick { color: var(--color-shadow-primary, #ff6400); font-weight: 700; }
 .pk5e-guide-result { margin: 0; font-size: 13px; }
 .pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 12px; padding: 3px 8px; }
+
+/* Chosen item shown with the same artwork the sheet uses */
+.pk5e-guide-chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pk5e-guide-chosen img {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  object-fit: cover;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.pk5e-guide-chosen .pk5e-guide-result {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -140,6 +140,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         action: "addSpecies",
         done: !!species,
         result: species?.name ?? "",
+        img: species?.img ?? "",
         blurb: "Determines your speed, size and innate traits."
       },
       {
@@ -149,6 +150,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         action: "addBackground",
         done: !!background,
         result: background?.name ?? "",
+        img: background?.img ?? "",
         blurb: "Grants proficiencies, an origin feat and ability score increases."
       },
       {
@@ -158,6 +160,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         action: "addClass",
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
+        img: cls?.img ?? "",
         blurb: "What your character can do, in combat and out of it."
       },
       {
@@ -171,12 +174,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
               .map(([, v]) => v.value)
               .join(" / ")
           : "",
+        img: "",
         blurb: "Importers skip this, so it is done here at the end."
       }
     ];
 
     return {
       actorName: actor.name,
+      actorImg: actor.img ?? "",
       steps,
       allDone: steps.every((s) => s.done),
       progress: `${steps.filter((s) => s.done).length} of ${steps.length}`
@@ -186,25 +191,54 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender() {
     const input = this.element.querySelector("[data-field='name']");
     if (input) {
-      input.addEventListener("change", async (ev) => {
+      const save = async (ev) => {
         const name = ev.currentTarget.value.trim();
-        if (name && this.actor) await this.actor.update({ name });
+        if (name && this.actor && name !== this.actor.name) {
+          await this.actor.update({ name });
+        }
+      };
+      input.addEventListener("change", save);
+      // Saving on Enter too, so the name sticks even if the field keeps focus.
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          save(ev);
+        }
       });
     }
 
     if (!this._hooks.length) this.registerWatchers();
   }
 
-  /** Redraw whenever something lands on (or leaves) the actor. */
+  /**
+   * Redraw whenever something lands on (or leaves) the actor.
+   *
+   * Renaming is handled separately and deliberately does NOT redraw. Clicking a
+   * step button first blurs the name field, which fires `change` and updates the
+   * actor; redrawing at that moment would destroy the very button being clicked
+   * before the click completed, so the first click appeared to do nothing.
+   */
   registerWatchers() {
-    const belongs = (doc) => doc?.parent?.id === this.actorId || doc?.id === this.actorId;
-    const refresh = (doc) => {
-      if (belongs(doc)) this.render();
+    const onItem = (doc) => {
+      if (doc?.parent?.id === this.actorId) this.render();
     };
-    for (const hook of ["createItem", "deleteItem", "updateItem", "updateActor"]) {
-      const id = Hooks.on(hook, refresh);
-      this._hooks.push([hook, id]);
+    for (const hook of ["createItem", "deleteItem", "updateItem"]) {
+      this._hooks.push([hook, Hooks.on(hook, onItem)]);
     }
+
+    const onActor = (doc, changed = {}) => {
+      if (doc?.id !== this.actorId) return;
+
+      const keys = Object.keys(changed).filter((k) => k !== "_id" && k !== "_stats");
+      if (keys.length && keys.every((k) => k === "name")) {
+        // Keep the field in sync without touching the DOM the user is clicking.
+        const field = this.element?.querySelector("[data-field='name']");
+        if (field && document.activeElement !== field) field.value = doc.name;
+        return;
+      }
+      this.render();
+    };
+    this._hooks.push(["updateActor", Hooks.on("updateActor", onActor)]);
   }
 
   async close(options) {
