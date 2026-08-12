@@ -1,0 +1,125 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      <p class="pk5e-lead">
+        For characters built by an importer such as Plutonium, which fills in the
+        class, species, background and gear but never asks for ability scores.
+      </p>
+
+      <label class="pk5e-label" for="pk5e-actor">Character</label>
+      <select id="pk5e-actor" data-actor>
+        <option value="">— choose —</option>
+        {{#each actors}}
+        <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+        {{/each}}
+      </select>
+
+      {{#if hasActor}}
+      <p class="pk5e-note">{{summary}}</p>
+
+      <label class="pk5e-pack">
+        <input type="checkbox" data-keep-bonuses {{#if keepBonuses}}checked{{/if}}>
+        <span class="pk5e-pack-name">Keep bonuses already on the sheet</span>
+      </label>
+      <p class="pk5e-note">
+        Anything above 10 in the current scores is treated as a background or
+        species increase and added on top of your assignment. Switch this off to
+        overwrite the scores outright.
+      </p>
+
+      <div class="pk5e-methods">
+        <label><input type="radio" name="pk5e-cmethod" data-method="standard"
+                      {{#if isStandard}}checked{{/if}}> Standard array</label>
+        <label><input type="radio" name="pk5e-cmethod" data-method="pointbuy"
+                      {{#if isPointBuy}}checked{{/if}}> Point buy</label>
+        <label><input type="radio" name="pk5e-cmethod" data-method="roll"
+                      {{#if isRoll}}checked{{/if}}> Roll dice</label>
+        <label><input type="radio" name="pk5e-cmethod" data-method="manual"
+                      {{#if isManual}}checked{{/if}}> Manual</label>
+      </div>
+
+      {{#if isRoll}}
+      <p class="pk5e-note">
+        <button type="button" class="pk5e-link" data-action="rollAbilities">Roll 4d6, drop lowest</button>
+      </p>
+      {{/if}}
+      {{#if isPointBuy}}
+      <p class="pk5e-note">Points remaining: <strong>{{pointsLeft}}</strong> of {{pointsTotal}}.</p>
+      {{/if}}
+
+      <table class="pk5e-abilities">
+        <thead>
+          <tr>
+            <th>Ability</th>
+            <th>Now</th>
+            <th>Assign</th>
+            <th>Bonus</th>
+            <th>Result</th>
+            <th>Mod</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each rows}}
+          <tr>
+            <th scope="row">{{label}}</th>
+            <td class="pk5e-mod">{{current}}</td>
+            <td>
+              {{#if ../usesPool}}
+                <select data-assign="{{key}}">
+                  <option value="">—</option>
+                  {{#each options}}
+                  <option value="{{index}}" {{#if selected}}selected{{/if}}
+                          {{#if disabled}}disabled{{/if}}>{{value}}</option>
+                  {{/each}}
+                </select>
+              {{else if ../isPointBuy}}
+                <span class="pk5e-stepper">
+                  <button type="button" data-action="abilityMinus" data-ability="{{key}}"
+                          {{#if minusDisabled}}disabled{{/if}}>&minus;</button>
+                  <span class="pk5e-stepper-value">{{value}}</span>
+                  <button type="button" data-action="abilityPlus" data-ability="{{key}}"
+                          {{#if plusDisabled}}disabled{{/if}}>+</button>
+                </span>
+              {{else}}
+                <input type="number" data-manual="{{key}}" value="{{value}}" min="1" max="20">
+              {{/if}}
+            </td>
+            <td class="pk5e-mod">{{bonusLabel}}</td>
+            <td class="pk5e-mod"><strong>{{final}}</strong></td>
+            <td class="pk5e-mod">{{modLabel}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <button type="button" class="pk5e-link" data-action="reset">Reset</button>
+
+      <details class="pk5e-details">
+        <summary>Languages</summary>
+        <p class="pk5e-note">Already known languages are ticked. Add any that are missing.</p>
+        <div class="pk5e-packs">
+          {{#each languages}}
+          <label class="pk5e-pack">
+            <input type="checkbox" data-language="{{key}}" {{#if checked}}checked{{/if}}>
+            <span class="pk5e-pack-name">{{label}}</span>
+          </label>
+          {{/each}}
+        </div>
+      </details>
+      {{/if}}
+
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <span class="pk5e-hint">
+      Only ability scores and languages are touched. Everything else on the sheet
+      is left exactly as the importer created it.
+    </span>
+    <button type="button" class="pk5e-primary" data-action="apply"
+            {{#unless canApply}}disabled{{/unless}}>Apply</button>
+  </footer>
+
+</div>

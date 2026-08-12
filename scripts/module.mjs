@@ -6,6 +6,7 @@ import { MODULE_ID } from "./sources.mjs";
 import { CharacterCreator } from "./creator.mjs";
 import { SourceConfig } from "./source-config.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
+import { CompleteCharacter } from "./complete.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "enabledPacks", {
@@ -86,8 +87,10 @@ registerBrowserTweaks();
 Hooks.once("ready", () => {
   const api = {
     open: () => new CharacterCreator().render(true),
+    complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
     sources: () => new SourceConfig().render(true),
     CharacterCreator,
+    CompleteCharacter,
     SourceConfig
   };
   const mod = game.modules.get(MODULE_ID);
@@ -108,15 +111,22 @@ Hooks.on("renderActorDirectory", (app, html) => {
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root || root.querySelector(".pk5e-launch")) return;
 
+  const target =
+    root.querySelector(".header-actions") ??
+    root.querySelector(".directory-header") ??
+    root;
+
   const button = document.createElement("button");
   button.type = "button";
   button.className = "pk5e-launch";
   button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Character Creator';
   button.addEventListener("click", () => new CharacterCreator().render(true));
-
-  const target =
-    root.querySelector(".header-actions") ??
-    root.querySelector(".directory-header") ??
-    root;
   target.appendChild(button);
+
+  const complete = document.createElement("button");
+  complete.type = "button";
+  complete.className = "pk5e-launch pk5e-launch-secondary";
+  complete.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Complete Character';
+  complete.addEventListener("click", () => new CompleteCharacter().render(true));
+  target.appendChild(complete);
 });
