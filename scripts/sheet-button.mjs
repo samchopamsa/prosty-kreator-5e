@@ -14,8 +14,12 @@
  *   game.actors.contents[0].sheet.constructor.name
  */
 
-import { MODULE_ID } from "./sources.mjs";
+import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
+import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
+
+/** Actors whose panel has already been offered in this browser session. */
+const OFFERED = new Set();
 
 const SHEET_HOOKS = [
   "renderCharacterActorSheet",
@@ -72,8 +76,14 @@ function inject(app, html) {
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root) return;
 
-  root.querySelector(".pk5e-sheet-button")?.remove();
-  if (!inEditMode(app, root)) return;
+  root.querySelectorAll(".pk5e-sheet-button").forEach((el) => el.remove());
+
+  const incomplete = isIncomplete(actor);
+  const editing = inEditMode(app, root);
+
+  // The creation button stays visible in play mode too: a new player should not
+  // have to discover the edit toggle before they can build their character.
+  if (!editing && !incomplete) return;
 
   // There are two rest buttons (short and long). Take the LAST match so we land
   // to the right of Long Rest rather than between the two.
@@ -88,22 +98,52 @@ function inject(app, html) {
     }
   }
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.dataset.tooltip = "Complete Character: ability scores and languages";
-  button.setAttribute("aria-label", "Complete Character");
-  button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    new CompleteCharacter({ actorId: actor.id }).render(true);
-  });
+  const make = (icon, tooltip, onClick) => {
+    const el = document.createElement("button");
+    el.type = "button";
+    el.dataset.tooltip = tooltip;
+    el.setAttribute("aria-label", tooltip);
+    el.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+    el.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onClick();
+    });
+    return el;
+  };
+
+  const buttons = [];
+
+  // Only offered while something is still outstanding, so finished sheets stay
+  // uncluttered. "Start" until the first step lands, "Resume" afterwards.
+  if (incomplete) {
+    const started = missingSteps(actor).length < 4;
+    buttons.push(
+      make("fa-list-check", started ? "Resume creation" : "Start creation", () =>
+        CreationGuide.open(actor.id)
+      )
+    );
+  }
+
+  if (editing) {
+    buttons.push(
+      make("fa-wand-magic-sparkles", "Complete Character: ability scores and languages", () =>
+        new CompleteCharacter({ actorId: actor.id }).render(true)
+      )
+    );
+  }
+
+  if (!buttons.length) return;
 
   if (restButton) {
-    // Match the neighbouring rest buttons exactly, then mark it as ours.
-    button.className = restButton.className;
-    button.classList.add("pk5e-sheet-button");
-    restButton.insertAdjacentElement("afterend", button);
+    // Match the neighbouring rest buttons exactly, then mark them as ours.
+    let previous = restButton;
+    for (const el of buttons) {
+      el.className = restButton.className;
+      el.classList.add("pk5e-sheet-button");
+      previous.insertAdjacentElement("afterend", el);
+      previous = el;
+    }
     return;
   }
 
@@ -114,8 +154,27 @@ function inject(app, html) {
   }
   if (!anchor) return;
 
-  button.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
-  anchor.prepend(button);
+  for (const el of buttons.reverse()) {
+    el.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
+    anchor.prepend(el);
+  }
+}
+
+/**
+ * Opens the panel by itself the first time a player opens an unfinished sheet,
+ * so nothing has to be found. Strictly once: closing the panel records that on
+ * the actor, and it never reappears on its own.
+ */
+function maybeAutoOpen(actor) {
+  if (!game.settings.get(MODULE_ID, "autoOpenGuide")) return;
+  if (game.user.isGM) return;
+  if (!actor?.isOwner || actor.type !== "character") return;
+  if (!isIncomplete(actor)) return;
+  if (OFFERED.has(actor.id)) return;
+  if (actor.getFlag(MODULE_ID, "guideDismissed")) return;
+
+  OFFERED.add(actor.id);
+  setTimeout(() => CreationGuide.open(actor.id), 400);
 }
 
 export function registerSheetButton() {
@@ -123,6 +182,7 @@ export function registerSheetButton() {
     Hooks.on(hook, (app, html) => {
       try {
         inject(app, html);
+        maybeAutoOpen(app.document ?? app.actor);
       } catch (err) {
         console.warn(`${MODULE_ID} | Could not add the sheet button via ${hook}`, err);
       }

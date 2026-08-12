@@ -1,69 +1,38 @@
 /**
  * module.mjs - module entry point.
+ *
+ * The module guides character creation through the tools already installed:
+ * the dnd5e character sheet, its Advancement system, and importers such as
+ * Plutonium. It adds the ordering and the one thing importers skip - ability
+ * scores - rather than reimplementing anything.
  */
 
-import { MODULE_ID } from "./sources.mjs";
-import { CharacterCreator } from "./creator.mjs";
-import { SourceConfig } from "./source-config.mjs";
-import { registerBrowserTweaks } from "./browser-tweaks.mjs";
+import { MODULE_ID } from "./constants.mjs";
+import { CreationGuide } from "./guide.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
-import { CreationGuide } from "./guide.mjs";
+import { registerBrowserTweaks } from "./browser-tweaks.mjs";
+import { registerContextMenu } from "./context-menu.mjs";
 
 Hooks.once("init", () => {
-  game.settings.register(MODULE_ID, "enabledPacks", {
-    scope: "world",
-    config: false,
-    type: Array,
-    default: []
-  });
-
-  game.settings.registerMenu(MODULE_ID, "sourcesMenu", {
-    name: "Compendium sources",
-    label: "Configure sources",
-    hint: "Choose which compendiums the character creator reads species, backgrounds and classes from.",
-    icon: "fa-solid fa-book",
-    type: SourceConfig,
-    restricted: true
-  });
-
-  game.settings.register(MODULE_ID, "defaultRules", {
-    name: "Default rules edition",
-    hint: "Which edition the lists are filtered to when the creator opens. Players can still switch.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "2024",
-    choices: {
-      "": "All editions",
-      "2024": "2024 rules only",
-      "2014": "2014 rules only"
-    }
-  });
-
-  game.settings.register(MODULE_ID, "abilityMethod", {
-    name: "Default ability score method",
-    hint: "Which method the Abilities step starts on. Players can still switch.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "standard",
-    choices: {
-      standard: "Standard array (15,14,13,12,10,8)",
-      pointbuy: "Point buy (27 points)",
-      roll: "Roll dice (4d6 drop lowest)",
-      manual: "Manual entry"
-    }
-  });
-
-  game.settings.register(MODULE_ID, "showArtwork", {
-    name: "Show artwork in descriptions",
-    hint: "Off by default. SRD text links to images from premium modules; without a licence Foundry draws a padlock instead.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
+  // Wording shown in the guide panel. Leave blank to use the built-in text.
+  const textSettings = {
+    introText: "Panel: opening paragraph",
+    textSpecies: "Panel: species step",
+    textBackground: "Panel: background step",
+    textClass: "Panel: class step",
+    textAbilities: "Panel: ability scores step"
+  };
+  for (const [key, name] of Object.entries(textSettings)) {
+    game.settings.register(MODULE_ID, key, {
+      name,
+      hint: "Your own wording for this step. Leave blank for the default.",
+      scope: "world",
+      config: true,
+      type: String,
+      default: ""
+    });
+  }
 
   game.settings.register(MODULE_ID, "guideButton", {
     name: "Show 'New Character' in the Actors sidebar",
@@ -75,26 +44,30 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "sheetButton", {
-    name: "Show 'Complete Character' on the character sheet",
-    hint: "Adds the button to the sheet header while the sheet is in edit mode.",
+    name: "Show buttons on the character sheet",
+    hint: "Adds 'Complete Character', and 'Resume creation' while anything is outstanding, to the sheet header in edit mode.",
     scope: "world",
     config: true,
     type: Boolean,
     default: true
   });
 
-  game.settings.register(MODULE_ID, "sidebarButtons", {
-    name: "Buttons in the Actors sidebar",
-    hint: "Fallback if the sheet button does not appear on your sheet version.",
+  game.settings.register(MODULE_ID, "autoOpenGuide", {
+    name: "Open the panel automatically for players",
+    hint: "Opens once, the first time a player opens an unfinished character. Closing it stops it coming back.",
     scope: "world",
     config: true,
-    type: String,
-    default: "none",
-    choices: {
-      none: "None",
-      complete: "Complete Character only",
-      both: "Character Creator and Complete Character"
-    }
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "sidebarComplete", {
+    name: "Also show 'Complete Character' in the sidebar",
+    hint: "Fallback if the sheet buttons do not appear on your sheet version.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
   });
 
   game.settings.register(MODULE_ID, "narrowBrowserTooltips", {
@@ -107,7 +80,7 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "allowPlayers", {
-    name: "Players may open the creator",
+    name: "Players may start a new character",
     hint: "Players also need the 'Create New Actors' permission in User Configuration.",
     scope: "world",
     config: true,
@@ -116,39 +89,48 @@ Hooks.once("init", () => {
   });
 });
 
-registerBrowserTweaks();
 registerSheetButton();
+registerBrowserTweaks();
+registerContextMenu();
 
 Hooks.once("ready", () => {
   const api = {
-    open: () => new CharacterCreator().render(true),
-    complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
     guide: () => CreationGuide.start(),
-    resume: (actorId) => new CreationGuide({ actorId }).render(true),
-    sources: () => new SourceConfig().render(true),
-    CharacterCreator,
-    CompleteCharacter,
+    resume: (actorId) => CreationGuide.open(actorId),
+    complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
     CreationGuide,
-    SourceConfig
+    CompleteCharacter
   };
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = api;
   globalThis.characterCreator = api;
-  globalThis.prostyKreator = api;
 
   if (game.system.id !== "dnd5e") {
     ui.notifications.warn("Character Creator only works with the dnd5e system.");
   }
 });
 
-/** Optional fallback buttons in the Actors sidebar. */
+/** Whether this user may create actors at all. */
+export function canCreateActors() {
+  const user = game.user;
+  if (!user) return false;
+  if (user.isGM) return true;
+  if (typeof user.hasPermission === "function") return user.hasPermission("ACTOR_CREATE");
+  if (typeof user.can === "function") return user.can("ACTOR_CREATE");
+  return false;
+}
+
+/** Buttons in the Actors sidebar. */
 Hooks.on("renderActorDirectory", (app, html) => {
   if (game.system.id !== "dnd5e") return;
   if (!game.user.isGM && !game.settings.get(MODULE_ID, "allowPlayers")) return;
 
-  const mode = game.settings.get(MODULE_ID, "sidebarButtons");
-  const showGuide = game.settings.get(MODULE_ID, "guideButton");
-  if (mode === "none" && !showGuide) return;
+  // Do not offer character creation to someone who is not allowed to create
+  // actors - the button would only ever produce a permission error.
+  const showGuide =
+    game.settings.get(MODULE_ID, "guideButton") && canCreateActors();
+  const showComplete = game.settings.get(MODULE_ID, "sidebarComplete");
+  if (!showGuide && !showComplete) return;
 
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root || root.querySelector(".pk5e-launch")) return;
@@ -158,30 +140,19 @@ Hooks.on("renderActorDirectory", (app, html) => {
     root.querySelector(".directory-header") ??
     root;
 
-  if (showGuide) {
-    const guide = document.createElement("button");
-    guide.type = "button";
-    guide.className = "pk5e-launch";
-    guide.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> New Character';
-    guide.addEventListener("click", () => CreationGuide.start());
-    target.appendChild(guide);
-  }
-
-  if (mode === "none") return;
-
-  if (mode === "both") {
+  const add = (icon, label, onClick) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "pk5e-launch";
-    button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Character Creator';
-    button.addEventListener("click", () => new CharacterCreator().render(true));
+    button.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
+    button.addEventListener("click", onClick);
     target.appendChild(button);
-  }
+  };
 
-  const complete = document.createElement("button");
-  complete.type = "button";
-  complete.className = "pk5e-launch";
-  complete.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Complete Character';
-  complete.addEventListener("click", () => new CompleteCharacter().render(true));
-  target.appendChild(complete);
+  if (showGuide) add("fa-hat-wizard", "New Character", () => CreationGuide.start());
+  if (showComplete) {
+    add("fa-wand-magic-sparkles", "Complete Character", () =>
+      new CompleteCharacter({}).render(true)
+    );
+  }
 });

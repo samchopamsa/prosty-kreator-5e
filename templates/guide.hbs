@@ -7,11 +7,7 @@
         <p class="pk5e-empty">This character no longer exists.</p>
       {{else}}
 
-      <p class="pk5e-lead">
-        Five steps. Each one opens the same dialog the character sheet uses, so
-        anything you have installed works exactly as usual. Those windows appear
-        on top of this one - close them and come back here.
-      </p>
+      <p class="pk5e-lead">{{introText}}</p>
 
       <div class="pk5e-guide-step is-done">
         <div class="pk5e-guide-head">
@@ -54,6 +50,51 @@
       </div>
       {{/each}}
 
+      <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-label">
+            {{#if ready}}Ready to play{{else}}{{report.errors}} thing(s) to fix{{/if}}
+          </span>
+          <button type="button" class="pk5e-link" data-action="recheck">Recheck</button>
+        </div>
+        {{#if failures}}
+        <ul class="pk5e-report-list">
+          {{#each failures}}
+          <li class="pk5e-report-item is-{{level}}">
+            <span class="pk5e-report-label">{{label}}</span>
+            <span class="pk5e-report-hint">{{hint}}</span>
+          </li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="pk5e-note">Everything checks out.</p>
+        {{/if}}
+      </section>
+
+      {{#if isGM}}
+      <details class="pk5e-details">
+        <summary>Ownership and filing</summary>
+
+        <p class="pk5e-note">Players who can open and edit this character.</p>
+        <div class="pk5e-packs">
+          {{#each players}}
+          <label class="pk5e-pack">
+            <input type="checkbox" data-owner="{{id}}" {{#if owner}}checked{{/if}}>
+            <span class="pk5e-pack-name">{{name}}</span>
+          </label>
+          {{/each}}
+        </div>
+
+        <label class="pk5e-label" for="pk5e-folder">Folder</label>
+        <select id="pk5e-folder" data-folder>
+          <option value="">— none —</option>
+          {{#each folders}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      </details>
+      {{/if}}
+
       {{/if}}
     </div>
   </div>
@@ -61,6 +102,7 @@
   <footer class="pk5e-footer">
     <button type="button" data-action="openSheet">Open sheet</button>
     <span class="pk5e-hint">{{progress}} complete</span>
+    <button type="button" class="pk5e-primary" data-action="postSummary">Post to chat</button>
   </footer>
 
 </div>

@@ -1,107 +1,92 @@
-# Prosty Kreator Postaci (D&D 5e) — wersja 0.1
+# Character Creator (D&D 5e) — 1.1.0
 
-Kreator postaci dla Foundry VTT, który czyta dane **z Twoich kompendiów** — nie ma
-w kodzie żadnej zaszytej listy gatunków czy klas.
+Guided character creation for Foundry VTT that **drives the tools you already
+have** instead of replacing them.
 
-- Foundry: **v13 lub v14**
-- System: **dnd5e 5.0+** (testowane pod kątem 5.3.x)
-
----
-
-## Instalacja (5 minut, bez programowania)
-
-1. Znajdź folder danych Foundry (w launcherze: **Configuration → User Data Path**).
-   Zwykle jest to `.../FoundryVTT/Data/`.
-2. Wejdź do podfolderu `modules`.
-3. Skopiuj tam cały folder `prosty-kreator-5e` (ten, w którym leży ten plik).
-   Ścieżka końcowa musi wyglądać tak:
-   `.../Data/modules/prosty-kreator-5e/module.json`
-4. Uruchom ponownie Foundry (albo cały serwer).
-5. Wejdź do świata → **Ustawienia → Zarządzaj Modułami** → zaznacz
-   **Prosty Kreator Postaci** → Zapisz.
-
-Przycisk **„Kreator Postaci"** pojawi się na dole zakładki **Aktorzy**.
-Można go też odpalić makrem: `prostyKreator.open()`
+- Foundry: **v13 or v14**
+- System: **dnd5e 5.0+** (developed against 5.3)
 
 ---
 
-## Pierwsze uruchomienie — wybór źródeł
+## Co robi
 
-W kroku **Start** rozwiń sekcję *Źródła danych*. Zobaczysz listę wszystkich
-kompendiów z przedmiotami. Domyślnie włączone są kompendia systemowe (SRD).
+Kreator nie implementuje własnego wyboru gatunku, klasy, ekwipunku ani zaklęć.
+Każdy krok klika **ten sam przycisk, który jest na karcie postaci**, więc
+uruchamia się dokładnie to, co masz zainstalowane — Plutonium, systemowy
+Compendium Browser, mechanizm Advancement. Moduł dokłada kolejność, kontekst dla
+gracza i jedną rzecz, którą importery pomijają: **atrybuty**.
 
-Kiedy zaimportujesz coś Plutonium, import trafia do **kompendiów świata** —
-pojawią się na tej samej liście jako „Świat" i wystarczy je zaznaczyć.
-Nie trzeba zmieniać ani linijki kodu.
+### Dwa narzędzia
 
-Wybór zapisuje się na poziomie świata, więc ustawia go **Mistrz Gry** raz.
-Gracze widzą listę tylko do wglądu.
+**New Character** (zakładka Aktorzy) — panel z pięcioma krokami: imię, gatunek,
+pochodzenie, klasa, atrybuty i języki. Panel obserwuje kartę i odhacza kroki
+sam, gdy coś na niej wyląduje. Okna Plutonium pojawiają się na wierzchu —
+zamykasz je i wracasz do panelu.
 
----
-
-## Jak to działa (i dlaczego akurat tak)
-
-Kreator świadomie **nie** implementuje wyboru ekwipunku ani zaklęć od zera.
-System dnd5e ma własny mechanizm *Advancement*, który to robi — i robi to
-zgodnie z aktualnymi zasadami, także po aktualizacjach systemu.
-
-Podział pracy wygląda tak:
-
-| Robi kreator | Robi system dnd5e (Advancement) |
-|---|---|
-| imię postaci | punkty życia |
-| wybór gatunku / pochodzenia / klasy z kompendiów | biegłości i języki |
-| atrybuty bazowe (zestaw / punkty / rzut / ręcznie) | podniesienie atrybutów z pochodzenia (+2/+1) |
-| stworzenie aktora we właściwej kolejności | atut startowy |
-| | ekwipunek startowy |
-| | zaklęcia i sztuczki |
-
-Kolejność dodawania to gatunek → pochodzenie → klasa. To celowe: pochodzenie
-podnosi atrybuty, więc kiedy przychodzi rzut na punkty życia, modyfikator
-Kondycji jest już poprawny.
+**Complete Character** (przycisk na karcie, w trybie edycji) — przypisuje
+atrybuty i języki istniejącej postaci. Rozpoznaje premie już naliczone na karcie
+i pokazuje wynik przed zapisem.
 
 ---
 
 ## Uprawnienia dla graczy
 
-Żeby gracz mógł sam stworzyć postać, potrzebuje uprawnienia
-**Tworzenie nowych Aktorów**:
-*Ustawienia → Konfiguruj Uprawnienia → Create New Actors → zaznacz rolę Gracz*.
-
-Bez tego kreator wyświetli błąd na samym końcu. Alternatywa: MG uruchamia
-kreator przy graczu.
-
-W ustawieniach modułu można też całkiem wyłączyć przycisk dla graczy.
+Gracz potrzebuje uprawnienia **Create New Actors**:
+*Ustawienia → Konfiguruj Uprawnienia → Create New Actors*.
+Bez tego przycisk zgłosi błąd. Można też całkiem wyłączyć dostęp graczy w
+ustawieniach modułu.
 
 ---
 
-## Zmiana tekstów dla nowych graczy
+## Ustawienia
 
-Wszystkie komunikaty widoczne w oknie są w jednym pliku:
-`templates/creator.hbs`
-
-Możesz je przepisać pod swoją kampanię (otwórz w Notatniku albo VS Code, zmień
-tekst między znacznikami HTML, zapisz, odśwież Foundry klawiszem F5).
-Kod tego nie ruszy. Podpowiedzi na dole okna siedzą w `scripts/creator.mjs`
-w funkcji `stepHint`.
-
----
-
-## Znane ograniczenia wersji 0.1
-
-- Tylko poziom 1. Podklasa (poziom 3) i awanse — poza zakresem.
-- Wielo­klasowość nieobsługiwana.
-- Brak osobnego kroku „ekwipunek dodatkowy" — jest tylko to, co daje system.
-- Nie filtruje duplikatów, jeśli to samo pochodzenie jest w dwóch kompendiach.
-  Etykieta kompendium jest widoczna pod każdą pozycją, więc widać, co jest z czego.
+- **Panel: opening paragraph** i cztery pola na teksty kroków — własne
+  instrukcje dla graczy, bez dotykania plików. Puste = tekst domyślny.
+- **Show 'New Character' in the Actors sidebar**
+- **Show buttons on the character sheet**
+- **Also show 'Complete Character' in the sidebar** — awaryjne, gdyby przyciski
+  na karcie nie zadziałały w Twojej wersji arkusza.
+- **Narrow tooltips in the Compendium Browser** — zawęża obszar wyzwalający
+  podgląd, żeby dymek nie zasłaniał checkboxa. Ingeruje w cudzy interfejs;
+  wyłącz, jeśli coś wygląda źle.
+- **Players may start a new character**
 
 ---
 
-## Co robić, gdy coś nie działa
+## Sprawdzenie gotowości
 
-Otwórz konsolę przeglądarki (**F12** → zakładka *Console*), powtórz czynność,
-która się wysypała, i skopiuj czerwony komunikat błędu wraz z kilkoma liniami
-pod nim. To wystarczy, żeby namierzyć problem.
+Panel weryfikuje kartę i rozdziela problemy na blokujące (brak gatunku,
+pochodzenia, klasy, zerowe HP, zerowa szybkość, nieprzypisane atrybuty) oraz
+warte sprawdzenia (języki, biegłości, ekwipunek, portret).
 
-Przydaje się też: wersja Foundry i wersja systemu dnd5e
-(*Ustawienia → Wsparcie i Zgłaszanie Błędów*).
+---
+
+## Wejścia awaryjne
+
+```js
+characterCreator.guide()            // nowa postać
+characterCreator.resume(actorId)    // powrót do przerwanej
+characterCreator.complete(actorId)  // atrybuty i języki
+```
+
+---
+
+## Ograniczenia
+
+- Kreator zakłada **poziom 1**. Awanse prowadzi karta postaci.
+- Wykrywanie premii do atrybutów: przy pierwszym uruchomieniu na karcie bez
+  historii czyta advancementy, a gdy ich nie ma, przyjmuje że wszystko powyżej
+  10 to premia. Dlatego wynik jest pokazywany przed zapisem.
+- Ekwipunek startowy dodaje Plutonium albo systemowy mechanizm — moduł go nie
+  dotyka.
+
+---
+
+## Gdy coś nie działa
+
+**F12 → Console**, powtórz czynność, skopiuj czerwony błąd. Przydaje się też
+wersja Foundry i dnd5e (*Ustawienia → Wsparcie i Zgłaszanie Błędów*).
+
+Po aktualizacji plików na serwerze: `git pull`, potem **Ctrl+Shift+R** w
+przeglądarce. Numer wersji w liście modułów odświeża się dopiero po restarcie
+serwera Foundry — sam kod ładuje się przy odświeżeniu strony.

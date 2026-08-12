@@ -11,7 +11,7 @@
  * applying; nothing breaks.
  */
 
-import { MODULE_ID } from "./sources.mjs";
+import { MODULE_ID } from "./constants.mjs";
 
 /** Selectors we try, in order, to find the name/icon area of a row. */
 const NAME_SELECTORS = [

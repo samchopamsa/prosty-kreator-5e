@@ -14,7 +14,7 @@
  * arithmetic before anything is saved.
  */
 
-import { MODULE_ID } from "./sources.mjs";
+import { MODULE_ID } from "./constants.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

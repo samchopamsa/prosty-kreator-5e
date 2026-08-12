@@ -13,12 +13,29 @@
  * watches the actor and reports what has landed on the sheet.
  */
 
-import { MODULE_ID } from "./sources.mjs";
+import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
+import { checkCharacter } from "./validate.mjs";
+import { postSummary } from "./summary.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Wording the GM can override in the module settings. */
+const DEFAULT_TEXT = {
+  introText:
+    "Five steps. Each one opens the same dialog the character sheet uses, so anything you have installed works exactly as usual. Those windows appear on top of this one - close them and come back here.",
+  textSpecies: "Determines your speed, size and innate traits.",
+  textBackground: "Grants proficiencies, an origin feat and ability score increases.",
+  textClass: "What your character can do, in combat and out of it.",
+  textAbilities: "Importers skip this, so it is done here at the end."
+};
+
+function text(key) {
+  const custom = game.settings.get(MODULE_ID, key);
+  return (typeof custom === "string" && custom.trim()) || DEFAULT_TEXT[key];
+}
 
 /** What each step adds, and how to find its button and its item. */
 const STEP_CONFIG = {
@@ -162,6 +179,25 @@ async function pressSheetButton(actor, types, labels) {
   return true;
 }
 
+/**
+ * Which creation steps are still outstanding on an actor. Used to decide
+ * whether to offer "Resume creation" at all.
+ */
+export function missingSteps(actor) {
+  if (!actor || actor.type !== "character") return [];
+  const missing = [];
+  for (const [step, config] of Object.entries(STEP_CONFIG)) {
+    const has = actor.items.some((i) => config.itemTypes.includes(i.type));
+    if (!has) missing.push(step);
+  }
+  if (!actor.getFlag(MODULE_ID, "abilities")) missing.push("abilities");
+  return missing;
+}
+
+export function isIncomplete(actor) {
+  return missingSteps(actor).length > 0;
+}
+
 export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
@@ -184,7 +220,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       replaceStep: CreationGuide.onReplaceStep,
       removeStep: CreationGuide.onRemoveStep,
       openSheet: CreationGuide.onOpenSheet,
-      finalise: CreationGuide.onFinalise
+      finalise: CreationGuide.onFinalise,
+      postSummary: CreationGuide.onPostSummary,
+      recheck: CreationGuide.onRecheck
     }
   };
 
@@ -196,10 +234,41 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     return this.actorId ? game.actors.get(this.actorId) : null;
   }
 
+  /**
+   * Opens the guide for an existing character. Each actor gets its own window
+   * id, so guides for two characters do not fight over the same application.
+   */
+  static open(actorId) {
+    const actor = game.actors.get(actorId);
+    if (!actor) {
+      ui.notifications.warn("That character no longer exists.");
+      return null;
+    }
+    const existing = foundry.applications.instances?.get(`pk5e-guide-${actorId}`);
+    if (existing) {
+      existing.bringToFront?.();
+      existing.render(true);
+      return existing;
+    }
+    const guide = new CreationGuide({ actorId, id: `pk5e-guide-${actorId}` });
+    guide.render(true);
+    return guide;
+  }
+
   /** Creates a blank character and opens the guide beside its sheet. */
   static async start() {
-    if (!game.user.can("ACTOR_CREATE")) {
-      ui.notifications.error("You do not have permission to create actors.");
+    const allowed = game.user.isGM
+      ? true
+      : typeof game.user.hasPermission === "function"
+        ? game.user.hasPermission("ACTOR_CREATE")
+        : game.user.can?.("ACTOR_CREATE");
+
+    if (!allowed) {
+      ui.notifications.error(
+        "You cannot create characters yet. Ask your GM to enable 'Create New Actors' " +
+          "for your role under Settings, Configure Permissions.",
+        { permanent: true }
+      );
       return null;
     }
     const actor = await Actor.implementation.create({
@@ -213,9 +282,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     if (!actor) return null;
     await actor.sheet.render(true);
-    const guide = new CreationGuide({ actorId: actor.id });
-    guide.render(true);
-    return guide;
+    return CreationGuide.open(actor.id);
   }
 
   async _prepareContext() {
@@ -236,7 +303,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         done: !!species,
         result: species?.name ?? "",
         img: species?.img ?? "",
-        blurb: "Determines your speed, size and innate traits."
+        blurb: text("textSpecies")
       },
       {
         key: "background",
@@ -246,7 +313,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         done: !!background,
         result: background?.name ?? "",
         img: background?.img ?? "",
-        blurb: "Grants proficiencies, an origin feat and ability score increases."
+        blurb: text("textBackground")
       },
       {
         key: "class",
@@ -256,7 +323,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
         img: cls?.img ?? "",
-        blurb: "What your character can do, in combat and out of it."
+        blurb: text("textClass")
       },
       {
         key: "abilities",
@@ -270,13 +337,31 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
               .join(" / ")
           : "",
         img: "",
-        blurb: "Importers skip this, so it is done here at the end."
+        blurb: text("textAbilities")
       }
     ];
+
+    const report = checkCharacter(actor);
+    const ownership = actor.ownership ?? {};
 
     return {
       actorName: actor.name,
       actorImg: actor.img ?? "",
+      introText: text("introText"),
+      isGM: game.user.isGM,
+      report,
+      failures: report.checks.filter((c) => !c.ok),
+      ready: report.ready,
+      players: game.users
+        .filter((u) => !u.isGM && u.active !== undefined)
+        .map((u) => ({
+          id: u.id,
+          name: u.name,
+          owner: ownership[u.id] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
+        })),
+      folders: game.folders
+        .filter((f) => f.type === "Actor")
+        .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
       steps,
       allDone: steps.every((s) => s.done),
       progress: `${steps.filter((s) => s.done).length} of ${steps.length}`
@@ -301,6 +386,31 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       });
     }
+
+    this.element.querySelectorAll("input[data-owner]").forEach((cb) => {
+      cb.addEventListener("change", async (ev) => {
+        const userId = ev.currentTarget.dataset.owner;
+        const level = ev.currentTarget.checked
+          ? CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
+          : CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE;
+        try {
+          await this.actor?.update({ [`ownership.${userId}`]: level });
+        } catch (err) {
+          console.error(`${MODULE_ID} | Could not change ownership`, err);
+          ui.notifications.error(`Could not change ownership: ${err.message}`);
+        }
+      });
+    });
+
+    this.element.querySelector("select[data-folder]")?.addEventListener("change", async (ev) => {
+      const value = ev.currentTarget.value || null;
+      try {
+        await this.actor?.update({ folder: value });
+      } catch (err) {
+        console.error(`${MODULE_ID} | Could not move the character`, err);
+        ui.notifications.error(`Could not move the character: ${err.message}`);
+      }
+    });
 
     if (!this._hooks.length) this.registerWatchers();
   }
@@ -339,6 +449,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   async close(options) {
     for (const [hook, id] of this._hooks) Hooks.off(hook, id);
     this._hooks = [];
+
+    // Closing the panel counts as "I have seen this". It will not open by
+    // itself again; the sheet button remains for anyone who wants it back.
+    try {
+      if (this.actor?.isOwner && !this.actor.getFlag(MODULE_ID, "guideDismissed")) {
+        await this.actor.setFlag(MODULE_ID, "guideDismissed", true);
+      }
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not record the panel being closed`, err);
+    }
+
     return super.close(options);
   }
 
@@ -400,6 +521,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onRemoveStep(event, target) {
     await this.removeFor(target.dataset.step);
+  }
+
+  static async onPostSummary() {
+    if (!this.actor) return;
+    const message = await postSummary(this.actor);
+    if (message) ui.notifications.info("Summary posted to chat.");
+  }
+
+  static onRecheck() {
+    this.render();
   }
 
   static onOpenSheet() {
