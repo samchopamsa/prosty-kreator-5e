@@ -4,6 +4,7 @@
 
 import { MODULE_ID } from "./sources.mjs";
 import { CharacterCreator } from "./creator.mjs";
+import { SourceConfig } from "./source-config.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "enabledPacks", {
@@ -11,6 +12,29 @@ Hooks.once("init", () => {
     config: false,
     type: Array,
     default: []
+  });
+
+  game.settings.registerMenu(MODULE_ID, "sourcesMenu", {
+    name: "Compendium sources",
+    label: "Configure sources",
+    hint: "Choose which compendiums the character creator reads species, backgrounds and classes from.",
+    icon: "fa-solid fa-book",
+    type: SourceConfig,
+    restricted: true
+  });
+
+  game.settings.register(MODULE_ID, "defaultRules", {
+    name: "Default rules edition",
+    hint: "Which edition the lists are filtered to when the creator opens. Players can still switch.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "2024",
+    choices: {
+      "": "All editions",
+      "2024": "2024 rules only",
+      "2014": "2014 rules only"
+    }
   });
 
   game.settings.register(MODULE_ID, "abilityMethod", {
@@ -28,6 +52,15 @@ Hooks.once("init", () => {
     }
   });
 
+  game.settings.register(MODULE_ID, "showArtwork", {
+    name: "Show artwork in descriptions",
+    hint: "Off by default. SRD text links to images from premium modules; without a licence Foundry draws a padlock instead.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
   game.settings.register(MODULE_ID, "allowPlayers", {
     name: "Players may open the creator",
     hint: "Players also need the 'Create New Actors' permission in User Configuration.",
@@ -41,12 +74,14 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   const api = {
     open: () => new CharacterCreator().render(true),
-    CharacterCreator
+    sources: () => new SourceConfig().render(true),
+    CharacterCreator,
+    SourceConfig
   };
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = api;
-  globalThis.prostyKreator = api;
   globalThis.characterCreator = api;
+  globalThis.prostyKreator = api;
 
   if (game.system.id !== "dnd5e") {
     ui.notifications.warn("Character Creator only works with the dnd5e system.");

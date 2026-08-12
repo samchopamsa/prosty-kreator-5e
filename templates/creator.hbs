@@ -30,35 +30,36 @@
     <input id="pk5e-name" type="text" data-field="name" value="{{wizard.name}}"
            placeholder="e.g. Elara Shadowstep" autocomplete="off">
 
-    <details class="pk5e-details">
-      <summary>Data sources ({{#if isGM}}editable{{else}}read only{{/if}})</summary>
+    <div class="pk5e-sources-note">
       <p class="pk5e-note">
-        The creator reads species, backgrounds and classes only from the compendiums
-        ticked below.
-        {{#unless isGM}}<br>Only the Game Master can change this.{{/unless}}
+        Species, backgrounds and classes are read from
+        <strong>{{enabledCount}}</strong> compendium(s).
       </p>
-      <div class="pk5e-packs">
-        {{#each packs}}
-        <label class="pk5e-pack">
-          <input type="checkbox" data-pack="{{id}}" {{#if checked}}checked{{/if}}
-                 {{#unless ../isGM}}disabled{{/unless}}>
-          <span class="pk5e-pack-name">{{label}}</span>
-          <span class="pk5e-pack-origin">{{origin}}</span>
-        </label>
-        {{/each}}
-      </div>
-    </details>
+      {{#if isGM}}
+      <button type="button" class="pk5e-link" data-action="configureSources">
+        Configure compendium sources
+      </button>
+      {{/if}}
+    </div>
   </div>
   {{/if}}
 
   {{#if isPickStep}}
   <div class="pk5e-pane pk5e-split">
     <div class="pk5e-list-col">
-      <input type="search" data-search placeholder="Search..." autocomplete="off">
+      <div class="pk5e-listbar">
+        <input type="search" data-search placeholder="Search..." autocomplete="off">
+        <div class="pk5e-rules-filter">
+          {{#each rulesButtons}}
+          <button type="button" class="pk5e-chip {{#if active}}is-active{{/if}}"
+                  data-action="setRules" data-value="{{value}}">{{label}}</button>
+          {{/each}}
+        </div>
+      </div>
       {{#if emptyList}}
       <p class="pk5e-empty">
-        Nothing here. Go back to <strong>Start</strong> and tick at least one
-        compendium that contains this type of item.
+        Nothing to show. Either no enabled compendium holds this type of item, or
+        the edition filter above hides everything. Try <strong>All</strong>.
       </p>
       {{/if}}
       <div class="pk5e-options">
@@ -69,7 +70,10 @@
           <img src="{{img}}" alt="">
           <span class="pk5e-option-text">
             <span class="pk5e-option-name">{{name}}</span>
-            <span class="pk5e-option-meta">{{packLabel}}</span>
+            <span class="pk5e-option-meta">
+              {{#if hasRules}}<span class="pk5e-badge pk5e-badge-{{rules}}">{{rules}}</span>{{/if}}
+              {{origin}}
+            </span>
           </span>
         </button>
         {{/each}}
@@ -79,7 +83,10 @@
     <div class="pk5e-detail-col">
       {{#if selected}}
         <h3>{{selected.name}}</h3>
-        <p class="pk5e-note">Source: {{selected.packLabel}}</p>
+        <p class="pk5e-note">
+          {{#if selected.hasRules}}<span class="pk5e-badge pk5e-badge-{{selected.rules}}">{{selected.rules}}</span>{{/if}}
+          Source: {{selected.origin}} &middot; {{selected.packLabel}}
+        </p>
         <div class="pk5e-detail-text">{{{detail}}}</div>
         <button type="button" class="pk5e-link" data-action="clearPick" data-kind="{{kind}}">
           Clear selection
@@ -90,6 +97,76 @@
         </p>
       {{/if}}
     </div>
+  </div>
+  {{/if}}
+
+  {{#if isEquipment}}
+  <div class="pk5e-pane">
+    <h2>Starting equipment</h2>
+    {{#if noEquipment}}
+      <p class="pk5e-lead">
+        Neither your class nor your background lists starting equipment, so there
+        is nothing to choose here. Press <strong>Next</strong>.
+      </p>
+    {{else}}
+      <p class="pk5e-lead">
+        Pick what you set out with. Where you see a choice, one option is already
+        selected for you - changing it is optional.
+      </p>
+    {{/if}}
+
+    {{#each equipment}}
+    <section class="pk5e-equip-source">
+      <header class="pk5e-equip-header">
+        <span class="pk5e-equip-title">{{sourceName}}</span>
+        {{#if hasWealth}}
+        <span class="pk5e-equip-modes">
+          <button type="button" class="pk5e-chip {{#unless isGold}}is-active{{/unless}}"
+                  data-action="setEquipMode" data-source="{{kind}}" data-mode="items">Gear</button>
+          <button type="button" class="pk5e-chip {{#if isGold}}is-active{{/if}}"
+                  data-action="setEquipMode" data-source="{{kind}}" data-mode="gold">{{wealth}} gp instead</button>
+        </span>
+        {{/if}}
+      </header>
+
+      {{#if isGold}}
+        <p class="pk5e-note">Taking {{wealth}} gp instead of gear from this source.</p>
+      {{else}}
+        {{#each groups}}
+        <div class="pk5e-equip-group">
+          {{#each options}}
+          <div class="pk5e-equip-option {{#if selected}}is-selected{{/if}}">
+            {{#if ../isChoice}}
+            <button type="button" class="pk5e-equip-radio"
+                    data-action="chooseOption" data-group="{{../id}}" data-option="{{id}}">
+              {{#if selected}}&#9679;{{else}}&#9675;{{/if}} {{label}}
+            </button>
+            {{else}}
+            <span class="pk5e-equip-fixed">{{label}}</span>
+            {{/if}}
+
+            {{#if selected}}
+              {{#each parts}}
+                {{#if needsPick}}
+                <div class="pk5e-equip-pick">
+                  <label>{{name}}{{#if fallback}} (showing all){{/if}}</label>
+                  <select data-equip-pick="{{id}}">
+                    <option value="">— choose —</option>
+                    {{#each candidates}}
+                    <option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                {{/if}}
+              {{/each}}
+            {{/if}}
+          </div>
+          {{/each}}
+        </div>
+        {{/each}}
+      {{/if}}
+    </section>
+    {{/each}}
   </div>
   {{/if}}
 
@@ -175,6 +252,7 @@
       <dt>Species</dt><dd>{{#if wizard.species}}{{wizard.species.name}}{{else}}—{{/if}}</dd>
       <dt>Background</dt><dd>{{#if wizard.background}}{{wizard.background.name}}{{else}}—{{/if}}</dd>
       <dt>Class</dt><dd>{{#if wizard.class}}{{wizard.class.name}} (level 1){{else}}—{{/if}}</dd>
+      <dt>Equipment</dt><dd>{{equipmentSummary}}</dd>
     </dl>
 
     <table class="pk5e-abilities pk5e-abilities-compact">

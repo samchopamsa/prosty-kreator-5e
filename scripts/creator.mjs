@@ -14,7 +14,14 @@
  * ApplicationV2 already defines a read-only `state` property (render state).
  */
 
-import { MODULE_ID, getEntries, getPackChoices, getDescriptionHTML } from "./sources.mjs";
+import { MODULE_ID, getEntries, getDescriptionHTML, getEnabledPackIds } from "./sources.mjs";
+import { SourceConfig } from "./source-config.mjs";
+import {
+  buildEquipmentPlan,
+  resolveEquipment,
+  equipmentComplete,
+  clearCandidateCache
+} from "./equipment.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -24,6 +31,7 @@ const STEPS = [
   { key: "species", label: "Species" },
   { key: "background", label: "Background" },
   { key: "class", label: "Class" },
+  { key: "equipment", label: "Equipment" },
   { key: "abilities", label: "Abilities" },
   { key: "summary", label: "Summary" }
 ];
@@ -48,7 +56,11 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       /** which pool index goes to which ability: {str: 0, dex: 3, ...} */
       assign: {},
       /** direct values for point buy and manual entry */
-      direct: {}
+      direct: {},
+      /** "" = every edition, otherwise "2024" / "2014" */
+      rulesFilter: game.settings.get(MODULE_ID, "defaultRules") ?? "",
+      /** starting equipment choices */
+      equipment: { mode: {}, choices: {}, picks: {} }
     };
 
     for (const key of this.abilityKeys) {
@@ -83,7 +95,11 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       abilityMinus: CharacterCreator.onAbilityMinus,
       rollAbilities: CharacterCreator.onRollAbilities,
       resetAbilities: CharacterCreator.onResetAbilities,
-      finish: CharacterCreator.onFinish
+      finish: CharacterCreator.onFinish,
+      configureSources: CharacterCreator.onConfigureSources,
+      setRules: CharacterCreator.onSetRules,
+      chooseOption: CharacterCreator.onChooseOption,
+      setEquipMode: CharacterCreator.onSetEquipMode
     }
   };
 
@@ -114,6 +130,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
         return !!this.wizard.background;
       case "class":
         return !!this.wizard.class;
+      case "equipment":
+        return this._equipmentPlan
+          ? equipmentComplete(this._equipmentPlan, this.wizard.equipment)
+          : true;
       case "abilities":
         return this.abilitiesValid();
       default:
@@ -167,6 +187,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       isGM: game.user.isGM,
       step,
       isIntro: step === "intro",
+      isEquipment: step === "equipment",
       isAbilities: step === "abilities",
       isSummary: step === "summary",
       isPickStep: ["species", "background", "class"].includes(step),
@@ -184,7 +205,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     };
 
     if (step === "intro") {
-      context.packs = getPackChoices();
+      context.enabledCount = getEnabledPackIds().length;
     }
 
     if (context.isPickStep) {
@@ -192,10 +213,45 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       context.kindLabel = STEPS[this.wizard.stepIndex].label;
       const entries = await this.getCachedEntries(step);
       const selectedUuid = this.wizard[step]?.uuid ?? null;
-      context.list = entries.map((e) => ({ ...e, selected: e.uuid === selectedUuid }));
+      const filter = this.wizard.rulesFilter;
+      const visible = filter ? entries.filter((e) => e.rules === filter) : entries;
+      context.list = visible.map((e) => ({ ...e, selected: e.uuid === selectedUuid }));
+      context.rulesFilter = filter;
+      context.rulesButtons = [
+        { value: "", label: "All", active: filter === "" },
+        { value: "2024", label: "2024", active: filter === "2024" },
+        { value: "2014", label: "2014", active: filter === "2014" }
+      ];
+      context.filteredOut = entries.length - visible.length;
       context.selected = this.wizard[step];
       context.detail = this._detail[step];
-      context.emptyList = entries.length === 0;
+      context.emptyList = visible.length === 0;
+    }
+
+    if (step === "equipment") {
+      const plan = await this.getEquipmentPlan();
+      const state = this.wizard.equipment;
+      context.equipment = plan.map((source) => ({
+        ...source,
+        isGold: state.mode?.[source.kind] === "gold",
+        groups: source.groups.map((group) => ({
+          ...group,
+          options: group.options.map((option) => ({
+            ...option,
+            selected: group.isChoice
+              ? (state.choices?.[group.id] ?? group.options[0]?.id) === option.id
+              : true,
+            parts: option.parts.map((part) => ({
+              ...part,
+              candidates: (part.candidates ?? []).map((c) => ({
+                ...c,
+                selected: state.picks?.[part.id] === c.uuid
+              }))
+            }))
+          }))
+        }))
+      }));
+      context.noEquipment = plan.length === 0;
     }
 
     if (step === "abilities") {
@@ -203,6 +259,14 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     }
 
     if (step === "summary") {
+      const plan = await this.getEquipmentPlan();
+      if (!plan.length) context.equipmentSummary = "none listed";
+      else {
+        const golds = plan.filter((p) => this.wizard.equipment.mode?.[p.kind] === "gold");
+        context.equipmentSummary = golds.length === plan.length
+          ? "starting gold only"
+          : "chosen on the previous step";
+      }
       const abilities = this.getAbilities();
       context.summaryAbilities = this.abilityKeys.map((k) => {
         const mod = Math.floor((abilities[k] - 10) / 2);
@@ -277,13 +341,15 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   stepHint(step) {
     switch (step) {
       case "intro":
-        return "Enter a name. Below you can check which compendiums the creator reads from.";
+        return "Enter a name to continue.";
       case "species":
         return "Your species determines speed, size and innate traits.";
       case "background":
         return "Your background grants proficiencies, an origin feat and ability score increases (+2/+1).";
       case "class":
         return "Your class determines what your character can do, in combat and out of it.";
+      case "equipment":
+        return "What your character carries on day one. You can take gold instead of gear.";
       case "abilities":
         return "These are BASE scores. Background bonuses are added automatically in the next step.";
       case "summary":
@@ -300,6 +366,15 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 
   invalidateCache() {
     this._entryCache = {};
+    this._equipmentPlan = null;
+    clearCandidateCache();
+  }
+
+  async getEquipmentPlan() {
+    if (!this._equipmentPlan) {
+      this._equipmentPlan = await buildEquipmentPlan(this.wizard);
+    }
+    return this._equipmentPlan;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -311,16 +386,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       this.wizard.name = ev.currentTarget.value;
       const nextBtn = el.querySelector("[data-action='next']");
       if (nextBtn) nextBtn.disabled = !this.wizard.name.trim();
-    });
-
-    el.querySelectorAll("[data-pack]").forEach((cb) => {
-      cb.addEventListener("change", async () => {
-        const ids = Array.from(el.querySelectorAll("[data-pack]"))
-          .filter((c) => c.checked)
-          .map((c) => c.dataset.pack);
-        await game.settings.set(MODULE_ID, "enabledPacks", ids);
-        this.invalidateCache();
-      });
     });
 
     const search = el.querySelector("[data-search]");
@@ -347,6 +412,14 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
         const key = ev.currentTarget.dataset.assign;
         const raw = ev.currentTarget.value;
         this.wizard.assign[key] = raw === "" ? null : Number(raw);
+        this.render();
+      });
+    });
+
+    el.querySelectorAll("select[data-equip-pick]").forEach((sel) => {
+      sel.addEventListener("change", (ev) => {
+        const partId = ev.currentTarget.dataset.equipPick;
+        this.wizard.equipment.picks[partId] = ev.currentTarget.value || null;
         this.render();
       });
     });
@@ -392,6 +465,36 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     const entries = await this.getCachedEntries(kind);
     this.wizard[kind] = entries.find((e) => e.uuid === uuid) ?? null;
     this._detail[kind] = await getDescriptionHTML(uuid);
+    if (kind === "class" || kind === "background") {
+      this._equipmentPlan = null;
+      this.wizard.equipment = { mode: {}, choices: {}, picks: {} };
+    }
+    this.render();
+  }
+
+  static onConfigureSources() {
+    new SourceConfig({
+      onSaved: () => {
+        this.invalidateCache();
+        this.render();
+      }
+    }).render(true);
+  }
+
+  static onSetRules(event, target) {
+    this.wizard.rulesFilter = target.dataset.value ?? "";
+    this.render();
+  }
+
+  static onChooseOption(event, target) {
+    const { group, option } = target.dataset;
+    this.wizard.equipment.choices[group] = option;
+    this.render();
+  }
+
+  static onSetEquipMode(event, target) {
+    const { source, mode } = target.dataset;
+    this.wizard.equipment.mode[source] = mode;
     this.render();
   }
 
@@ -489,8 +592,32 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       await addItemWithAdvancement(actor, data);
     }
 
+    await this.grantEquipment(actor);
+
     actor.sheet.render(true);
     ui.notifications.info(`Character "${actor.name}" created.`);
+  }
+
+  /** Creates the chosen starting equipment and adds any starting gold. */
+  async grantEquipment(actor) {
+    try {
+      const plan = await this.getEquipmentPlan();
+      if (!plan.length) return;
+
+      const { items, gold } = await resolveEquipment(plan, this.wizard.equipment);
+
+      if (items.length) await actor.createEmbeddedDocuments("Item", items);
+
+      if (gold > 0) {
+        const current = actor.system?.currency?.gp ?? 0;
+        await actor.update({ "system.currency.gp": current + gold });
+      }
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not grant starting equipment`, err);
+      ui.notifications.warn(
+        "Character created, but the starting equipment could not be added automatically."
+      );
+    }
   }
 }
 
