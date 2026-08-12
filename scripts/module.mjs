@@ -7,6 +7,7 @@ import { CharacterCreator } from "./creator.mjs";
 import { SourceConfig } from "./source-config.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { CompleteCharacter } from "./complete.mjs";
+import { registerSheetButton } from "./sheet-button.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "enabledPacks", {
@@ -63,6 +64,29 @@ Hooks.once("init", () => {
     default: false
   });
 
+  game.settings.register(MODULE_ID, "sheetButton", {
+    name: "Show 'Complete Character' on the character sheet",
+    hint: "Adds the button to the sheet header while the sheet is in edit mode.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "sidebarButtons", {
+    name: "Buttons in the Actors sidebar",
+    hint: "Fallback if the sheet button does not appear on your sheet version.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "none",
+    choices: {
+      none: "None",
+      complete: "Complete Character only",
+      both: "Character Creator and Complete Character"
+    }
+  });
+
   game.settings.register(MODULE_ID, "narrowBrowserTooltips", {
     name: "Narrow tooltips in the Compendium Browser",
     hint: "Shows the item preview only when hovering the name or icon, so the popup stops covering the selection checkbox. Adjusts another package's interface, so switch it off if anything looks wrong.",
@@ -83,6 +107,7 @@ Hooks.once("init", () => {
 });
 
 registerBrowserTweaks();
+registerSheetButton();
 
 Hooks.once("ready", () => {
   const api = {
@@ -103,10 +128,13 @@ Hooks.once("ready", () => {
   }
 });
 
-/** Button in the Actors sidebar tab. */
+/** Optional fallback buttons in the Actors sidebar. */
 Hooks.on("renderActorDirectory", (app, html) => {
   if (game.system.id !== "dnd5e") return;
   if (!game.user.isGM && !game.settings.get(MODULE_ID, "allowPlayers")) return;
+
+  const mode = game.settings.get(MODULE_ID, "sidebarButtons");
+  if (mode === "none") return;
 
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root || root.querySelector(".pk5e-launch")) return;
@@ -116,16 +144,18 @@ Hooks.on("renderActorDirectory", (app, html) => {
     root.querySelector(".directory-header") ??
     root;
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "pk5e-launch";
-  button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Character Creator';
-  button.addEventListener("click", () => new CharacterCreator().render(true));
-  target.appendChild(button);
+  if (mode === "both") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "pk5e-launch";
+    button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Character Creator';
+    button.addEventListener("click", () => new CharacterCreator().render(true));
+    target.appendChild(button);
+  }
 
   const complete = document.createElement("button");
   complete.type = "button";
-  complete.className = "pk5e-launch pk5e-launch-secondary";
+  complete.className = "pk5e-launch";
   complete.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Complete Character';
   complete.addEventListener("click", () => new CompleteCharacter().render(true));
   target.appendChild(complete);

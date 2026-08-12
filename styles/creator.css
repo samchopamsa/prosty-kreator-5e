@@ -470,3 +470,19 @@
 /* v0.4 - complete character mode */
 .pk5e-launch-secondary { opacity: 0.85; font-size: 12px; }
 .pk5e-creator table.pk5e-abilities td { white-space: nowrap; }
+
+/* Button injected into the dnd5e character sheet (edit mode only). */
+.pk5e-sheet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  margin: 2px 4px 2px 0;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  border-radius: 4px;
+  cursor: pointer;
+}
