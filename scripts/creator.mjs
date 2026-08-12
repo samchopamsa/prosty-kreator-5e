@@ -1,28 +1,31 @@
 /**
  * creator.mjs
  * ---------------------------------------------------------------------------
- * Okno kreatora postaci. Napisane na ApplicationV2 (Foundry v13+).
+ * The character creation wizard. Built on ApplicationV2 (Foundry v13+).
  *
- * Kroki: Zrodla -> Gatunek -> Pochodzenie -> Klasa -> Atrybuty -> Podsumowanie
+ * Steps: Sources -> Species -> Background -> Class -> Abilities -> Summary
  *
- * Po kliknieciu "Stworz postac" modul tworzy Aktora, ustawia bazowe atrybuty,
- * a nastepnie dodaje gatunek, pochodzenie i klase przez systemowy mechanizm
- * Advancement - to on wyswietla okna z wyborem HP, biegłosci, ekwipunku
- * startowego i zaklec. Nie duplikujemy tej logiki.
+ * On "Create Character" the module creates the Actor, sets base ability scores,
+ * then adds species, background and class through the system's own Advancement
+ * manager - that is what prompts for hit points, proficiencies, starting
+ * equipment and spells. We deliberately do not reimplement any of that.
+ *
+ * NOTE: wizard data lives in `this.wizard`, NOT `this.state`.
+ * ApplicationV2 already defines a read-only `state` property (render state).
  */
 
 import { MODULE_ID, getEntries, getPackChoices, getDescriptionHTML } from "./sources.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-/** Kolejnosc i etykiety krokow. */
+/** Step order and labels. */
 const STEPS = [
   { key: "intro", label: "Start" },
-  { key: "species", label: "Gatunek" },
-  { key: "background", label: "Pochodzenie" },
-  { key: "class", label: "Klasa" },
-  { key: "abilities", label: "Atrybuty" },
-  { key: "summary", label: "Podsumowanie" }
+  { key: "species", label: "Species" },
+  { key: "background", label: "Background" },
+  { key: "class", label: "Class" },
+  { key: "abilities", label: "Abilities" },
+  { key: "summary", label: "Summary" }
 ];
 
 const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
@@ -33,24 +36,24 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   constructor(options = {}) {
     super(options);
 
-    this.state = {
+    this.wizard = {
       stepIndex: 0,
       name: "",
       species: null,
       background: null,
       class: null,
       method: game.settings.get(MODULE_ID, "abilityMethod") ?? "standard",
-      /** pula wartosci do przypisania (standard array / rzut) */
+      /** values waiting to be assigned (standard array / rolled) */
       pool: [...STANDARD_ARRAY],
-      /** ktora wartosc z puli trafia do ktorego atrybutu: {str: 0, dex: 3, ...} */
+      /** which pool index goes to which ability: {str: 0, dex: 3, ...} */
       assign: {},
-      /** wartosci dla trybu point-buy i recznego */
+      /** direct values for point buy and manual entry */
       direct: {}
     };
 
     for (const key of this.abilityKeys) {
-      this.state.assign[key] = null;
-      this.state.direct[key] = 8;
+      this.wizard.assign[key] = null;
+      this.wizard.direct[key] = 8;
     }
 
     this._entryCache = {};
@@ -65,7 +68,7 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     tag: "div",
     classes: ["pk5e-creator"],
     window: {
-      title: "Kreator Postaci",
+      title: "Character Creator",
       icon: "fa-solid fa-hat-wizard",
       resizable: true
     },
@@ -90,28 +93,27 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 
   /* ---------------------------------------------------------------------- */
 
-  /** Klucze atrybutow w kolejnosci systemowej (str, dex, con, int, wis, cha). */
+  /** Ability keys in system order (str, dex, con, int, wis, cha). */
   get abilityKeys() {
-    return Object.keys(CONFIG.DND5E?.abilities ?? {
-      str: {}, dex: {}, con: {}, int: {}, wis: {}, cha: {}
-    });
+    return Object.keys(
+      CONFIG.DND5E?.abilities ?? { str: {}, dex: {}, con: {}, int: {}, wis: {}, cha: {} }
+    );
   }
 
-  get step() {
-    return STEPS[this.state.stepIndex].key;
+  get currentStep() {
+    return STEPS[this.wizard.stepIndex].key;
   }
 
-  /** Czy krok jest wypelniony na tyle, by isc dalej. */
   isStepComplete(key) {
     switch (key) {
       case "intro":
-        return !!this.state.name?.trim();
+        return !!this.wizard.name?.trim();
       case "species":
-        return !!this.state.species;
+        return !!this.wizard.species;
       case "background":
-        return !!this.state.background;
+        return !!this.wizard.background;
       case "class":
-        return !!this.state.class;
+        return !!this.wizard.class;
       case "abilities":
         return this.abilitiesValid();
       default:
@@ -120,36 +122,36 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   abilitiesValid() {
-    const m = this.state.method;
+    const m = this.wizard.method;
     if (m === "standard" || m === "roll") {
-      return this.abilityKeys.every((k) => this.state.assign[k] !== null);
+      return this.abilityKeys.every((k) => this.wizard.assign[k] !== null);
     }
     if (m === "pointbuy") {
       return this.pointsSpent() <= POINT_BUY_TOTAL;
     }
     return this.abilityKeys.every((k) => {
-      const v = Number(this.state.direct[k]);
+      const v = Number(this.wizard.direct[k]);
       return Number.isFinite(v) && v >= 1 && v <= 20;
     });
   }
 
   pointsSpent() {
     return this.abilityKeys.reduce(
-      (sum, k) => sum + (POINT_BUY_COST[this.state.direct[k]] ?? 0),
+      (sum, k) => sum + (POINT_BUY_COST[this.wizard.direct[k]] ?? 0),
       0
     );
   }
 
-  /** Ostateczne wartosci atrybutow (bez bonusow z pochodzenia - te doda Advancement). */
+  /** Final base scores. Background bonuses are applied later by Advancement. */
   getAbilities() {
     const out = {};
-    const m = this.state.method;
+    const m = this.wizard.method;
     for (const k of this.abilityKeys) {
       if (m === "standard" || m === "roll") {
-        const idx = this.state.assign[k];
-        out[k] = idx === null ? 10 : this.state.pool[idx];
+        const idx = this.wizard.assign[k];
+        out[k] = idx === null ? 10 : this.wizard.pool[idx];
       } else {
-        out[k] = Number(this.state.direct[k]) || 10;
+        out[k] = Number(this.wizard.direct[k]) || 10;
       }
     }
     return out;
@@ -158,17 +160,13 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   /* ---------------------------------------------------------------------- */
 
   async _prepareContext(options) {
-    const step = this.step;
-    const isGM = game.user.isGM;
+    const step = this.currentStep;
 
     const context = {
-      state: this.state,
-      isGM,
+      wizard: this.wizard,
+      isGM: game.user.isGM,
       step,
       isIntro: step === "intro",
-      isSpecies: step === "species",
-      isBackground: step === "background",
-      isClass: step === "class",
       isAbilities: step === "abilities",
       isSummary: step === "summary",
       isPickStep: ["species", "background", "class"].includes(step),
@@ -177,10 +175,10 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
         index: i,
         number: i + 1,
         label: s.label,
-        active: i === this.state.stepIndex,
-        done: i < this.state.stepIndex && this.isStepComplete(s.key)
+        active: i === this.wizard.stepIndex,
+        done: i < this.wizard.stepIndex && this.isStepComplete(s.key)
       })),
-      canBack: this.state.stepIndex > 0,
+      canBack: this.wizard.stepIndex > 0,
       canNext: this.isStepComplete(step),
       hint: this.stepHint(step)
     };
@@ -191,11 +189,11 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
 
     if (context.isPickStep) {
       context.kind = step;
-      context.kindLabel = STEPS[this.state.stepIndex].label;
+      context.kindLabel = STEPS[this.wizard.stepIndex].label;
       const entries = await this.getCachedEntries(step);
-      const selectedUuid = this.state[step]?.uuid ?? null;
+      const selectedUuid = this.wizard[step]?.uuid ?? null;
       context.list = entries.map((e) => ({ ...e, selected: e.uuid === selectedUuid }));
-      context.selected = this.state[step];
+      context.selected = this.wizard[step];
       context.detail = this._detail[step];
       context.emptyList = entries.length === 0;
     }
@@ -220,9 +218,9 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   prepareAbilitiesContext() {
-    const m = this.state.method;
+    const m = this.wizard.method;
     const usedIndexes = new Set(
-      Object.values(this.state.assign).filter((v) => v !== null)
+      Object.values(this.wizard.assign).filter((v) => v !== null)
     );
 
     const rows = this.abilityKeys.map((key) => {
@@ -234,30 +232,32 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       };
 
       if (m === "standard" || m === "roll") {
-        row.assigned = this.state.assign[key];
-        row.value = row.assigned === null ? null : this.state.pool[row.assigned];
-        row.options = this.state.pool.map((v, i) => ({
+        row.assigned = this.wizard.assign[key];
+        row.value = row.assigned === null ? null : this.wizard.pool[row.assigned];
+        row.options = this.wizard.pool.map((v, i) => ({
           index: i,
           value: v,
-          selected: this.state.assign[key] === i,
-          disabled: usedIndexes.has(i) && this.state.assign[key] !== i
+          selected: this.wizard.assign[key] === i,
+          disabled: usedIndexes.has(i) && this.wizard.assign[key] !== i
         }));
       } else {
-        row.value = Number(this.state.direct[key]);
-        row.cost = POINT_BUY_COST[row.value] ?? null;
+        row.value = Number(this.wizard.direct[key]);
         row.minusDisabled = m === "pointbuy" ? row.value <= 8 : row.value <= 1;
         row.plusDisabled =
           m === "pointbuy"
             ? row.value >= 15 ||
-              this.pointsSpent() - (POINT_BUY_COST[row.value] ?? 0) +
-                (POINT_BUY_COST[row.value + 1] ?? 99) > POINT_BUY_TOTAL
+              this.pointsSpent() -
+                (POINT_BUY_COST[row.value] ?? 0) +
+                (POINT_BUY_COST[row.value + 1] ?? 99) >
+                POINT_BUY_TOTAL
             : row.value >= 20;
       }
 
-      row.mod = row.value === null || row.value === undefined
-        ? null
-        : Math.floor((row.value - 10) / 2);
-      row.modLabel = row.mod === null ? "—" : (row.mod >= 0 ? `+${row.mod}` : `${row.mod}`);
+      row.mod =
+        row.value === null || row.value === undefined
+          ? null
+          : Math.floor((row.value - 10) / 2);
+      row.modLabel = row.mod === null ? "—" : row.mod >= 0 ? `+${row.mod}` : `${row.mod}`;
       return row;
     });
 
@@ -270,25 +270,24 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       rows,
       pointsSpent: this.pointsSpent(),
       pointsTotal: POINT_BUY_TOTAL,
-      pointsLeft: POINT_BUY_TOTAL - this.pointsSpent(),
-      rolled: m === "roll" && this.state.pool.length === 6
+      pointsLeft: POINT_BUY_TOTAL - this.pointsSpent()
     };
   }
 
   stepHint(step) {
     switch (step) {
       case "intro":
-        return "Wpisz imie postaci. Ponizej mozesz sprawdzic, z ktorych kompendiow kreator bierze dane.";
+        return "Enter a name. Below you can check which compendiums the creator reads from.";
       case "species":
-        return "Gatunek okresla szybkosc, rozmiar i cechy wrodzone.";
+        return "Your species determines speed, size and innate traits.";
       case "background":
-        return "Pochodzenie daje biegłosci, atut startowy i podwyzszenia atrybutow (+2/+1).";
+        return "Your background grants proficiencies, an origin feat and ability score increases (+2/+1).";
       case "class":
-        return "Klasa okresla, co Twoja postac potrafi w walce i poza nia.";
+        return "Your class determines what your character can do, in combat and out of it.";
       case "abilities":
-        return "To sa wartosci BAZOWE. Bonusy z pochodzenia system doda automatycznie w nastepnym kroku.";
+        return "These are BASE scores. Background bonuses are added automatically in the next step.";
       case "summary":
-        return "Po kliknieciu przycisku system otworzy okienka z wyborem HP, biegłosci, ekwipunku i zaklec.";
+        return "After you click the button, the system will open its own dialogs for hit points, proficiencies, equipment and spells.";
       default:
         return "";
     }
@@ -299,7 +298,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     return this._entryCache[kind];
   }
 
-  /** Czysci cache list po zmianie wlaczonych zrodel. */
   invalidateCache() {
     this._entryCache = {};
   }
@@ -309,14 +307,12 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
   _onRender(context, options) {
     const el = this.element;
 
-    // Pole z imieniem postaci
     el.querySelector("[data-field='name']")?.addEventListener("input", (ev) => {
-      this.state.name = ev.currentTarget.value;
+      this.wizard.name = ev.currentTarget.value;
       const nextBtn = el.querySelector("[data-action='next']");
-      if (nextBtn) nextBtn.disabled = !this.state.name.trim();
+      if (nextBtn) nextBtn.disabled = !this.wizard.name.trim();
     });
 
-    // Checkboxy zrodel (tylko GM)
     el.querySelectorAll("[data-pack]").forEach((cb) => {
       cb.addEventListener("change", async () => {
         const ids = Array.from(el.querySelectorAll("[data-pack]"))
@@ -327,7 +323,6 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       });
     });
 
-    // Wyszukiwarka na listach
     const search = el.querySelector("[data-search]");
     if (search) {
       search.addEventListener("input", (ev) => {
@@ -338,60 +333,55 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       });
     }
 
-    // Wybor metody atrybutow
     el.querySelectorAll("[data-method]").forEach((input) => {
       input.addEventListener("change", (ev) => {
-        this.state.method = ev.currentTarget.dataset.method;
-        if (this.state.method === "standard") this.state.pool = [...STANDARD_ARRAY];
-        for (const k of this.abilityKeys) this.state.assign[k] = null;
+        this.wizard.method = ev.currentTarget.dataset.method;
+        if (this.wizard.method === "standard") this.wizard.pool = [...STANDARD_ARRAY];
+        for (const k of this.abilityKeys) this.wizard.assign[k] = null;
         this.render();
       });
     });
 
-    // Przypisywanie wartosci z puli
     el.querySelectorAll("select[data-assign]").forEach((sel) => {
       sel.addEventListener("change", (ev) => {
         const key = ev.currentTarget.dataset.assign;
         const raw = ev.currentTarget.value;
-        this.state.assign[key] = raw === "" ? null : Number(raw);
+        this.wizard.assign[key] = raw === "" ? null : Number(raw);
         this.render();
       });
     });
 
-    // Reczne wpisywanie wartosci
     el.querySelectorAll("input[data-manual]").forEach((input) => {
       input.addEventListener("change", (ev) => {
         const key = ev.currentTarget.dataset.manual;
-        this.state.direct[key] = Math.clamp
-          ? Math.clamp(Number(ev.currentTarget.value) || 10, 1, 20)
-          : Math.min(20, Math.max(1, Number(ev.currentTarget.value) || 10));
+        const raw = Number(ev.currentTarget.value) || 10;
+        this.wizard.direct[key] = Math.min(20, Math.max(1, raw));
         this.render();
       });
     });
   }
 
-  /* ------------------------------- AKCJE -------------------------------- */
+  /* -------------------------------- ACTIONS ----------------------------- */
 
   static onGoto(event, target) {
     const idx = Number(target.dataset.index);
-    // Wolno cofac sie zawsze; do przodu tylko przez "Dalej".
-    if (idx <= this.state.stepIndex) {
-      this.state.stepIndex = idx;
+    if (idx <= this.wizard.stepIndex) {
+      this.wizard.stepIndex = idx;
       this.render();
     }
   }
 
   static onNext() {
-    if (!this.isStepComplete(this.step)) return;
-    if (this.state.stepIndex < STEPS.length - 1) {
-      this.state.stepIndex += 1;
+    if (!this.isStepComplete(this.currentStep)) return;
+    if (this.wizard.stepIndex < STEPS.length - 1) {
+      this.wizard.stepIndex += 1;
       this.render();
     }
   }
 
   static onBack() {
-    if (this.state.stepIndex > 0) {
-      this.state.stepIndex -= 1;
+    if (this.wizard.stepIndex > 0) {
+      this.wizard.stepIndex -= 1;
       this.render();
     }
   }
@@ -400,29 +390,29 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     const kind = target.dataset.kind;
     const uuid = target.dataset.uuid;
     const entries = await this.getCachedEntries(kind);
-    this.state[kind] = entries.find((e) => e.uuid === uuid) ?? null;
+    this.wizard[kind] = entries.find((e) => e.uuid === uuid) ?? null;
     this._detail[kind] = await getDescriptionHTML(uuid);
     this.render();
   }
 
   static onClearPick(event, target) {
     const kind = target.dataset.kind;
-    this.state[kind] = null;
+    this.wizard[kind] = null;
     this._detail[kind] = null;
     this.render();
   }
 
   static onAbilityPlus(event, target) {
     const key = target.dataset.ability;
-    const max = this.state.method === "pointbuy" ? 15 : 20;
-    if (this.state.direct[key] < max) this.state.direct[key] += 1;
+    const max = this.wizard.method === "pointbuy" ? 15 : 20;
+    if (this.wizard.direct[key] < max) this.wizard.direct[key] += 1;
     this.render();
   }
 
   static onAbilityMinus(event, target) {
     const key = target.dataset.ability;
-    const min = this.state.method === "pointbuy" ? 8 : 1;
-    if (this.state.direct[key] > min) this.state.direct[key] -= 1;
+    const min = this.wizard.method === "pointbuy" ? 8 : 1;
+    if (this.wizard.direct[key] > min) this.wizard.direct[key] -= 1;
     this.render();
   }
 
@@ -433,18 +423,18 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       values.push(roll.total);
     }
     values.sort((a, b) => b - a);
-    this.state.method = "roll";
-    this.state.pool = values;
-    for (const k of this.abilityKeys) this.state.assign[k] = null;
-    ui.notifications.info(`Wyrzucono: ${values.join(", ")}`);
+    this.wizard.method = "roll";
+    this.wizard.pool = values;
+    for (const k of this.abilityKeys) this.wizard.assign[k] = null;
+    ui.notifications.info(`Rolled: ${values.join(", ")}`);
     this.render();
   }
 
   static onResetAbilities() {
-    this.state.pool = [...STANDARD_ARRAY];
+    this.wizard.pool = [...STANDARD_ARRAY];
     for (const k of this.abilityKeys) {
-      this.state.assign[k] = null;
-      this.state.direct[k] = 8;
+      this.wizard.assign[k] = null;
+      this.wizard.direct[k] = 8;
     }
     this.render();
   }
@@ -455,22 +445,21 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     try {
       await this.createCharacter();
     } catch (err) {
-      console.error(`${MODULE_ID} | Blad podczas tworzenia postaci`, err);
-      ui.notifications.error(`Kreator: ${err.message}`);
+      console.error(`${MODULE_ID} | Failed to create character`, err);
+      ui.notifications.error(`Character Creator: ${err.message}`);
     } finally {
       this._busy = false;
     }
   }
 
-  /* ---------------------------- TWORZENIE ------------------------------- */
+  /* ------------------------------- CREATION ----------------------------- */
 
   async createCharacter() {
     const abilities = {};
-    const values = this.getAbilities();
-    for (const [k, v] of Object.entries(values)) abilities[k] = { value: v };
+    for (const [k, v] of Object.entries(this.getAbilities())) abilities[k] = { value: v };
 
     const actor = await Actor.implementation.create({
-      name: this.state.name?.trim() || "Nowa Postac",
+      name: this.wizard.name?.trim() || "New Character",
       type: "character",
       system: { abilities },
       prototypeToken: {
@@ -480,18 +469,18 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       }
     });
 
-    if (!actor) throw new Error("Nie udalo sie utworzyc aktora (sprawdz uprawnienia).");
+    if (!actor) throw new Error("Could not create the actor - check your permissions.");
 
     this.close();
 
-    // Kolejnosc ma znaczenie: pochodzenie podnosi atrybuty (2024), wiec klasa
-    // (i rzut na HP zalezny od KON) idzie na koncu.
+    // Order matters: the background raises ability scores (2024 rules), so the
+    // class - and its Constitution-dependent hit point roll - comes last.
     for (const kind of ["species", "background", "class"]) {
-      const entry = this.state[kind];
+      const entry = this.wizard[kind];
       if (!entry) continue;
       const doc = await fromUuid(entry.uuid);
       if (!doc) {
-        ui.notifications.warn(`Nie znaleziono wpisu: ${entry.name}`);
+        ui.notifications.warn(`Could not load: ${entry.name}`);
         continue;
       }
       const data = doc.toObject();
@@ -501,13 +490,13 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
     }
 
     actor.sheet.render(true);
-    ui.notifications.info(`Postac "${actor.name}" zostala utworzona.`);
+    ui.notifications.info(`Character "${actor.name}" created.`);
   }
 }
 
 /**
- * Dodaje przedmiot do aktora przez systemowy mechanizm Advancement
- * i czeka, az uzytkownik zamknie okno wyborow.
+ * Adds an item to the actor through the system's Advancement manager and waits
+ * until the user closes the resulting dialog.
  */
 async function addItemWithAdvancement(actor, itemData) {
   const AdvancementManager =
@@ -523,7 +512,7 @@ async function addItemWithAdvancement(actor, itemData) {
   try {
     manager = AdvancementManager.forNewItem(actor, itemData);
   } catch (err) {
-    console.warn(`${MODULE_ID} | Advancement niedostepny dla ${itemData.name}`, err);
+    console.warn(`${MODULE_ID} | Advancement unavailable for ${itemData.name}`, err);
   }
 
   if (!manager || !manager.steps?.length) {

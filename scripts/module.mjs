@@ -1,5 +1,5 @@
 /**
- * module.mjs - punkt wejscia modulu.
+ * module.mjs - module entry point.
  */
 
 import { MODULE_ID } from "./sources.mjs";
@@ -14,23 +14,23 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "abilityMethod", {
-    name: "Domyslna metoda atrybutow",
-    hint: "Od tej metody zaczyna sie krok z atrybutami. Gracz moze ja zmienic.",
+    name: "Default ability score method",
+    hint: "Which method the Abilities step starts on. Players can still switch.",
     scope: "world",
     config: true,
     type: String,
     default: "standard",
     choices: {
-      standard: "Zestaw standardowy (15,14,13,12,10,8)",
-      pointbuy: "Zakup punktowy (27 pkt)",
-      roll: "Rzut koscmi (4k6, odrzuc najnizsza)",
-      manual: "Recznie"
+      standard: "Standard array (15,14,13,12,10,8)",
+      pointbuy: "Point buy (27 points)",
+      roll: "Roll dice (4d6 drop lowest)",
+      manual: "Manual entry"
     }
   });
 
   game.settings.register(MODULE_ID, "allowPlayers", {
-    name: "Gracze moga otwierac kreator",
-    hint: "Gracz musi dodatkowo miec uprawnienie 'Tworzenie nowych Aktorow' w ustawieniach uzytkownikow.",
+    name: "Players may open the creator",
+    hint: "Players also need the 'Create New Actors' permission in User Configuration.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -46,15 +46,14 @@ Hooks.once("ready", () => {
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = api;
   globalThis.prostyKreator = api;
+  globalThis.characterCreator = api;
 
   if (game.system.id !== "dnd5e") {
-    ui.notifications.warn(
-      "Prosty Kreator Postaci dziala tylko w systemie dnd5e i zostal wylaczony."
-    );
+    ui.notifications.warn("Character Creator only works with the dnd5e system.");
   }
 });
 
-/** Przycisk w zakladce Aktorzy. */
+/** Button in the Actors sidebar tab. */
 Hooks.on("renderActorDirectory", (app, html) => {
   if (game.system.id !== "dnd5e") return;
   if (!game.user.isGM && !game.settings.get(MODULE_ID, "allowPlayers")) return;
@@ -65,7 +64,7 @@ Hooks.on("renderActorDirectory", (app, html) => {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "pk5e-launch";
-  button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Kreator Postaci';
+  button.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> Character Creator';
   button.addEventListener("click", () => new CharacterCreator().render(true));
 
   const target =

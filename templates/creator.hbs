@@ -1,6 +1,6 @@
 {{!--
-  Wszystkie teksty widoczne dla graczy sa w tym pliku.
-  Mozesz je swobodnie przepisac pod swoja kampanie - kod tego nie ruszy.
+  Every piece of text the player sees lives in this file.
+  Feel free to rewrite it for your table - the code will not mind.
 --}}
 
 <nav class="pk5e-steps">
@@ -17,23 +17,24 @@
 
   {{#if isIntro}}
   <div class="pk5e-pane">
-    <h2>Witaj w kreatorze postaci</h2>
+    <h2>Let's build your character</h2>
     <p class="pk5e-lead">
-      Przeprowadze Cie przez sześć kroków. Nie musisz nic wiedziec o zasadach -
-      w kazdym kroku wybierasz jedna rzecz z listy i klikasz <strong>Dalej</strong>.
-      Na koncu system D&amp;D zapyta jeszcze o kilka szczegolow (punkty zycia,
-      ekwipunek, zaklecia) - to normalna czesc procesu.
+      Six steps, one choice each. You do not need to know the rules - pick something
+      from the list and press <strong>Next</strong>. At the end, D&amp;D itself will ask
+      a few more questions (hit points, equipment, spells). That is a normal part
+      of the process.
     </p>
 
-    <label class="pk5e-label" for="pk5e-name">Imie postaci</label>
-    <input id="pk5e-name" type="text" data-field="name" value="{{state.name}}"
-           placeholder="np. Elara Cieniostopa" autocomplete="off">
+    <label class="pk5e-label" for="pk5e-name">Character name</label>
+    <input id="pk5e-name" type="text" data-field="name" value="{{wizard.name}}"
+           placeholder="e.g. Elara Shadowstep" autocomplete="off">
 
     <details class="pk5e-details">
-      <summary>Zrodla danych ({{#if isGM}}mozesz zmienic{{else}}tylko do wgladu{{/if}})</summary>
+      <summary>Data sources ({{#if isGM}}editable{{else}}read only{{/if}})</summary>
       <p class="pk5e-note">
-        Kreator czyta gatunki, pochodzenia i klasy wylacznie z zaznaczonych kompendiow.
-        {{#unless isGM}}<br>Zmiany moze wprowadzic tylko Mistrz Gry.{{/unless}}
+        The creator reads species, backgrounds and classes only from the compendiums
+        ticked below.
+        {{#unless isGM}}<br>Only the Game Master can change this.{{/unless}}
       </p>
       <div class="pk5e-packs">
         {{#each packs}}
@@ -52,11 +53,11 @@
   {{#if isPickStep}}
   <div class="pk5e-pane pk5e-split">
     <div class="pk5e-list-col">
-      <input type="search" data-search placeholder="Szukaj..." autocomplete="off">
+      <input type="search" data-search placeholder="Search..." autocomplete="off">
       {{#if emptyList}}
       <p class="pk5e-empty">
-        Brak wpisow. Wroc do kroku <strong>Start</strong> i zaznacz przynajmniej jedno
-        kompendium zawierajace ten typ przedmiotow.
+        Nothing here. Go back to <strong>Start</strong> and tick at least one
+        compendium that contains this type of item.
       </p>
       {{/if}}
       <div class="pk5e-options">
@@ -77,14 +78,14 @@
     <div class="pk5e-detail-col">
       {{#if selected}}
         <h3>{{selected.name}}</h3>
-        <p class="pk5e-note">Zrodlo: {{selected.packLabel}}</p>
+        <p class="pk5e-note">Source: {{selected.packLabel}}</p>
         <div class="pk5e-detail-text">{{{detail}}}</div>
         <button type="button" class="pk5e-link" data-action="clearPick" data-kind="{{kind}}">
-          Cofnij wybor
+          Clear selection
         </button>
       {{else}}
         <p class="pk5e-placeholder">
-          Wybierz pozycje z listy po lewej, aby zobaczyc jej opis.
+          Pick something on the left to read about it.
         </p>
       {{/if}}
     </div>
@@ -93,42 +94,42 @@
 
   {{#if isAbilities}}
   <div class="pk5e-pane">
-    <h2>Atrybuty</h2>
+    <h2>Ability scores</h2>
     <p class="pk5e-lead">
-      Sześć liczb opisujacych Twoja postac. Im wyzsza wartosc, tym lepiej.
-      Wpisz tu wartosci <strong>bazowe</strong> - premie z pochodzenia system doda sam.
+      Six numbers describing your character. Higher is better. Enter your
+      <strong>base</strong> scores here - the system adds your background bonuses by itself.
     </p>
 
     <div class="pk5e-methods">
       <label><input type="radio" name="pk5e-method" data-method="standard"
-                    {{#if abilities.isStandard}}checked{{/if}}> Zestaw standardowy</label>
+                    {{#if abilities.isStandard}}checked{{/if}}> Standard array</label>
       <label><input type="radio" name="pk5e-method" data-method="pointbuy"
-                    {{#if abilities.isPointBuy}}checked{{/if}}> Zakup punktowy</label>
+                    {{#if abilities.isPointBuy}}checked{{/if}}> Point buy</label>
       <label><input type="radio" name="pk5e-method" data-method="roll"
-                    {{#if abilities.isRoll}}checked{{/if}}> Rzut koscmi</label>
+                    {{#if abilities.isRoll}}checked{{/if}}> Roll dice</label>
       <label><input type="radio" name="pk5e-method" data-method="manual"
-                    {{#if abilities.isManual}}checked{{/if}}> Recznie</label>
+                    {{#if abilities.isManual}}checked{{/if}}> Manual</label>
     </div>
 
     {{#if abilities.isStandard}}
-    <p class="pk5e-note">Przydziel wartosci 15, 14, 13, 12, 10 i 8 - kazda dokladnie raz.</p>
+    <p class="pk5e-note">Assign 15, 14, 13, 12, 10 and 8 - each exactly once.</p>
     {{/if}}
     {{#if abilities.isRoll}}
     <p class="pk5e-note">
-      Rzuc 4k6 i odrzuc najnizsza kosc, sześć razy. Nastepnie przydziel wyniki.
-      <button type="button" class="pk5e-link" data-action="rollAbilities">Rzuc koscmi</button>
+      Roll 4d6 and drop the lowest die, six times, then assign the results.
+      <button type="button" class="pk5e-link" data-action="rollAbilities">Roll dice</button>
     </p>
     {{/if}}
     {{#if abilities.isPointBuy}}
     <p class="pk5e-note">
-      Masz {{abilities.pointsTotal}} punktow. Pozostalo:
-      <strong>{{abilities.pointsLeft}}</strong>. Zakres 8-15.
+      You have {{abilities.pointsTotal}} points. Remaining:
+      <strong>{{abilities.pointsLeft}}</strong>. Range 8-15.
     </p>
     {{/if}}
 
     <table class="pk5e-abilities">
       <thead>
-        <tr><th>Atrybut</th><th>Wartosc</th><th>Modyfikator</th></tr>
+        <tr><th>Ability</th><th>Score</th><th>Modifier</th></tr>
       </thead>
       <tbody>
         {{#each abilities.rows}}
@@ -161,18 +162,18 @@
       </tbody>
     </table>
 
-    <button type="button" class="pk5e-link" data-action="resetAbilities">Wyczysc</button>
+    <button type="button" class="pk5e-link" data-action="resetAbilities">Reset</button>
   </div>
   {{/if}}
 
   {{#if isSummary}}
   <div class="pk5e-pane">
-    <h2>Podsumowanie</h2>
+    <h2>Summary</h2>
     <dl class="pk5e-summary">
-      <dt>Imie</dt><dd>{{state.name}}</dd>
-      <dt>Gatunek</dt><dd>{{#if state.species}}{{state.species.name}}{{else}}—{{/if}}</dd>
-      <dt>Pochodzenie</dt><dd>{{#if state.background}}{{state.background.name}}{{else}}—{{/if}}</dd>
-      <dt>Klasa</dt><dd>{{#if state.class}}{{state.class.name}} (poziom 1){{else}}—{{/if}}</dd>
+      <dt>Name</dt><dd>{{wizard.name}}</dd>
+      <dt>Species</dt><dd>{{#if wizard.species}}{{wizard.species.name}}{{else}}—{{/if}}</dd>
+      <dt>Background</dt><dd>{{#if wizard.background}}{{wizard.background.name}}{{else}}—{{/if}}</dd>
+      <dt>Class</dt><dd>{{#if wizard.class}}{{wizard.class.name}} (level 1){{else}}—{{/if}}</dd>
     </dl>
 
     <table class="pk5e-abilities pk5e-abilities-compact">
@@ -184,12 +185,12 @@
     </table>
 
     <div class="pk5e-callout">
-      <strong>Co sie stanie teraz?</strong>
+      <strong>What happens next?</strong>
       <p>
-        Utworze karte postaci, a system D&amp;D otworzy po kolei kilka malych okienek:
-        punkty zycia, biegłosci, ekwipunek startowy i - jesli Twoja klasa rzuca czary -
-        wybor zaklec. W kazdym z nich wybierasz opcje i klikasz <em>Dalej</em>.
-        Nie zamykaj ich krzyzykiem, chyba ze chcesz pominac dany krok.
+        Your character sheet gets created, and the D&amp;D system opens a few small
+        dialogs in turn: hit points, proficiencies, starting equipment and - if your
+        class casts spells - spell selection. Pick an option in each and press
+        <em>Next</em>. Do not close them with the X unless you want to skip that part.
       </p>
     </div>
   </div>
@@ -199,16 +200,16 @@
 
 <footer class="pk5e-footer">
   <button type="button" data-action="back" {{#unless canBack}}disabled{{/unless}}>
-    Wstecz
+    Back
   </button>
   <span class="pk5e-hint">{{hint}}</span>
   {{#if isSummary}}
     <button type="button" class="pk5e-primary" data-action="finish" {{#if busy}}disabled{{/if}}>
-      Stworz postac
+      Create character
     </button>
   {{else}}
     <button type="button" class="pk5e-primary" data-action="next" {{#unless canNext}}disabled{{/unless}}>
-      Dalej
+      Next
     </button>
   {{/if}}
 </footer>
