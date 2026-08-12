@@ -14,6 +14,16 @@
   overflow: hidden;
 }
 
+/* Single root element required by ApplicationV2; it carries the column layout. */
+.pk5e-root {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* --- pasek krokow --- */
 .pk5e-steps {
   display: flex;
