@@ -1,0 +1,109 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      {{#if missing}}
+        <p class="pk5e-empty">This character no longer exists.</p>
+      {{else}}
+
+      <p class="pk5e-lead">{{introText}}</p>
+
+      {{#if isGM}}
+      <details class="pk5e-details" open>
+        <summary>Ownership and filing</summary>
+
+        <label class="pk5e-label" for="pk5e-owner">Player</label>
+        <select id="pk5e-owner" data-owner>
+          <option value="">— nobody yet —</option>
+          {{#each players}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+        <p class="pk5e-note">Who can open and edit this character.</p>
+
+        <label class="pk5e-label" for="pk5e-folder">Folder</label>
+        <select id="pk5e-folder" data-folder>
+          <option value="">— none —</option>
+          {{#each folders}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      </details>
+      {{/if}}
+
+
+      <div class="pk5e-guide-step is-done">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-num">1</span>
+          <span class="pk5e-guide-label">Name</span>
+        </div>
+        <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
+      </div>
+
+      {{#each steps}}
+      <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-num">{{number}}</span>
+          <span class="pk5e-guide-label">{{label}}</span>
+          {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
+        </div>
+        {{#if done}}
+          <div class="pk5e-guide-chosen">
+            {{#if img}}<img src="{{img}}" alt="">{{/if}}
+            <span class="pk5e-guide-result">{{result}}</span>
+          </div>
+          {{#if removable}}
+          <div class="pk5e-guide-actions">
+            <button type="button" class="pk5e-link" data-action="replaceStep"
+                    data-step="{{key}}">Change</button>
+            <button type="button" class="pk5e-link" data-action="removeStep"
+                    data-step="{{key}}">Remove</button>
+          </div>
+          {{else}}
+          <button type="button" class="pk5e-link" data-action="finalise">Adjust</button>
+          {{/if}}
+        {{else}}
+          <p class="pk5e-note">{{blurb}}</p>
+          {{#if removable}}
+          <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
+          {{else}}
+          <button type="button" data-action="finalise">Set {{label}}</button>
+          {{/if}}
+        {{/if}}
+      </div>
+      {{/each}}
+
+      <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-label">
+            {{#if ready}}Ready to play{{else}}{{report.errors}} thing(s) to fix{{/if}}
+          </span>
+          <button type="button" class="pk5e-link" data-action="recheck">Recheck</button>
+        </div>
+        {{#if failures}}
+        <ul class="pk5e-report-list">
+          {{#each failures}}
+          <li class="pk5e-report-item is-{{level}}">
+            <span class="pk5e-report-label">{{label}}</span>
+            <span class="pk5e-report-hint">{{hint}}</span>
+          </li>
+          {{/each}}
+        </ul>
+        {{else}}
+        <p class="pk5e-note">Everything checks out.</p>
+        {{/if}}
+      </section>
+
+
+      {{/if}}
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <button type="button" data-action="openSheet">Open sheet</button>
+    <span class="pk5e-hint">{{progress}} complete</span>
+    <button type="button" class="pk5e-primary" data-action="postSummary">Post to chat</button>
+  </footer>
+
+</div>
