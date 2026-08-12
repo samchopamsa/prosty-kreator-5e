@@ -140,6 +140,27 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     return this.actorId ? game.actors.get(this.actorId) : null;
   }
 
+  /** What this screen saved on its last run, or null the first time. */
+  get savedState() {
+    return this.actor?.getFlag(MODULE_ID, "abilities") ?? null;
+  }
+
+  /** Restores the previous assignment so reopening shows what was chosen. */
+  loadSavedState() {
+    if (!this.actor || this._loadedFor === this.actorId) return;
+    this._loadedFor = this.actorId;
+
+    const saved = this.savedState;
+    if (!saved) return;
+
+    if (saved.method) this.method = saved.method;
+    if (Array.isArray(saved.pool) && saved.pool.length) this.pool = [...saved.pool];
+    for (const key of this.abilityKeys) {
+      if (saved.assign) this.assign[key] = saved.assign[key] ?? null;
+      if (saved.direct) this.direct[key] = saved.direct[key] ?? 8;
+    }
+  }
+
   /**
    * Ability increases already applied to the sheet.
    *
@@ -172,9 +193,25 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     return (this._bonusCache = result);
   }
 
+  /**
+   * The bonus already on the sheet, by decreasing reliability:
+   *
+   * 1. If this screen ran before, the difference between the current score and
+   *    the base we wrote IS the bonus. Exact, and it picks up later increases.
+   * 2. Otherwise, the ability score improvements declared on the actor's items.
+   * 3. Otherwise, the old guess: anything above 10.
+   */
   existingBonus(key) {
     if (!this.keepBonuses || !this.actor) return 0;
-    return this.detectBonuses().values[key] ?? 0;
+
+    const current = this.actor.system?.abilities?.[key]?.value ?? 10;
+    const lastBase = this.savedState?.base?.[key];
+    if (Number.isFinite(lastBase)) return Math.max(0, current - lastBase);
+
+    const detected = this.detectBonuses();
+    if (detected.source === "advancement") return detected.values[key] ?? 0;
+
+    return Math.max(0, current - 10);
   }
 
   baseValue(key) {

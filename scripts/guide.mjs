@@ -39,6 +39,46 @@ const STEP_CONFIG = {
   }
 };
 
+/**
+ * Deletes an item the way the character sheet does.
+ *
+ * Class, species and background advancements write proficiencies, features and
+ * hit points directly onto the actor. Deleting the item on its own leaves all of
+ * that behind, so we hand it to the system's Advancement manager, which knows
+ * how to unwind those changes.
+ */
+async function deleteWithAdvancement(actor, item) {
+  const AdvancementManager =
+    foundry.utils.getProperty(globalThis, "dnd5e.applications.advancement.AdvancementManager") ??
+    foundry.utils.getProperty(game, "dnd5e.applications.advancement.AdvancementManager");
+
+  if (AdvancementManager?.forDeletedItem) {
+    let manager = null;
+    try {
+      manager = AdvancementManager.forDeletedItem(actor, item.id);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Advancement reversal unavailable for ${item.name}`, err);
+    }
+
+    if (manager?.steps?.length) {
+      await new Promise((resolve) => {
+        const originalClose = manager.close.bind(manager);
+        manager.close = async (...args) => {
+          try {
+            return await originalClose(...args);
+          } finally {
+            resolve();
+          }
+        };
+        manager.render(true);
+      });
+      return;
+    }
+  }
+
+  await item.delete();
+}
+
 /** Confirmation dialog, tolerant of the API differing between versions. */
 async function confirmRemoval(message) {
   const DialogV2 = foundry.applications?.api?.DialogV2;
@@ -314,10 +354,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     try {
-      await this.actor.deleteEmbeddedDocuments(
-        "Item",
-        items.map((i) => i.id)
-      );
+      // One at a time: each may open its own advancement reversal window.
+      for (const item of items) {
+        if (!this.actor.items.get(item.id)) continue;
+        await deleteWithAdvancement(this.actor, item);
+      }
       return true;
     } catch (err) {
       console.error(`${MODULE_ID} | Could not remove the ${step}`, err);
