@@ -1,0 +1,214 @@
+{{!--
+  Wszystkie teksty widoczne dla graczy sa w tym pliku.
+  Mozesz je swobodnie przepisac pod swoja kampanie - kod tego nie ruszy.
+--}}
+
+<nav class="pk5e-steps">
+  {{#each steps}}
+  <button type="button" class="pk5e-step {{#if active}}is-active{{/if}} {{#if done}}is-done{{/if}}"
+          data-action="goto" data-index="{{index}}">
+    <span class="pk5e-step-num">{{number}}</span>
+    <span class="pk5e-step-label">{{label}}</span>
+  </button>
+  {{/each}}
+</nav>
+
+<div class="pk5e-body">
+
+  {{#if isIntro}}
+  <div class="pk5e-pane">
+    <h2>Witaj w kreatorze postaci</h2>
+    <p class="pk5e-lead">
+      Przeprowadze Cie przez sześć kroków. Nie musisz nic wiedziec o zasadach -
+      w kazdym kroku wybierasz jedna rzecz z listy i klikasz <strong>Dalej</strong>.
+      Na koncu system D&amp;D zapyta jeszcze o kilka szczegolow (punkty zycia,
+      ekwipunek, zaklecia) - to normalna czesc procesu.
+    </p>
+
+    <label class="pk5e-label" for="pk5e-name">Imie postaci</label>
+    <input id="pk5e-name" type="text" data-field="name" value="{{state.name}}"
+           placeholder="np. Elara Cieniostopa" autocomplete="off">
+
+    <details class="pk5e-details">
+      <summary>Zrodla danych ({{#if isGM}}mozesz zmienic{{else}}tylko do wgladu{{/if}})</summary>
+      <p class="pk5e-note">
+        Kreator czyta gatunki, pochodzenia i klasy wylacznie z zaznaczonych kompendiow.
+        {{#unless isGM}}<br>Zmiany moze wprowadzic tylko Mistrz Gry.{{/unless}}
+      </p>
+      <div class="pk5e-packs">
+        {{#each packs}}
+        <label class="pk5e-pack">
+          <input type="checkbox" data-pack="{{id}}" {{#if checked}}checked{{/if}}
+                 {{#unless ../isGM}}disabled{{/unless}}>
+          <span class="pk5e-pack-name">{{label}}</span>
+          <span class="pk5e-pack-origin">{{origin}}</span>
+        </label>
+        {{/each}}
+      </div>
+    </details>
+  </div>
+  {{/if}}
+
+  {{#if isPickStep}}
+  <div class="pk5e-pane pk5e-split">
+    <div class="pk5e-list-col">
+      <input type="search" data-search placeholder="Szukaj..." autocomplete="off">
+      {{#if emptyList}}
+      <p class="pk5e-empty">
+        Brak wpisow. Wroc do kroku <strong>Start</strong> i zaznacz przynajmniej jedno
+        kompendium zawierajace ten typ przedmiotow.
+      </p>
+      {{/if}}
+      <div class="pk5e-options">
+        {{#each list}}
+        <button type="button" class="pk5e-option {{#if selected}}is-selected{{/if}}"
+                data-action="pick" data-kind="{{../kind}}" data-uuid="{{uuid}}"
+                data-search="{{search}}">
+          <img src="{{img}}" alt="">
+          <span class="pk5e-option-text">
+            <span class="pk5e-option-name">{{name}}</span>
+            <span class="pk5e-option-meta">{{packLabel}}</span>
+          </span>
+        </button>
+        {{/each}}
+      </div>
+    </div>
+
+    <div class="pk5e-detail-col">
+      {{#if selected}}
+        <h3>{{selected.name}}</h3>
+        <p class="pk5e-note">Zrodlo: {{selected.packLabel}}</p>
+        <div class="pk5e-detail-text">{{{detail}}}</div>
+        <button type="button" class="pk5e-link" data-action="clearPick" data-kind="{{kind}}">
+          Cofnij wybor
+        </button>
+      {{else}}
+        <p class="pk5e-placeholder">
+          Wybierz pozycje z listy po lewej, aby zobaczyc jej opis.
+        </p>
+      {{/if}}
+    </div>
+  </div>
+  {{/if}}
+
+  {{#if isAbilities}}
+  <div class="pk5e-pane">
+    <h2>Atrybuty</h2>
+    <p class="pk5e-lead">
+      Sześć liczb opisujacych Twoja postac. Im wyzsza wartosc, tym lepiej.
+      Wpisz tu wartosci <strong>bazowe</strong> - premie z pochodzenia system doda sam.
+    </p>
+
+    <div class="pk5e-methods">
+      <label><input type="radio" name="pk5e-method" data-method="standard"
+                    {{#if abilities.isStandard}}checked{{/if}}> Zestaw standardowy</label>
+      <label><input type="radio" name="pk5e-method" data-method="pointbuy"
+                    {{#if abilities.isPointBuy}}checked{{/if}}> Zakup punktowy</label>
+      <label><input type="radio" name="pk5e-method" data-method="roll"
+                    {{#if abilities.isRoll}}checked{{/if}}> Rzut koscmi</label>
+      <label><input type="radio" name="pk5e-method" data-method="manual"
+                    {{#if abilities.isManual}}checked{{/if}}> Recznie</label>
+    </div>
+
+    {{#if abilities.isStandard}}
+    <p class="pk5e-note">Przydziel wartosci 15, 14, 13, 12, 10 i 8 - kazda dokladnie raz.</p>
+    {{/if}}
+    {{#if abilities.isRoll}}
+    <p class="pk5e-note">
+      Rzuc 4k6 i odrzuc najnizsza kosc, sześć razy. Nastepnie przydziel wyniki.
+      <button type="button" class="pk5e-link" data-action="rollAbilities">Rzuc koscmi</button>
+    </p>
+    {{/if}}
+    {{#if abilities.isPointBuy}}
+    <p class="pk5e-note">
+      Masz {{abilities.pointsTotal}} punktow. Pozostalo:
+      <strong>{{abilities.pointsLeft}}</strong>. Zakres 8-15.
+    </p>
+    {{/if}}
+
+    <table class="pk5e-abilities">
+      <thead>
+        <tr><th>Atrybut</th><th>Wartosc</th><th>Modyfikator</th></tr>
+      </thead>
+      <tbody>
+        {{#each abilities.rows}}
+        <tr>
+          <th scope="row">{{label}} <span class="pk5e-abbr">{{abbr}}</span></th>
+          <td>
+            {{#if ../abilities.isPointBuy}}
+              <span class="pk5e-stepper">
+                <button type="button" data-action="abilityMinus" data-ability="{{key}}"
+                        {{#if minusDisabled}}disabled{{/if}}>&minus;</button>
+                <span class="pk5e-stepper-value">{{value}}</span>
+                <button type="button" data-action="abilityPlus" data-ability="{{key}}"
+                        {{#if plusDisabled}}disabled{{/if}}>+</button>
+              </span>
+            {{else if ../abilities.isManual}}
+              <input type="number" data-manual="{{key}}" value="{{value}}" min="1" max="20">
+            {{else}}
+              <select data-assign="{{key}}">
+                <option value="">—</option>
+                {{#each options}}
+                <option value="{{index}}" {{#if selected}}selected{{/if}}
+                        {{#if disabled}}disabled{{/if}}>{{value}}</option>
+                {{/each}}
+              </select>
+            {{/if}}
+          </td>
+          <td class="pk5e-mod">{{modLabel}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <button type="button" class="pk5e-link" data-action="resetAbilities">Wyczysc</button>
+  </div>
+  {{/if}}
+
+  {{#if isSummary}}
+  <div class="pk5e-pane">
+    <h2>Podsumowanie</h2>
+    <dl class="pk5e-summary">
+      <dt>Imie</dt><dd>{{state.name}}</dd>
+      <dt>Gatunek</dt><dd>{{#if state.species}}{{state.species.name}}{{else}}—{{/if}}</dd>
+      <dt>Pochodzenie</dt><dd>{{#if state.background}}{{state.background.name}}{{else}}—{{/if}}</dd>
+      <dt>Klasa</dt><dd>{{#if state.class}}{{state.class.name}} (poziom 1){{else}}—{{/if}}</dd>
+    </dl>
+
+    <table class="pk5e-abilities pk5e-abilities-compact">
+      <tbody>
+        <tr>{{#each summaryAbilities}}<th>{{label}}</th>{{/each}}</tr>
+        <tr>{{#each summaryAbilities}}<td>{{value}}</td>{{/each}}</tr>
+        <tr>{{#each summaryAbilities}}<td class="pk5e-mod">{{modLabel}}</td>{{/each}}</tr>
+      </tbody>
+    </table>
+
+    <div class="pk5e-callout">
+      <strong>Co sie stanie teraz?</strong>
+      <p>
+        Utworze karte postaci, a system D&amp;D otworzy po kolei kilka malych okienek:
+        punkty zycia, biegłosci, ekwipunek startowy i - jesli Twoja klasa rzuca czary -
+        wybor zaklec. W kazdym z nich wybierasz opcje i klikasz <em>Dalej</em>.
+        Nie zamykaj ich krzyzykiem, chyba ze chcesz pominac dany krok.
+      </p>
+    </div>
+  </div>
+  {{/if}}
+
+</div>
+
+<footer class="pk5e-footer">
+  <button type="button" data-action="back" {{#unless canBack}}disabled{{/unless}}>
+    Wstecz
+  </button>
+  <span class="pk5e-hint">{{hint}}</span>
+  {{#if isSummary}}
+    <button type="button" class="pk5e-primary" data-action="finish" {{#if busy}}disabled{{/if}}>
+      Stworz postac
+    </button>
+  {{else}}
+    <button type="button" class="pk5e-primary" data-action="next" {{#unless canNext}}disabled{{/unless}}>
+      Dalej
+    </button>
+  {{/if}}
+</footer>
