@@ -25,7 +25,21 @@ const SHEET_HOOKS = [
   "renderActorSheet"
 ];
 
-/** Anchors tried in order when looking for somewhere to put the button. */
+/**
+ * The rest buttons in the sheet header. We insert our button next to them and
+ * copy their class list, so it inherits the sheet's own square icon styling
+ * instead of us reinventing it.
+ */
+const REST_SELECTORS = [
+  "[data-action='longRest']",
+  "[data-action='rest']",
+  ".long-rest",
+  "[data-tooltip*='Long Rest' i]",
+  "[aria-label*='Long Rest' i]",
+  "[data-tooltip*='Rest' i]"
+];
+
+/** Fallback anchors if no rest button can be found. */
 const ANCHORS = [
   ".header-elements",
   ".sheet-header .right",
@@ -61,6 +75,32 @@ function inject(app, html) {
   root.querySelector(".pk5e-sheet-button")?.remove();
   if (!inEditMode(app, root)) return;
 
+  let restButton = null;
+  for (const selector of REST_SELECTORS) {
+    restButton = root.querySelector(selector);
+    if (restButton?.parentElement) break;
+    restButton = null;
+  }
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.dataset.tooltip = "Complete Character: ability scores and languages";
+  button.setAttribute("aria-label", "Complete Character");
+  button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i>';
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    new CompleteCharacter({ actorId: actor.id }).render(true);
+  });
+
+  if (restButton) {
+    // Match the neighbouring rest buttons exactly, then mark it as ours.
+    button.className = restButton.className;
+    button.classList.add("pk5e-sheet-button");
+    restButton.insertAdjacentElement("afterend", button);
+    return;
+  }
+
   let anchor = null;
   for (const selector of ANCHORS) {
     anchor = root.querySelector(selector);
@@ -68,17 +108,7 @@ function inject(app, html) {
   }
   if (!anchor) return;
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "pk5e-sheet-button";
-  button.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Complete Character';
-  button.dataset.tooltip = "Assign ability scores and languages";
-  button.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    new CompleteCharacter({ actorId: actor.id }).render(true);
-  });
-
+  button.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
   anchor.prepend(button);
 }
 

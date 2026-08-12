@@ -8,6 +8,7 @@ import { SourceConfig } from "./source-config.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
+import { CreationGuide } from "./guide.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "enabledPacks", {
@@ -64,6 +65,15 @@ Hooks.once("init", () => {
     default: false
   });
 
+  game.settings.register(MODULE_ID, "guideButton", {
+    name: "Show 'New Character' in the Actors sidebar",
+    hint: "Guided creation that drives the character sheet's own buttons.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, "sheetButton", {
     name: "Show 'Complete Character' on the character sheet",
     hint: "Adds the button to the sheet header while the sheet is in edit mode.",
@@ -113,9 +123,12 @@ Hooks.once("ready", () => {
   const api = {
     open: () => new CharacterCreator().render(true),
     complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
+    guide: () => CreationGuide.start(),
+    resume: (actorId) => new CreationGuide({ actorId }).render(true),
     sources: () => new SourceConfig().render(true),
     CharacterCreator,
     CompleteCharacter,
+    CreationGuide,
     SourceConfig
   };
   const mod = game.modules.get(MODULE_ID);
@@ -134,7 +147,8 @@ Hooks.on("renderActorDirectory", (app, html) => {
   if (!game.user.isGM && !game.settings.get(MODULE_ID, "allowPlayers")) return;
 
   const mode = game.settings.get(MODULE_ID, "sidebarButtons");
-  if (mode === "none") return;
+  const showGuide = game.settings.get(MODULE_ID, "guideButton");
+  if (mode === "none" && !showGuide) return;
 
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root || root.querySelector(".pk5e-launch")) return;
@@ -143,6 +157,17 @@ Hooks.on("renderActorDirectory", (app, html) => {
     root.querySelector(".header-actions") ??
     root.querySelector(".directory-header") ??
     root;
+
+  if (showGuide) {
+    const guide = document.createElement("button");
+    guide.type = "button";
+    guide.className = "pk5e-launch";
+    guide.innerHTML = '<i class="fa-solid fa-hat-wizard"></i> New Character';
+    guide.addEventListener("click", () => CreationGuide.start());
+    target.appendChild(guide);
+  }
+
+  if (mode === "none") return;
 
   if (mode === "both") {
     const button = document.createElement("button");

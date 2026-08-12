@@ -1,0 +1,50 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      {{#if missing}}
+        <p class="pk5e-empty">This character no longer exists.</p>
+      {{else}}
+
+      <p class="pk5e-lead">
+        Five steps. Each one opens the same dialog the character sheet uses, so
+        anything you have installed works exactly as usual. Those windows appear
+        on top of this one - close them and come back here.
+      </p>
+
+      <div class="pk5e-guide-step is-done">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-num">1</span>
+          <span class="pk5e-guide-label">Name</span>
+        </div>
+        <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
+      </div>
+
+      {{#each steps}}
+      <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-num">{{number}}</span>
+          <span class="pk5e-guide-label">{{label}}</span>
+          {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
+        </div>
+        {{#if done}}
+          <p class="pk5e-guide-result">{{result}}</p>
+          <button type="button" class="pk5e-link" data-action="{{action}}">Change</button>
+        {{else}}
+          <p class="pk5e-note">{{blurb}}</p>
+          <button type="button" data-action="{{action}}">Choose {{label}}</button>
+        {{/if}}
+      </div>
+      {{/each}}
+
+      {{/if}}
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <button type="button" data-action="openSheet">Open sheet</button>
+    <span class="pk5e-hint">{{progress}} complete</span>
+  </footer>
+
+</div>

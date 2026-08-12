@@ -471,10 +471,13 @@
 .pk5e-launch-secondary { opacity: 0.85; font-size: 12px; }
 .pk5e-creator table.pk5e-abilities td { white-space: nowrap; }
 
-/* Button injected into the dnd5e character sheet (edit mode only). */
-.pk5e-sheet-button {
+/* Button injected into the dnd5e character sheet (edit mode only).
+   When placed beside the rest buttons it copies their classes, so it needs no
+   styling of its own. These rules only cover the standalone fallback. */
+.pk5e-sheet-button-standalone {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   width: auto;
   flex: 0 0 auto;
@@ -486,3 +489,53 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* Language picker in the complete-character screen */
+.pk5e-lang-groups { max-height: 260px; }
+.pk5e-lang-group { display: flex; flex-direction: column; gap: 1px; }
+
+.pk5e-lang-heading {
+  margin: 8px 0 2px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.65;
+}
+
+.pk5e-lang-group:first-child .pk5e-lang-heading { margin-top: 0; }
+
+/* v0.6 - guided creation panel */
+.pk5e-guide-step {
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-left: 3px solid rgba(128, 128, 128, 0.4);
+  border-radius: 4px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk5e-guide-step.is-done { border-left-color: var(--color-shadow-primary, #ff6400); }
+
+.pk5e-guide-head { display: flex; align-items: center; gap: 6px; }
+
+.pk5e-guide-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 10px;
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.pk5e-guide-label { font-weight: 600; font-size: 13px; flex: 1 1 auto; }
+.pk5e-guide-tick { color: var(--color-shadow-primary, #ff6400); font-weight: 700; }
+.pk5e-guide-result { margin: 0; font-size: 13px; }
+.pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 12px; padding: 3px 8px; }

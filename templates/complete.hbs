@@ -8,6 +8,7 @@
         class, species, background and gear but never asks for ability scores.
       </p>
 
+      {{#unless locked}}
       <label class="pk5e-label" for="pk5e-actor">Character</label>
       <select id="pk5e-actor" data-actor>
         <option value="">— choose —</option>
@@ -15,19 +16,28 @@
         <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
         {{/each}}
       </select>
+      {{/unless}}
 
       {{#if hasActor}}
+      <h2>{{actorName}}</h2>
       <p class="pk5e-note">{{summary}}</p>
 
       <label class="pk5e-pack">
         <input type="checkbox" data-keep-bonuses {{#if keepBonuses}}checked{{/if}}>
         <span class="pk5e-pack-name">Keep bonuses already on the sheet</span>
       </label>
+      {{#if bonusFound}}
       <p class="pk5e-note">
-        Anything above 10 in the current scores is treated as a background or
-        species increase and added on top of your assignment. Switch this off to
+        Increases granted by this character's background or species were found on
+        the sheet and are added on top of your assignment. Switch the box off to
         overwrite the scores outright.
       </p>
+      {{else}}
+      <p class="pk5e-note">
+        No ability score increases were found on this character, so your
+        assignment is written as-is.
+      </p>
+      {{/if}}
 
       <div class="pk5e-methods">
         <label><input type="radio" name="pk5e-cmethod" data-method="standard"
@@ -96,15 +106,21 @@
 
       <button type="button" class="pk5e-link" data-action="reset">Reset</button>
 
-      <details class="pk5e-details">
-        <summary>Languages</summary>
-        <p class="pk5e-note">Already known languages are ticked. Add any that are missing.</p>
-        <div class="pk5e-packs">
-          {{#each languages}}
-          <label class="pk5e-pack">
-            <input type="checkbox" data-language="{{key}}" {{#if checked}}checked{{/if}}>
-            <span class="pk5e-pack-name">{{label}}</span>
-          </label>
+      <details class="pk5e-details" open>
+        <summary>Languages (<span data-language-count>{{languageSelected}}</span> selected)</summary>
+        <p class="pk5e-note">Languages already on the sheet are ticked.</p>
+        <input type="search" data-language-search placeholder="Search languages..." autocomplete="off">
+        <div class="pk5e-packs pk5e-lang-groups">
+          {{#each languageGroups}}
+          <section class="pk5e-lang-group">
+            <h4 class="pk5e-lang-heading">{{label}}</h4>
+            {{#each languages}}
+            <label class="pk5e-pack" data-search="{{search}}">
+              <input type="checkbox" data-language="{{key}}" {{#if checked}}checked{{/if}}>
+              <span class="pk5e-pack-name">{{label}}</span>
+            </label>
+            {{/each}}
+          </section>
           {{/each}}
         </div>
       </details>

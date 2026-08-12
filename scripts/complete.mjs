@@ -22,34 +22,85 @@ const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
 const POINT_BUY_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const POINT_BUY_TOTAL = 27;
 
+/**
+ * Languages listed as standard in the 2024 core rules. Everything else is shown
+ * under "Expanded". Matched against both the config key and the label, because
+ * key spellings differ between system versions.
+ */
+const CORE_LANGUAGES = [
+  "common",
+  "commonsignlanguage",
+  "draconic",
+  "dwarvish",
+  "elvish",
+  "giant",
+  "gnomish",
+  "goblin",
+  "halfling",
+  "orc"
+];
+
+const normalise = (value) => String(value ?? "").toLowerCase().replace(/[^a-z]/g, "");
+
+function isCoreLanguage(entry) {
+  return (
+    CORE_LANGUAGES.includes(normalise(entry.key)) ||
+    CORE_LANGUAGES.includes(normalise(entry.plainLabel ?? entry.label))
+  );
+}
+
 /** CONFIG.DND5E.languages may be flat or nested; flatten either shape. */
 function flattenLanguages(node = CONFIG.DND5E?.languages ?? {}, prefix = "") {
   const out = [];
   for (const [key, value] of Object.entries(node)) {
     if (typeof value === "string") {
-      out.push({ key, label: value });
+      out.push({ key, label: value, plainLabel: value });
       continue;
     }
     const label = value?.label ?? key;
     if (value?.children) {
       out.push(...flattenLanguages(value.children, `${prefix}${label} / `));
     } else {
-      out.push({ key, label: `${prefix}${label}` });
+      out.push({ key, label: `${prefix}${label}`, plainLabel: label });
     }
   }
   return out.sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/** Core languages first, everything else under Expanded. */
+function groupLanguages(selected) {
+  const all = flattenLanguages().map((entry) => ({
+    key: entry.key,
+    label: entry.label,
+    checked: selected.has(entry.key),
+    search: `${entry.label} ${entry.key}`.toLowerCase(),
+    core: isCoreLanguage(entry)
+  }));
+
+  const groups = [
+    { label: "Core Rules", languages: all.filter((l) => l.core) },
+    { label: "Expanded", languages: all.filter((l) => !l.core) }
+  ].filter((g) => g.languages.length);
+
+  return { groups, total: all.length, selected: all.filter((l) => l.checked).length };
 }
 
 export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     super(options);
     this.actorId = options.actorId ?? null;
+    /** Opened from a specific sheet: the character is fixed, not selectable. */
+    this.locked = !!options.actorId;
+    /** Opened from a sheet: the character is fixed, so hide the picker. */
+    this.locked = !!options.actorId;
     this.method = "standard";
     this.pool = [...STANDARD_ARRAY];
     this.assign = {};
     this.direct = {};
     this.keepBonuses = true;
     this.languages = null;
+    /** Which actor the stored state was loaded for, so we load it only once. */
+    this._loadedFor = null;
     for (const key of this.abilityKeys) {
       this.assign[key] = null;
       this.direct[key] = 8;
@@ -89,11 +140,41 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     return this.actorId ? game.actors.get(this.actorId) : null;
   }
 
-  /** Whatever sits above 10 is treated as an already-applied bonus. */
+  /**
+   * Ability increases already applied to the sheet.
+   *
+   * Read from the actual AbilityScoreImprovement advancements on the character's
+   * items. Falling back to "anything above 10 is a bonus" was wrong for sheets
+   * that already had proper scores - it treated 15 as a +5 increase.
+   */
+  detectBonuses() {
+    if (this._bonusCache?.actorId === this.actorId) return this._bonusCache;
+
+    const actor = this.actor;
+    const result = { actorId: this.actorId, values: {}, source: "none" };
+    if (!actor) return (this._bonusCache = result);
+
+    for (const item of actor.items) {
+      for (const adv of item.system?.advancement ?? []) {
+        if (adv.type !== "AbilityScoreImprovement") continue;
+        const value = adv.value ?? {};
+        const assignments = value.assignments ?? value.abilities ?? {};
+        for (const [key, raw] of Object.entries(assignments)) {
+          const amount = Number(raw);
+          if (Number.isFinite(amount) && amount > 0) {
+            result.values[key] = (result.values[key] ?? 0) + amount;
+          }
+        }
+      }
+    }
+
+    if (Object.keys(result.values).length) result.source = "advancement";
+    return (this._bonusCache = result);
+  }
+
   existingBonus(key) {
     if (!this.keepBonuses || !this.actor) return 0;
-    const current = this.actor.system?.abilities?.[key]?.value ?? 10;
-    return Math.max(0, current - 10);
+    return this.detectBonuses().values[key] ?? 0;
   }
 
   baseValue(key) {
@@ -124,6 +205,7 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   async _prepareContext() {
+    this.loadSavedState();
     const actor = this.actor;
     const used = new Set(Object.values(this.assign).filter((v) => v !== null));
 
@@ -157,13 +239,20 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     const known = actor?.system?.traits?.languages?.value;
     const current = this.languages ?? new Set(known ? Array.from(known) : []);
     this.languages = current;
+    const grouped = groupLanguages(current);
 
     return {
-      actors: game.actors
+      locked: this.locked,
+      actors: this.locked
+        ? []
+        : game.actors
         .filter((a) => a.type === "character" && a.isOwner)
         .map((a) => ({ id: a.id, name: a.name, selected: a.id === this.actorId }))
         .sort((a, b) => a.name.localeCompare(b.name)),
       hasActor: !!actor,
+      locked: this.locked,
+      bonusSource: this.detectBonuses().source,
+      bonusFound: this.detectBonuses().source === "advancement",
       actorName: actor?.name ?? "",
       summary: actor
         ? [
@@ -175,6 +264,10 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
             .join(" · ")
         : "",
       keepBonuses: this.keepBonuses,
+      hasSavedState: !!this.savedState,
+      savedAt: this.savedState?.appliedAt
+        ? new Date(this.savedState.appliedAt).toLocaleString()
+        : null,
       isStandard: this.method === "standard",
       isRoll: this.method === "roll",
       isPointBuy: this.method === "pointbuy",
@@ -183,10 +276,9 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       rows,
       pointsLeft: POINT_BUY_TOTAL - this.pointsSpent(),
       pointsTotal: POINT_BUY_TOTAL,
-      languages: flattenLanguages().map((l) => ({
-        ...l,
-        checked: current.has(l.key)
-      })),
+      languageGroups: grouped.groups,
+      languageTotal: grouped.total,
+      languageSelected: grouped.selected,
       canApply: this.isReady()
     };
   }
@@ -197,6 +289,7 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     el.querySelector("select[data-actor]")?.addEventListener("change", (ev) => {
       this.actorId = ev.currentTarget.value || null;
       this.languages = null;
+      this._bonusCache = null;
       this.render();
     });
 
@@ -236,8 +329,26 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
         const key = ev.currentTarget.dataset.language;
         if (ev.currentTarget.checked) this.languages.add(key);
         else this.languages.delete(key);
+        const counter = el.querySelector("[data-language-count]");
+        if (counter) counter.textContent = String(this.languages.size);
       });
     });
+
+    const langSearch = el.querySelector("[data-language-search]");
+    if (langSearch) {
+      langSearch.addEventListener("input", (ev) => {
+        const q = ev.currentTarget.value.trim().toLowerCase();
+        el.querySelectorAll(".pk5e-lang-group").forEach((group) => {
+          let visible = 0;
+          group.querySelectorAll(".pk5e-pack").forEach((row) => {
+            const match = !q || row.dataset.search.includes(q);
+            row.style.display = match ? "" : "none";
+            if (match) visible += 1;
+          });
+          group.style.display = visible ? "" : "none";
+        });
+      });
+    }
   }
 
   static onAbilityPlus(event, target) {
@@ -282,14 +393,27 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     if (!actor || !this.isReady()) return;
 
     const update = {};
+    const base = {};
     for (const key of this.abilityKeys) {
-      const base = this.baseValue(key);
-      if (base === null) continue;
-      update[`system.abilities.${key}.value`] = Math.min(20, base + this.existingBonus(key));
+      const value = this.baseValue(key);
+      if (value === null) continue;
+      base[key] = value;
+      update[`system.abilities.${key}.value`] = Math.min(20, value + this.existingBonus(key));
     }
     if (this.languages) {
       update["system.traits.languages.value"] = Array.from(this.languages);
     }
+
+    // Remember the base scores we wrote. Next time the bonus is derived from
+    // the difference against these, so nothing is ever counted twice.
+    update[`flags.${MODULE_ID}.abilities`] = {
+      method: this.method,
+      pool: [...this.pool],
+      assign: { ...this.assign },
+      direct: { ...this.direct },
+      base,
+      appliedAt: Date.now()
+    };
 
     try {
       await actor.update(update);
