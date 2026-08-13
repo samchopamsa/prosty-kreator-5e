@@ -34,25 +34,18 @@
       </div>
       {{/if}}
 
-      <label class="pk5e-label" for="pk5e-bonus-mode">Bonuses already on the sheet</label>
-      <select id="pk5e-bonus-mode" data-bonus-mode>
-        {{#each bonusModes}}
-        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
-        {{/each}}
-      </select>
       <p class="pk5e-note">
         {{#if isMeasured}}
-          The difference between the current score and the base saved last time is
-          treated as a bonus. Accurate on a sheet nobody has meddled with.
+          Bonuses are measured against the base saved last time.
         {{/if}}
         {{#if isFromAdvancements}}
-          Bonuses are read from the ability score improvements on the character's
-          own items, and whatever is currently on the sheet is ignored. Use this
-          to clear increases left behind by an importer when an item was deleted.
+          Bonuses are read from the increases declared on this character's own
+          items; whatever is on the sheet is ignored.
         {{/if}}
         {{#if isIgnored}}
           The scores are written exactly as assigned, with nothing added.
         {{/if}}
+        Change this under Module Settings.
       </p>
 
       <div class="pk5e-methods">

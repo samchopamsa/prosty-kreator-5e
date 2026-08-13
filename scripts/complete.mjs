@@ -53,13 +53,9 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     this.pool = [...STANDARD_ARRAY];
     this.assign = {};
     this.direct = {};
-    /**
-     * How the bonus already on the sheet is worked out:
-     *  measured     - difference against the base saved last time (default)
-     *  advancements - read from the ability score improvements on the items
-     *  none         - ignore, write the raw assignment
-     */
-    this.bonusMode = "measured";
+    // Chosen once in the module settings rather than per character: it is a
+    // decision about how the world is run, not about this one sheet.
+    this.bonusMode = game.settings.get(MODULE_ID, "bonusMode") ?? "advancements";
     /** Which actor the stored state was loaded for, so we load it only once. */
     this._loadedFor = null;
     for (const key of this.abilityKeys) {
@@ -265,11 +261,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
             .filter(Boolean)
             .join(" · ")
         : "",
-      bonusModes: [
-        { key: "measured", label: "Measured against the last save", selected: this.bonusMode === "measured" },
-        { key: "advancements", label: "Read from the character's advancements", selected: this.bonusMode === "advancements" },
-        { key: "none", label: "Ignore - write my numbers exactly", selected: this.bonusMode === "none" }
-      ],
       bonusMode: this.bonusMode,
       isMeasured: this.bonusMode === "measured",
       isFromAdvancements: this.bonusMode === "advancements",
@@ -298,11 +289,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     el.querySelector("select[data-actor]")?.addEventListener("change", (ev) => {
       this.actorId = ev.currentTarget.value || null;
       this._bonusCache = null;
-      this.render();
-    });
-
-    el.querySelector("select[data-bonus-mode]")?.addEventListener("change", (ev) => {
-      this.bonusMode = ev.currentTarget.value;
       this.render();
     });
 

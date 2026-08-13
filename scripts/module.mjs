@@ -94,6 +94,20 @@ Hooks.once("init", () => {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "bonusMode", {
+    name: "How existing ability score increases are recognised",
+    hint: "Backgrounds raise ability scores, so the sheet shows a result rather than the base you assign. This decides how the module works out how much of the score is a bonus. Advancements is the most robust: it reads the increases declared on the character's own items and ignores whatever is on the sheet, which also clears increases left behind when an importer deleted an item.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "advancements",
+    choices: {
+      advancements: "Read from the character's advancements (recommended)",
+      measured: "Measure against the base saved last time",
+      none: "Ignore - write the assigned numbers exactly"
+    }
+  });
+
   game.settings.register(MODULE_ID, "levelUpMode", {
     name: "How levelling works at your table",
     hint: "Milestone: the level-up button is pressed straight away. Experience: you are asked which level to reach, experience is topped up to match, and only then does the button run. Match this to the system's own Leveling Mode.",
