@@ -1,0 +1,65 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane pk5e-split">
+
+      <div class="pk5e-list-col">
+        <div class="pk5e-listbar">
+          <input type="search" data-search placeholder="Search..." autocomplete="off">
+          <div class="pk5e-rules-filter">
+            {{#each kinds}}
+            <button type="button" class="pk5e-chip {{#if active}}is-active{{/if}}"
+                    data-action="setKind" data-kind="{{key}}">{{label}}</button>
+            {{/each}}
+          </div>
+        </div>
+
+        {{#if empty}}
+        <p class="pk5e-empty">
+          No entries found. This window reads compendiums, so nothing appears if
+          the relevant compendium is not installed.
+        </p>
+        {{/if}}
+
+        <div class="pk5e-options">
+          {{#each list}}
+          <button type="button" class="pk5e-option {{#if selected}}is-selected{{/if}}"
+                  data-action="pickEntry" data-uuid="{{uuid}}" data-search="{{search}}">
+            <img src="{{img}}" alt="">
+            <span class="pk5e-option-text">
+              <span class="pk5e-option-name">{{name}}</span>
+              <span class="pk5e-option-meta">{{origin}}</span>
+            </span>
+          </button>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="pk5e-detail-col">
+        {{#if selected}}
+          <h3>{{selected.name}}</h3>
+          <p class="pk5e-note">{{selected.origin}}</p>
+          {{#if detail}}
+            <div class="pk5e-detail-text">{{{detail}}}</div>
+          {{else}}
+            <p class="pk5e-placeholder">Reading...</p>
+          {{/if}}
+        {{else}}
+          <p class="pk5e-placeholder">
+            Pick an entry on the left to read about it. This is for reading only -
+            choose your class with the button in the panel.
+          </p>
+        {{/if}}
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <span class="pk5e-hint">
+      Reads your compendiums. If the importer offers books that are not installed
+      as a compendium, those will not appear here.
+    </span>
+  </footer>
+
+</div>

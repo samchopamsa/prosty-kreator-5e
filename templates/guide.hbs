@@ -68,33 +68,46 @@
             {{#if img}}<img src="{{img}}" alt="">{{/if}}
             <span class="pk5e-guide-result">{{result}}</span>
           </div>
-          {{#if removable}}
-          <div class="pk5e-guide-actions">
-            <button type="button" class="pk5e-link" data-action="replaceStep"
-                    data-step="{{key}}">Change</button>
-            <button type="button" class="pk5e-link" data-action="removeStep"
-                    data-step="{{key}}">Remove</button>
-          </div>
-          {{else}}
-          <button type="button" class="pk5e-link"
-                  data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">Change</button>
-          {{/if}}
+          {{#if summary}}<p class="pk5e-guide-summary">{{summary}}</p>{{/if}}
         {{else}}
           <p class="pk5e-note">{{blurb}}</p>
-          {{#if showHelp}}
-          <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
-            <summary>What is this?</summary>
-            <p>{{help}}</p>
-          </details>
-          {{/if}}
-          {{#if removable}}
-          <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
-          {{else}}
-          <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">
-            {{#if optional}}Add {{label}} (optional){{else}}Set {{label}}{{/if}}
-          </button>
-          {{/if}}
         {{/if}}
+
+        {{#if showHelp}}
+        <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
+          <summary>What is this?</summary>
+          <p>{{help}}</p>
+        </details>
+        {{/if}}
+
+        {{#unless importing}}
+          {{#if done}}
+            {{#if removable}}
+            <div class="pk5e-guide-actions">
+              <button type="button" class="pk5e-link" data-action="replaceStep"
+                      data-step="{{key}}">Change</button>
+              <button type="button" class="pk5e-link" data-action="removeStep"
+                      data-step="{{key}}">Remove</button>
+            </div>
+            {{else}}
+            <button type="button" class="pk5e-link"
+                    data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">Change</button>
+            {{/if}}
+          {{else}}
+            {{#if removable}}
+            <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
+            {{#if reference}}
+            <button type="button" class="pk5e-link" data-action="openReference" data-kind="class">
+              Read about the classes first
+            </button>
+            {{/if}}
+            {{else}}
+            <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">
+              {{#if optional}}Add {{label}} (optional){{else}}Set {{label}}{{/if}}
+            </button>
+            {{/if}}
+          {{/if}}
+        {{/unless}}
       </div>
       {{/each}}
 
@@ -125,9 +138,13 @@
   </div>
 
   <footer class="pk5e-footer">
-    <button type="button" data-action="openSheet">Open sheet</button>
-    <span class="pk5e-hint">{{progress}} complete</span>
-    <button type="button" class="pk5e-primary" data-action="postSummary">Post to chat</button>
+    <button type="button" data-action="postSummary">Post to chat</button>
+    <span class="pk5e-hint">{{progress}}</span>
+    <button type="button" class="pk5e-primary" data-action="finalizeGuide"
+            {{#unless allDone}}disabled{{/unless}}
+            data-tooltip="{{#unless allDone}}Finish the remaining steps first{{/unless}}">
+      Finalize
+    </button>
   </footer>
 
 </div>

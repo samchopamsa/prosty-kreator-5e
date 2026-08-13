@@ -16,6 +16,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { LanguagePicker } from "./languages.mjs";
+import { ClassReference } from "./reference.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { postSummary } from "./summary.mjs";
 
@@ -359,6 +360,40 @@ async function pressSheetButton(actor, types, labels) {
  * Which creation steps are still outstanding on an actor. Used to decide
  * whether to offer "Resume creation" at all.
  */
+/**
+ * A one-sentence summary taken from whatever was imported.
+ *
+ * Compendium descriptions are HTML and often open with tables, headings or a
+ * licence notice, so we strip the markup and take the first sentence that reads
+ * like prose rather than boilerplate.
+ */
+function shortSummary(item) {
+  const raw = item?.system?.description?.value ?? "";
+  if (!raw) return "";
+
+  const text = raw
+    // Headings, tables and captions are structure, not prose - dropping them
+    // whole stops fragments like "Traits 1" leaking into the sentence.
+    .replace(/<(script|style|table|figure|caption)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;|&rsquo;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+
+  const boilerplate = /free rules|creative commons|re-distributed|source:|^\d/i;
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    const candidate = sentence.trim();
+    if (candidate.length < 40 || boilerplate.test(candidate)) continue;
+    return candidate.length > 220 ? `${candidate.slice(0, 217)}...` : candidate;
+  }
+  return "";
+}
+
 export function missingSteps(actor) {
   if (!actor || actor.type !== "character") return [];
   const missing = [];
@@ -419,7 +454,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       replaceStep: CreationGuide.onReplaceStep,
       removeStep: CreationGuide.onRemoveStep,
       openSheet: CreationGuide.onOpenSheet,
+      finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
+      openReference: CreationGuide.onOpenReference,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
@@ -516,6 +553,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         done: !!species,
         result: species?.name ?? "",
         img: species?.img ?? "",
+        summary: shortSummary(species),
         blurb: text("textSpecies")
       },
       {
@@ -528,6 +566,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         done: !!background,
         result: background?.name ?? "",
         img: background?.img ?? "",
+        summary: shortSummary(background),
         blurb: text("textBackground")
       },
       {
@@ -535,11 +574,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         number: 4,
         label: "Class",
         icon: "fa-shield-halved",
+        reference: true,
         help: HELP.class + importFlowNote(),
         removable: true,
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
         img: cls?.img ?? "",
+        summary: shortSummary(cls),
         blurb: text("textClass")
       },
       {
@@ -622,10 +663,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         .filter((f) => f.type === "Actor")
         .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
       steps,
-      allDone: steps.every((s) => s.done || s.optional),
+      allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {
-        const required = steps.filter((s) => !s.optional);
-        return `${required.filter((s) => s.done).length} of ${required.length}`;
+        // The name always counts as done, and is shown as step 1, so include it
+        // here too - otherwise the tally silently disagrees with the numbering.
+        const required = steps.filter((step) => !step.optional);
+        const done = required.filter((step) => step.done).length + 1;
+        return `${done} of ${required.length + 1} steps done`;
       })()
     };
   }
@@ -793,6 +837,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** Lets the player set the portrait without hunting for it on the sheet. */
+  /** Opens the reading window for classes and subclasses. */
+  static onOpenReference(event, target) {
+    try {
+      new ClassReference({ kind: target.dataset.kind ?? "class" }).render(true);
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not open the reference window`, err);
+      ui.notifications.error(`Could not open the reference: ${err.message}`);
+    }
+  }
+
   static onSetPortrait() {
     const actor = this.actor;
     if (!actor) return;
@@ -853,6 +907,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static onRecheck() {
     this.render();
+  }
+
+  /** Ends the guided run: opens the finished sheet and closes the panel. */
+  static onFinalizeGuide() {
+    const actor = this.actor;
+    this.close();
+    actor?.sheet.render(true);
   }
 
   static onOpenSheet() {

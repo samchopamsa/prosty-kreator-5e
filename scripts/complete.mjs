@@ -382,8 +382,11 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
 
       ui.notifications.info(`Updated "${actor.name}".`);
       // Closes this popup only. The guide panel behind it stays open.
+      //
+      // The sheet is NOT re-rendered here: Foundry refreshes open sheets on its
+      // own after an update, and render(true) additionally pulls the sheet in
+      // front of the panel the player was working in.
       this.close();
-      actor.sheet.render(true);
       returnToPlayMode(actor);
     } catch (err) {
       console.error(`${MODULE_ID} | Could not update actor`, err);

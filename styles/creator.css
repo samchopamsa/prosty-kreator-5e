@@ -492,3 +492,104 @@
 }
 
 .pk5e-importing i { margin-right: 5px; opacity: 0.8; }
+
+.pk5e-guide-summary {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.8;
+  font-style: italic;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reference window (restored list/detail layout)                      */
+/* ------------------------------------------------------------------ */
+
+.pk5e-split { flex-direction: row; gap: 10px; overflow: hidden; }
+
+.pk5e-list-col {
+  flex: 0 0 42%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.pk5e-listbar { display: flex; align-items: center; gap: 6px; }
+.pk5e-listbar input[type="search"] { flex: 1 1 auto; min-width: 0; }
+.pk5e-rules-filter { display: flex; gap: 2px; flex: 0 0 auto; }
+
+.pk5e-chip {
+  width: auto;
+  padding: 2px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  opacity: 0.65;
+}
+
+.pk5e-chip.is-active {
+  opacity: 1;
+  font-weight: 600;
+  border-color: var(--color-shadow-primary, #ff6400);
+}
+
+.pk5e-options {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.pk5e-option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+  height: auto;
+  line-height: 1.2;
+}
+
+.pk5e-option:hover { background: rgba(0, 0, 0, 0.07); }
+
+.pk5e-option.is-selected {
+  border-color: var(--color-shadow-primary, #ff6400);
+  background: rgba(255, 100, 0, 0.1);
+  font-weight: 600;
+}
+
+.pk5e-option img {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  object-fit: cover;
+  border: none;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.pk5e-option-text { display: flex; flex-direction: column; overflow: hidden; }
+.pk5e-option-name { font-size: 13px; }
+.pk5e-option-meta { font-size: 10px; opacity: 0.6; }
+
+.pk5e-detail-col {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding-left: 10px;
+  border-left: 1px solid rgba(128, 128, 128, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pk5e-detail-col h3 { margin: 0; }
+.pk5e-detail-text { font-size: 13px; line-height: 1.45; }
