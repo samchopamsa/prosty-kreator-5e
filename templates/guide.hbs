@@ -80,6 +80,12 @@
         </details>
         {{/if}}
 
+        {{#if reference}}
+        <button type="button" class="pk5e-link" data-action="openReference" data-kind="class">
+          Read about the classes and subclasses
+        </button>
+        {{/if}}
+
         {{#unless importing}}
           {{#if done}}
             {{#if removable}}
@@ -96,11 +102,6 @@
           {{else}}
             {{#if removable}}
             <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
-            {{#if reference}}
-            <button type="button" class="pk5e-link" data-action="openReference" data-kind="class">
-              Read about the classes first
-            </button>
-            {{/if}}
             {{else}}
             <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">
               {{#if optional}}Add {{label}} (optional){{else}}Set {{label}}{{/if}}

@@ -361,35 +361,52 @@ async function pressSheetButton(actor, types, labels) {
  * whether to offer "Resume creation" at all.
  */
 /**
- * A one-sentence summary taken from whatever was imported.
+ * A short summary taken from whatever was imported.
  *
- * Compendium descriptions are HTML and often open with tables, headings or a
- * licence notice, so we strip the markup and take the first sentence that reads
- * like prose rather than boilerplate.
+ * Works on paragraphs rather than the flattened text. Captions, headings, trait
+ * tables and artist credits are not paragraphs of prose, so filtering at that
+ * level removes them without guessing. Foundry enricher syntax (@UUID[...],
+ * [[/r ...]], &Reference[...]) is stripped too - it is markup, not writing.
  */
 function shortSummary(item) {
   const raw = item?.system?.description?.value ?? "";
   if (!raw) return "";
 
-  const text = raw
-    // Headings, tables and captions are structure, not prose - dropping them
-    // whole stops fragments like "Traits 1" leaking into the sentence.
-    .replace(/<(script|style|table|figure|caption)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&#39;|&rsquo;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/\s+/g, " ")
-    .trim();
-  if (!text) return "";
+  const stripped = raw
+    .replace(/<(script|style|table|figure|figcaption)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ");
 
-  const boilerplate = /free rules|creative commons|re-distributed|source:|^\d/i;
-  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
-    const candidate = sentence.trim();
-    if (candidate.length < 40 || boilerplate.test(candidate)) continue;
-    return candidate.length > 220 ? `${candidate.slice(0, 217)}...` : candidate;
+  const clean = (html) =>
+    html
+      .replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
+      .replace(/&\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
+      .replace(/\[\[[^\]]*\]\]/g, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
+      .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
+      .replace(/&mdash;/g, "-")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const paragraphs = Array.from(stripped.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)).map((m) =>
+    clean(m[1])
+  );
+  const candidates = paragraphs.length ? paragraphs : [clean(stripped)];
+
+  const boilerplate = /free rules|creative commons|re-distributed|^source\b/i;
+
+  for (const paragraph of candidates) {
+    if (paragraph.length < 60 || boilerplate.test(paragraph)) continue;
+
+    const sentences = paragraph.split(/(?<=[.!?])\s+/);
+    let text = sentences[0]?.trim() ?? "";
+    // One sentence is often too terse; take a second if there is room.
+    if (text.length < 110 && sentences[1]) text = `${text} ${sentences[1].trim()}`;
+    if (text.length < 40) continue;
+
+    return text.length > 260 ? `${text.slice(0, 257)}...` : text;
   }
   return "";
 }
