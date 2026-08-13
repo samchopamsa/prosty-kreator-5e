@@ -499,9 +499,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       );
       return null;
     }
+    // A player making their own character owns it from the start, and the name
+    // says whose it is - otherwise the GM sees a row of identical entries.
+    const isPlayer = !game.user.isGM;
+    const ownership = isPlayer
+      ? { [game.user.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }
+      : {};
+
     const actor = await Actor.implementation.create({
-      name: DEFAULT_NAME,
+      name: isPlayer ? `${DEFAULT_NAME} for ${game.user.name}` : DEFAULT_NAME,
       type: "character",
+      ownership,
       prototypeToken: {
         actorLink: true,
         disposition: CONST.TOKEN_DISPOSITIONS.FRIENDLY,
@@ -778,10 +786,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const [hook, id] of this._hooks) Hooks.off(hook, id);
     this._hooks = [];
 
-    // Closing the panel counts as "I have seen this". It will not open by
-    // itself again; the sheet button remains for anyone who wants it back.
+    // Closing counts as "I have seen this" - but ONLY for a player. The GM
+    // normally opens the panel first to assign the character, and marking it
+    // dismissed then meant the player never got the automatic opening at all.
     try {
-      if (this.actor?.isOwner && !this.actor.getFlag(MODULE_ID, "guideDismissed")) {
+      if (!game.user.isGM && this.actor?.isOwner && !this.actor.getFlag(MODULE_ID, "guideDismissed")) {
         await this.actor.setFlag(MODULE_ID, "guideDismissed", true);
       }
     } catch (err) {
@@ -864,7 +873,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  static onSetPortrait() {
+  static async onSetPortrait() {
     const actor = this.actor;
     if (!actor) return;
 
@@ -892,13 +901,35 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     };
 
-    for (const FP of candidates) {
+    console.log(`${MODULE_ID} | Opening the file picker, ${candidates.length} variant(s) available.`);
+
+    for (const [index, FP] of candidates.entries()) {
       try {
         const picker = new FP({ type: "image", current: actor.img, callback: apply });
         picker.render(true);
+        console.log(`${MODULE_ID} | File picker opened using variant ${index + 1}.`);
         return;
       } catch (err) {
-        console.warn(`${MODULE_ID} | File picker variant failed, trying the next`, err);
+        console.warn(`${MODULE_ID} | File picker variant ${index + 1} failed`, err);
+      }
+    }
+
+    // Every variant refused, so fall back to typing a path. Better than a dead
+    // button, and it keeps working whatever Foundry does with the picker class.
+    const DialogV2 = foundry.applications?.api?.DialogV2;
+    if (DialogV2?.prompt) {
+      try {
+        const path = await DialogV2.prompt({
+          window: { title: "Portrait" },
+          content: `<p>The file picker could not be opened. Paste an image path:</p>
+                    <input type="text" name="path" value="${actor.img ?? ""}" style="width:100%">`,
+          ok: { callback: (event, button) => button.form.elements.path.value.trim() }
+        });
+        await apply(path);
+        return;
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Path prompt cancelled or unavailable`, err);
+        return;
       }
     }
     ui.notifications.error("Could not open the file picker. See the console for details.");

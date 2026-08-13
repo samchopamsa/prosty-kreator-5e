@@ -65,7 +65,11 @@
           </p>
         {{else if done}}
           <div class="pk5e-guide-chosen">
-            {{#if img}}<img src="{{img}}" alt="">{{/if}}
+            {{#if img}}
+              <img src="{{img}}" alt="">
+            {{else}}
+              <div class="pk5e-guide-empty-art is-done" aria-hidden="true">&#10003;</div>
+            {{/if}}
             <div class="pk5e-chosen-body">
               <span class="pk5e-guide-result">{{result}}</span>
               {{#if summary}}<p class="pk5e-guide-summary">{{summary}}</p>{{/if}}

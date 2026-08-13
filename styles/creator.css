@@ -672,3 +672,12 @@
 }
 
 .pk5e-guide-result-empty { opacity: 0.4; font-weight: 400; }
+
+/* Steps without artwork (abilities, languages) keep the same block, marked as
+   done rather than vanishing and shifting everything below. */
+.pk5e-guide-empty-art.is-done {
+  border-style: solid;
+  border-color: var(--color-shadow-primary, #ff6400);
+  color: var(--color-shadow-primary, #ff6400);
+  opacity: 0.75;
+}
