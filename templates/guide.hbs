@@ -72,7 +72,13 @@
             </div>
           </div>
         {{else}}
-          <p class="pk5e-note">{{blurb}}</p>
+          <div class="pk5e-guide-chosen">
+            <div class="pk5e-guide-empty-art" aria-hidden="true">?</div>
+            <div class="pk5e-chosen-body">
+              <span class="pk5e-guide-result pk5e-guide-result-empty">&mdash;</span>
+              <p class="pk5e-guide-summary">{{blurb}}</p>
+            </div>
+          </div>
         {{/if}}
 
         {{#if showHelp}}

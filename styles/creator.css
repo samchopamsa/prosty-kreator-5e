@@ -652,3 +652,23 @@
   vertical-align: 1px;
   background: rgba(255, 100, 0, 0.3);
 }
+
+/* Placeholder for a step not yet made, laid out exactly like a chosen entry so
+   nothing shifts when the choice lands. */
+.pk5e-guide-empty-art {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed rgba(128, 128, 128, 0.45);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+  font-size: 30px;
+  font-weight: 700;
+  opacity: 0.35;
+  user-select: none;
+}
+
+.pk5e-guide-result-empty { opacity: 0.4; font-weight: 400; }

@@ -25,6 +25,10 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Name given to a freshly created character, and the pattern we may replace. */
+const DEFAULT_NAME = "New Character";
+const AUTO_NAME = /^New Character for .+$/;
+
 /** Wording the GM can override in the module settings. */
 const DEFAULT_TEXT = {
   introText:
@@ -549,7 +553,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       return null;
     }
     const actor = await Actor.implementation.create({
-      name: "New Character",
+      name: DEFAULT_NAME,
       type: "character",
       prototypeToken: {
         actorLink: true,
@@ -750,6 +754,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       const update = {};
       for (const user of game.users.filter((u) => !u.isGM)) {
         update[`ownership.${user.id}`] = user.id === chosen ? OWNER : NONE;
+      }
+
+      // Name the character after its player while it is still unnamed. A row of
+      // sheets all called "New Character" is impossible to tell apart. A name
+      // the player has actually chosen is never touched.
+      const currentName = this.actor?.name ?? "";
+      const isPlaceholder = currentName === DEFAULT_NAME || AUTO_NAME.test(currentName);
+      if (isPlaceholder) {
+        const player = chosen ? game.users.get(chosen) : null;
+        update.name = player ? `${DEFAULT_NAME} for ${player.name}` : DEFAULT_NAME;
       }
 
       try {

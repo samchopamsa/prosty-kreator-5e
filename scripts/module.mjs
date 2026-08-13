@@ -78,6 +78,15 @@ Hooks.once("init", () => {
     default: []
   });
 
+  game.settings.register(MODULE_ID, "referenceGmSeesAll", {
+    name: "Reference: GM sees every compendium",
+    hint: "The compendium selection then applies to players only, so you can read anything while they see a curated set.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.registerMenu(MODULE_ID, "referenceMenu", {
     name: "Reference: compendiums to read",
     label: "Choose compendiums",
