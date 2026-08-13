@@ -212,6 +212,22 @@ function findKeepOpenCheckbox() {
  * therefore untick it here, doing exactly what the player would have done, and
  * only if we can actually see it.
  */
+/**
+ * Whether Plutonium has been configured to skip its own importer question.
+ * Read through its public config API; if that is unavailable we assume it still
+ * asks, which is the safe direction - at worst we wait a moment for nothing.
+ */
+function plutoniumAnswersItself() {
+  try {
+    const value = globalThis.plutonium?.config?.getValue?.("actor", "addButtonMode");
+    // 0 Never, 1 Prompt, 2 Always - anything other than Prompt means no dialog.
+    return value !== undefined && value !== 1;
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not read Plutonium's addButtonMode`, err);
+    return false;
+  }
+}
+
 async function autoAdvance() {
   const isGM = game.user?.isGM;
   const mode = game.settings.get(MODULE_ID, isGM ? "autoAdvanceGm" : "autoAdvance");
@@ -221,7 +237,11 @@ async function autoAdvance() {
   );
 
   // Step one: the "Use Plutonium / Use Compendium Browser" choice.
-  if (mode && mode !== "off") {
+  //
+  // Plutonium can be told to stop asking, via its own "Use Importer when Using
+  // ADD ... Button on Actor" setting. When it is, waiting for a window that will
+  // never appear just adds four seconds to every step, so we ask Plutonium first.
+  if (mode && mode !== "off" && !plutoniumAnswersItself()) {
     const label = mode === "plutonium" ? "use plutonium" : "use compendium browser";
     const chooser = await waitForButton([label], 4000);
     if (chooser) chooser.click();

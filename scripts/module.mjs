@@ -41,7 +41,7 @@ Hooks.once("init", () => {
 
   game.settings.register(MODULE_ID, "autoAdvanceGm", {
     name: "Click through the import dialogs automatically (GM)",
-    hint: "Same as below, but for you. Leave off if you want to pick sources yourself when importing.",
+    hint: "Same as below, but for you. Also better handled by Plutonium's own 'Use Importer when Using ADD ... Button on Actor' setting.",
     scope: "world",
     config: true,
     type: String,
@@ -55,7 +55,7 @@ Hooks.once("init", () => {
 
   game.settings.register(MODULE_ID, "autoAdvance", {
     name: "Click through the import dialogs automatically (players)",
-    hint: "Answers the 'Use Plutonium / Use Compendium Browser' question for the player. Recognises the window by its wording, so an update to Plutonium can stop it working - it then simply does nothing.",
+    hint: "Answers the 'Use Plutonium / Use Compendium Browser' question for the player. Better done in Plutonium itself: set 'Use Importer when Using ADD ... Button on Actor' to Always in its Config Editor, and the question stops being asked at all. This setting is then unnecessary and is skipped automatically.",
     scope: "world",
     config: true,
     type: String,

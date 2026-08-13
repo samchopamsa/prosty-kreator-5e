@@ -53,7 +53,13 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     this.pool = [...STANDARD_ARRAY];
     this.assign = {};
     this.direct = {};
-    this.keepBonuses = true;
+    /**
+     * How the bonus already on the sheet is worked out:
+     *  measured     - difference against the base saved last time (default)
+     *  advancements - read from the ability score improvements on the items
+     *  none         - ignore, write the raw assignment
+     */
+    this.bonusMode = "measured";
     /** Which actor the stored state was loaded for, so we load it only once. */
     this._loadedFor = null;
     for (const key of this.abilityKeys) {
@@ -157,7 +163,15 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
    * 3. Otherwise, the old guess: anything above 10.
    */
   existingBonus(key) {
-    if (!this.keepBonuses || !this.actor) return 0;
+    if (!this.actor || this.bonusMode === "none") return 0;
+
+    // Reading straight from the advancements ignores whatever is currently on
+    // the sheet. That is the point: increases left behind by an importer when an
+    // item was deleted quietly inflate the scores, and measuring against the
+    // sheet would faithfully preserve that inflation.
+    if (this.bonusMode === "advancements") {
+      return this.detectBonuses().values[key] ?? 0;
+    }
 
     const current = this.actor.system?.abilities?.[key]?.value ?? 10;
     const lastBase = this.savedState?.base?.[key];
@@ -251,7 +265,15 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
             .filter(Boolean)
             .join(" · ")
         : "",
-      keepBonuses: this.keepBonuses,
+      bonusModes: [
+        { key: "measured", label: "Measured against the last save", selected: this.bonusMode === "measured" },
+        { key: "advancements", label: "Read from the character's advancements", selected: this.bonusMode === "advancements" },
+        { key: "none", label: "Ignore - write my numbers exactly", selected: this.bonusMode === "none" }
+      ],
+      bonusMode: this.bonusMode,
+      isMeasured: this.bonusMode === "measured",
+      isFromAdvancements: this.bonusMode === "advancements",
+      isIgnored: this.bonusMode === "none",
       hasSavedState: !!this.savedState,
       savedAt: this.savedState?.appliedAt
         ? new Date(this.savedState.appliedAt).toLocaleString()
@@ -279,8 +301,8 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       this.render();
     });
 
-    el.querySelector("input[data-keep-bonuses]")?.addEventListener("change", (ev) => {
-      this.keepBonuses = ev.currentTarget.checked;
+    el.querySelector("select[data-bonus-mode]")?.addEventListener("change", (ev) => {
+      this.bonusMode = ev.currentTarget.value;
       this.render();
     });
 

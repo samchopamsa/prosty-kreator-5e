@@ -3,41 +3,57 @@
   <div class="pk5e-body">
     <div class="pk5e-pane">
 
-      <p class="pk5e-lead">
-        For characters built by an importer such as Plutonium, which fills in the
-        class, species, background and gear but never asks for ability scores.
-      </p>
-
-      {{#unless locked}}
-      <label class="pk5e-label" for="pk5e-actor">Character</label>
-      <select id="pk5e-actor" data-actor>
-        <option value="">— choose —</option>
-        {{#each actors}}
-        <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
-        {{/each}}
-      </select>
-      {{/unless}}
+      {{#if locked}}
+        <h2>{{actorName}}</h2>
+        <p class="pk5e-note">{{summary}}</p>
+      {{else}}
+        <p class="pk5e-lead">
+          For characters built by an importer such as Plutonium, which fills in
+          the class, species, background and gear but never asks for ability
+          scores.
+        </p>
+        <label class="pk5e-label" for="pk5e-actor">Character</label>
+        <select id="pk5e-actor" data-actor>
+          <option value="">— choose —</option>
+          {{#each actors}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          {{/each}}
+        </select>
+      {{/if}}
 
       {{#if hasActor}}
-      <h2>{{actorName}}</h2>
-      <p class="pk5e-note">{{summary}}</p>
+      {{#unless locked}}<p class="pk5e-note">{{summary}}</p>{{/unless}}
 
-      <label class="pk5e-pack">
-        <input type="checkbox" data-keep-bonuses {{#if keepBonuses}}checked{{/if}}>
-        <span class="pk5e-pack-name">Keep bonuses already on the sheet</span>
-      </label>
-      {{#if bonusFound}}
-      <p class="pk5e-note">
-        Increases granted by this character's background or species were found on
-        the sheet and are added on top of your assignment. Switch the box off to
-        overwrite the scores outright.
-      </p>
-      {{else}}
-      <p class="pk5e-note">
-        No ability score increases were found on this character, so your
-        assignment is written as-is.
-      </p>
+      {{#if hasSavedState}}
+      <div class="pk5e-callout">
+        <strong>Previously completed{{#if savedAt}} on {{savedAt}}{{/if}}.</strong>
+        <p>
+          Your earlier assignment is restored below, so applying again will not
+          stack anything twice.
+        </p>
+      </div>
       {{/if}}
+
+      <label class="pk5e-label" for="pk5e-bonus-mode">Bonuses already on the sheet</label>
+      <select id="pk5e-bonus-mode" data-bonus-mode>
+        {{#each bonusModes}}
+        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+        {{/each}}
+      </select>
+      <p class="pk5e-note">
+        {{#if isMeasured}}
+          The difference between the current score and the base saved last time is
+          treated as a bonus. Accurate on a sheet nobody has meddled with.
+        {{/if}}
+        {{#if isFromAdvancements}}
+          Bonuses are read from the ability score improvements on the character's
+          own items, and whatever is currently on the sheet is ignored. Use this
+          to clear increases left behind by an importer when an item was deleted.
+        {{/if}}
+        {{#if isIgnored}}
+          The scores are written exactly as assigned, with nothing added.
+        {{/if}}
+      </p>
 
       <div class="pk5e-methods">
         <label><input type="radio" name="pk5e-cmethod" data-method="standard"
@@ -105,17 +121,13 @@
       </table>
 
       <button type="button" class="pk5e-link" data-action="reset">Reset</button>
-
       {{/if}}
 
     </div>
   </div>
 
   <footer class="pk5e-footer">
-    <span class="pk5e-hint">
-      Only ability scores are touched. Everything else on the sheet
-      is left exactly as the importer created it.
-    </span>
+    <span class="pk5e-hint">Only ability scores are touched.</span>
     <button type="button" class="pk5e-primary" data-action="apply"
             {{#unless canApply}}disabled{{/unless}}>Apply</button>
   </footer>
