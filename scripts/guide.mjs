@@ -249,24 +249,25 @@ function findImportWindow() {
   return null;
 }
 
-function watchImport(onFinished, timeout = 300000) {
+function watchImport(isBusy, onFinished, timeout = 300000) {
   const deadline = Date.now() + timeout;
+  const QUIET_MS = 8000;
   let appeared = false;
-  let misses = 0;
 
   const tick = () => {
     const open = findImportWindow();
-    if (open) {
-      appeared = true;
-      misses = 0;
-    } else if (appeared) {
-      // Plutonium closes one window before opening the next, so a single miss
-      // does not mean it has finished. Require a run of them.
-      misses += 1;
-      if (misses >= 5) return onFinished();
-    }
+    if (open) appeared = true;
+
+    // Fetching data from the network takes a while, and Plutonium closes one
+    // window before opening the next, so a gap with no window on screen does
+    // NOT mean it has finished. We also treat items still arriving on the actor
+    // as proof the import is running, and only give up after a long quiet spell.
+    const quietFor = Date.now() - isBusy();
+    if (!open && appeared && quietFor > QUIET_MS) return onFinished();
+    if (!open && !appeared && quietFor > QUIET_MS) return onFinished();
     if (Date.now() > deadline) return onFinished();
-    setTimeout(tick, 300);
+
+    setTimeout(tick, 400);
   };
 
   setTimeout(tick, 600);
@@ -454,6 +455,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._help = {};
     /** Step whose import is still running, if any. */
     this._importing = null;
+    /** When something last landed on the actor, used to detect a finished import. */
+    this._lastActivity = 0;
   }
 
   static DEFAULT_OPTIONS = {
@@ -758,7 +761,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    */
   registerWatchers() {
     const onItem = (doc) => {
-      if (doc?.parent?.id === this.actorId) this.render();
+      if (doc?.parent?.id !== this.actorId) return;
+      // Items still arriving means the import is still running.
+      if (this._importing) this._lastActivity = Date.now();
+      this.render();
     };
     for (const hook of ["createItem", "deleteItem", "updateItem"]) {
       this._hooks.push([hook, Hooks.on(hook, onItem)]);
@@ -846,11 +852,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!pressed) return;
 
     this._importing = step;
+    this._lastActivity = Date.now();
     this.render();
-    watchImport(() => {
-      this._importing = null;
-      this.render();
-    });
+
+    watchImport(
+      () => this._lastActivity,
+      () => {
+        this._importing = null;
+        this.render();
+      }
+    );
   }
 
   /** Lets the player set the portrait without hunting for it on the sheet. */
