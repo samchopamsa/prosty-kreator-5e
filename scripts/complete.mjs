@@ -23,77 +23,6 @@ const POINT_BUY_COST = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
 const POINT_BUY_TOTAL = 27;
 
 /**
- * Languages listed as standard in the 2024 core rules. Everything else is shown
- * under "Expanded". Matched against both the config key and the label, because
- * key spellings differ between system versions.
- */
-const CORE_LANGUAGES = [
-  "common",
-  "commonsignlanguage",
-  "draconic",
-  "dwarvish",
-  "elvish",
-  "giant",
-  "gnomish",
-  "goblin",
-  "halfling",
-  "orc"
-];
-
-const normalise = (value) => String(value ?? "").toLowerCase().replace(/[^a-z]/g, "");
-
-/** The config key for Common, whatever this system version calls it. */
-function commonLanguageKey() {
-  const entry = flattenLanguages().find(
-    (l) => normalise(l.key) === "common" || normalise(l.plainLabel ?? l.label) === "common"
-  );
-  return entry?.key ?? null;
-}
-
-function isCoreLanguage(entry) {
-  return (
-    CORE_LANGUAGES.includes(normalise(entry.key)) ||
-    CORE_LANGUAGES.includes(normalise(entry.plainLabel ?? entry.label))
-  );
-}
-
-/** CONFIG.DND5E.languages may be flat or nested; flatten either shape. */
-function flattenLanguages(node = CONFIG.DND5E?.languages ?? {}, prefix = "") {
-  const out = [];
-  for (const [key, value] of Object.entries(node)) {
-    if (typeof value === "string") {
-      out.push({ key, label: value, plainLabel: value });
-      continue;
-    }
-    const label = value?.label ?? key;
-    if (value?.children) {
-      out.push(...flattenLanguages(value.children, `${prefix}${label} / `));
-    } else {
-      out.push({ key, label: `${prefix}${label}`, plainLabel: label });
-    }
-  }
-  return out.sort((a, b) => a.label.localeCompare(b.label));
-}
-
-/** Core languages first, everything else under Expanded. */
-function groupLanguages(selected) {
-  const all = flattenLanguages().map((entry) => ({
-    key: entry.key,
-    label: entry.label,
-    checked: selected.has(entry.key),
-    search: `${entry.label} ${entry.key}`.toLowerCase(),
-    core: isCoreLanguage(entry)
-  }));
-
-  const groups = [
-    { label: "Core Rules", languages: all.filter((l) => l.core) },
-    { label: "Expanded", languages: all.filter((l) => !l.core) }
-  ].filter((g) => g.languages.length);
-
-  return { groups, total: all.length, selected: all.filter((l) => l.checked).length };
-}
-
-/**
  * Puts the sheet back into play mode once the character is finished, so the
  * player is not left looking at the editing interface.
  */
@@ -124,7 +53,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     this.assign = {};
     this.direct = {};
     this.keepBonuses = true;
-    this.languages = null;
     /** Which actor the stored state was loaded for, so we load it only once. */
     this._loadedFor = null;
     for (const key of this.abilityKeys) {
@@ -299,17 +227,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       };
     });
 
-    const known = actor?.system?.traits?.languages?.value;
-    const first = !this.languages;
-    const current = this.languages ?? new Set(known ? Array.from(known) : []);
-
-    // Everyone speaks Common, so tick it rather than making each player find it.
-    if (first) {
-      const common = commonLanguageKey();
-      if (common) current.add(common);
-    }
-    this.languages = current;
-    const grouped = groupLanguages(current);
 
     return {
       locked: this.locked,
@@ -346,9 +263,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       rows,
       pointsLeft: POINT_BUY_TOTAL - this.pointsSpent(),
       pointsTotal: POINT_BUY_TOTAL,
-      languageGroups: grouped.groups,
-      languageTotal: grouped.total,
-      languageSelected: grouped.selected,
       canApply: this.isReady()
     };
   }
@@ -358,7 +272,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
 
     el.querySelector("select[data-actor]")?.addEventListener("change", (ev) => {
       this.actorId = ev.currentTarget.value || null;
-      this.languages = null;
       this._bonusCache = null;
       this.render();
     });
@@ -394,31 +307,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       });
     });
 
-    el.querySelectorAll("input[data-language]").forEach((cb) => {
-      cb.addEventListener("change", (ev) => {
-        const key = ev.currentTarget.dataset.language;
-        if (ev.currentTarget.checked) this.languages.add(key);
-        else this.languages.delete(key);
-        const counter = el.querySelector("[data-language-count]");
-        if (counter) counter.textContent = String(this.languages.size);
-      });
-    });
-
-    const langSearch = el.querySelector("[data-language-search]");
-    if (langSearch) {
-      langSearch.addEventListener("input", (ev) => {
-        const q = ev.currentTarget.value.trim().toLowerCase();
-        el.querySelectorAll(".pk5e-lang-group").forEach((group) => {
-          let visible = 0;
-          group.querySelectorAll(".pk5e-pack").forEach((row) => {
-            const match = !q || row.dataset.search.includes(q);
-            row.style.display = match ? "" : "none";
-            if (match) visible += 1;
-          });
-          group.style.display = visible ? "" : "none";
-        });
-      });
-    }
   }
 
   static onAbilityPlus(event, target) {
@@ -470,10 +358,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       base[key] = value;
       update[`system.abilities.${key}.value`] = Math.min(20, value + this.existingBonus(key));
     }
-    if (this.languages) {
-      update["system.traits.languages.value"] = Array.from(this.languages);
-    }
-
     // Remember the base scores we wrote. Next time the bonus is derived from
     // the difference against these, so nothing is ever counted twice.
     update[`flags.${MODULE_ID}.abilities`] = {

@@ -10,6 +10,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { CreationGuide } from "./guide.mjs";
 import { CompleteCharacter } from "./complete.mjs";
+import { LanguagePicker } from "./languages.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { registerContextMenu } from "./context-menu.mjs";
@@ -21,7 +22,8 @@ Hooks.once("init", () => {
     textSpecies: "Panel: species step",
     textBackground: "Panel: background step",
     textClass: "Panel: class step",
-    textAbilities: "Panel: ability scores step"
+    textAbilities: "Panel: ability scores step",
+    textLanguages: "Panel: languages step"
   };
   for (const [key, name] of Object.entries(textSettings)) {
     game.settings.register(MODULE_ID, key, {
@@ -33,6 +35,29 @@ Hooks.once("init", () => {
       default: ""
     });
   }
+
+  game.settings.register(MODULE_ID, "autoAdvance", {
+    name: "Click through the import dialogs automatically",
+    hint: "Skips the 'Use Plutonium / Use Compendium Browser' choice and presses 'Open Importer', so players land straight on the list. Recognises those windows by their wording, so an update to Plutonium can stop it working - it then simply does nothing.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "off",
+    choices: {
+      off: "Off - the player clicks through",
+      plutonium: "Always use Plutonium",
+      compendium: "Always use the Compendium Browser"
+    }
+  });
+
+  game.settings.register(MODULE_ID, "showStepHelp", {
+    name: "Show 'What is this?' explanations",
+    hint: "Short plain-language notes on each step, for players new to the game. Open by default on a brand new character.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
 
   game.settings.register(MODULE_ID, "guideButton", {
     name: "Show 'New Character' in the Actors sidebar",
@@ -98,6 +123,7 @@ Hooks.once("ready", () => {
     guide: () => CreationGuide.start(),
     resume: (actorId) => CreationGuide.open(actorId),
     complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
+    languages: (actorId) => new LanguagePicker({ actorId }).render(true),
     CreationGuide,
     CompleteCharacter
   };

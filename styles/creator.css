@@ -335,3 +335,67 @@
 }
 
 .pk5e-empty { font-size: 12px; padding: 8px; line-height: 1.4; }
+
+/* Standard Languages table */
+.pk5e-lang-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.pk5e-lang-table th,
+.pk5e-lang-table td {
+  padding: 3px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  text-align: left;
+}
+
+.pk5e-lang-table th:first-child,
+.pk5e-lang-table td:first-child { width: 60px; text-align: center; }
+.pk5e-lang-table tr.is-known { font-weight: 600; }
+
+.pk5e-lang-table tr.is-rolled {
+  background: rgba(255, 100, 0, 0.15);
+  outline: 1px solid var(--color-shadow-primary, #ff6400);
+}
+
+/* "What is this?" explanations */
+.pk5e-help { font-size: 12px; margin-top: 2px; }
+
+.pk5e-help > summary {
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 11px;
+  text-decoration: underline;
+  list-style: none;
+}
+
+.pk5e-help > summary::-webkit-details-marker { display: none; }
+.pk5e-help[open] > summary { opacity: 0.9; }
+
+.pk5e-help p {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  line-height: 1.45;
+  border-left: 2px solid rgba(128, 128, 128, 0.4);
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 0 3px 3px 0;
+}
+
+/* The panel opens over the character sheet, so it needs to be solid rather
+   than letting the sheet show through and compete for attention. */
+.pk5e-creator .window-content {
+  background-color: var(--color-bg, #17161a);
+  opacity: 1;
+}
+
+.pk5e-guide .window-content { background-color: var(--color-bg, #17161a); }
+
+.pk5e-guide-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  text-align: center;
+  opacity: 0.55;
+  font-size: 12px;
+}
+
+.pk5e-guide-step.is-done .pk5e-guide-icon {
+  opacity: 1;
+  color: var(--color-shadow-primary, #ff6400);
+}

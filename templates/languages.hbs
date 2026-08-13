@@ -1,0 +1,69 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      {{#if hasActor}}
+      <h2>{{actorName}}</h2>
+
+      <p class="pk5e-lead">
+        Your character knows at least three languages: Common plus two languages
+        you roll or choose from the Standard Languages table.
+      </p>
+
+      <table class="pk5e-lang-table">
+        <thead>
+          <tr><th>1d12</th><th>Language</th><th>Origin</th></tr>
+        </thead>
+        <tbody>
+          {{#each table}}
+          <tr class="{{#if known}}is-known{{/if}} {{#if highlight}}is-rolled{{/if}}">
+            <td class="pk5e-mod">{{roll}}</td>
+            <td>{{name}}{{#if automatic}} <span class="pk5e-abbr">always known</span>{{/if}}</td>
+            <td>{{origin}}</td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+
+      <p class="pk5e-note">
+        <button type="button" class="pk5e-link" data-action="rollLanguage">Roll 1d12</button>
+        {{#if lastRoll}} &middot; last roll: <strong>{{lastRoll}}</strong>{{/if}}
+      </p>
+
+      <h3>Your languages</h3>
+      <p class="pk5e-note">
+        Common is always known. Chosen besides Common: <strong>{{extras}}</strong>.
+        {{#if overLimit}} That is more than the usual two - you will be asked to confirm.{{/if}}
+      </p>
+
+      <input type="search" data-language-search placeholder="Search languages..." autocomplete="off">
+
+      <div class="pk5e-packs pk5e-lang-groups">
+        {{#each groups}}
+        <section class="pk5e-lang-group">
+          <h4 class="pk5e-lang-heading">{{label}}</h4>
+          {{#each languages}}
+          <label class="pk5e-pack" data-search="{{search}}">
+            <input type="checkbox" data-language="{{key}}"
+                   {{#if checked}}checked{{/if}} {{#if locked}}disabled{{/if}}>
+            <span class="pk5e-pack-name">{{label}}</span>
+            {{#if locked}}<span class="pk5e-pack-origin">always known</span>{{/if}}
+          </label>
+          {{/each}}
+        </section>
+        {{/each}}
+      </div>
+      {{else}}
+      <p class="pk5e-empty">This character no longer exists.</p>
+      {{/if}}
+
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <span class="pk5e-hint">Only languages are changed. Nothing else on the sheet is touched.</span>
+    <button type="button" class="pk5e-primary" data-action="apply">Save</button>
+  </footer>
+
+</div>

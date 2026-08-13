@@ -15,6 +15,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
+import { LanguagePicker } from "./languages.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { postSummary } from "./summary.mjs";
 
@@ -29,7 +30,32 @@ const DEFAULT_TEXT = {
   textSpecies: "Determines your speed, size and innate traits.",
   textBackground: "Grants proficiencies, an origin feat and ability score increases.",
   textClass: "What your character can do, in combat and out of it.",
-  textAbilities: "Importers skip this, so it is done here at the end."
+  textAbilities: "Importers skip this, so it is done here at the end.",
+  textLanguages: "Common plus two more. Roll for them or pick from the table."
+};
+
+/**
+ * Plain-language explanations for someone who has never built a character.
+ * Written from the rules themselves rather than copied from anywhere.
+ */
+const IMPORT_FLOW =
+  " After you press the button, a small window asks where to take the entry from. " +
+  "Choose Use Plutonium, then press Open Importer in the window that follows - " +
+  "only then do you see the list to pick from.";
+
+const HELP = {
+  name:
+    "Just a name for now. You can change it at any time, and nothing else depends on it.",
+  species:
+    "Your character's ancestry - dwarf, elf, human and so on. It sets size and walking speed, and usually adds something innate: darkvision, a resistance, a small once-per-day ability. Under the 2024 rules your species does NOT change your ability scores; that comes from your background." + IMPORT_FLOW,
+  background:
+    "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine." + IMPORT_FLOW,
+  class:
+    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of." + IMPORT_FLOW,
+  abilities:
+    "Six numbers describing raw talent. Strength for hitting and lifting, Dexterity for aim and reflexes, Constitution for stamina and hit points, Intelligence for knowledge, Wisdom for perception and willpower, Charisma for force of personality. What matters in play is the modifier next to each score: 10 gives +0, and every two points above or below shifts it by one. Put your highest number in whatever your class uses most.",
+  languages:
+    "Everyone speaks Common. Your character knows two more, which you can roll for or choose. Languages rarely decide a fight, but they open doors when the party meets someone who does not speak Common."
 };
 
 function text(key) {
@@ -94,6 +120,59 @@ async function deleteWithAdvancement(actor, item) {
   }
 
   await item.delete();
+}
+
+/**
+ * Waits for a button carrying one of the given labels to appear anywhere on the
+ * page, then hands it back. Used to walk the player past dialogs belonging to
+ * other packages, whose internals we deliberately do not depend on - we only
+ * recognise the wording a person would read.
+ */
+function waitForButton(labels, timeout = 5000) {
+  const wanted = labels.map((l) => l.toLowerCase());
+  return new Promise((resolve) => {
+    const deadline = Date.now() + timeout;
+
+    const find = () => {
+      const nodes = document.querySelectorAll("button, a.button, .dialog-button");
+      for (const node of nodes) {
+        if (node.disabled || node.closest("#pk5e-guide")) continue;
+        const label = (node.textContent ?? "").trim().toLowerCase();
+        if (label && wanted.some((w) => label === w || label.includes(w))) return node;
+      }
+      return null;
+    };
+
+    const tick = () => {
+      const hit = find();
+      if (hit) return resolve(hit);
+      if (Date.now() > deadline) return resolve(null);
+      setTimeout(tick, 120);
+    };
+    tick();
+  });
+}
+
+/**
+ * Optionally clicks through the "Use Plutonium / Use Compendium Browser" choice
+ * and the importer's own "Open Importer" button, so the player lands straight
+ * on the list of options. Off by default: it takes a real choice away, and it
+ * leans on the wording of another package.
+ */
+async function autoAdvance() {
+  const mode = game.settings.get(MODULE_ID, "autoAdvance");
+  if (!mode || mode === "off") return;
+
+  const label = mode === "plutonium" ? "use plutonium" : "use compendium browser";
+  const chooser = await waitForButton([label], 4000);
+  if (!chooser) return;
+  chooser.click();
+
+  if (mode !== "plutonium") return;
+
+  // Plutonium then shows its wizard, which needs one more click to open.
+  const opener = await waitForButton(["open importer"], 5000);
+  opener?.click();
 }
 
 /** Confirmation dialog, tolerant of the API differing between versions. */
@@ -176,6 +255,7 @@ async function pressSheetButton(actor, types, labels) {
   }
 
   button.click();
+  autoAdvance();
   return true;
 }
 
@@ -191,6 +271,7 @@ export function missingSteps(actor) {
     if (!has) missing.push(step);
   }
   if (!actor.getFlag(MODULE_ID, "abilities")) missing.push("abilities");
+  if (!actor.getFlag(MODULE_ID, "languages")) missing.push("languages");
   return missing;
 }
 
@@ -203,6 +284,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     super(options);
     this.actorId = options.actorId ?? null;
     this._hooks = [];
+
+    // Fill the available height rather than opening as a narrow strip over the
+    // sheet, which was hard to read.
+    const available = (globalThis.innerHeight ?? 900) - 80;
+    this.options.position = {
+      ...this.options.position,
+      width: Math.min(620, (globalThis.innerWidth ?? 1200) - 60),
+      height: Math.max(520, Math.min(880, available))
+    };
+    /** Per-step override of whether the explanation is expanded. */
+    this._help = {};
   }
 
   static DEFAULT_OPTIONS = {
@@ -221,6 +313,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       removeStep: CreationGuide.onRemoveStep,
       openSheet: CreationGuide.onOpenSheet,
       finalise: CreationGuide.onFinalise,
+      languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
       recheck: CreationGuide.onRecheck
     }
@@ -294,11 +387,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const cls = actor.items.find((i) => i.type === "class");
     const abilitiesDone = !!actor.getFlag(MODULE_ID, "abilities");
 
+    const known = actor.system?.traits?.languages?.value;
+    const languageCount = known ? Array.from(known).length : 0;
+    const languageSummary = languageCount
+      ? `${languageCount} language${languageCount === 1 ? "" : "s"}`
+      : "";
+
     const steps = [
       {
         key: "species",
         number: 2,
         label: "Species",
+        icon: "fa-dna",
+        help: HELP.species,
         removable: true,
         done: !!species,
         result: species?.name ?? "",
@@ -309,6 +410,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "background",
         number: 3,
         label: "Background",
+        icon: "fa-scroll",
+        help: HELP.background,
         removable: true,
         done: !!background,
         result: background?.name ?? "",
@@ -319,6 +422,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "class",
         number: 4,
         label: "Class",
+        icon: "fa-shield-halved",
+        help: HELP.class,
         removable: true,
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
@@ -328,7 +433,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       {
         key: "abilities",
         number: 5,
-        label: "Ability scores and languages",
+        label: "Ability scores",
+        icon: "fa-dice-d20",
+        help: HELP.abilities,
         removable: false,
         done: abilitiesDone,
         result: abilitiesDone
@@ -338,8 +445,30 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           : "",
         img: "",
         blurb: text("textAbilities")
+      },
+      {
+        key: "languages",
+        number: 6,
+        label: "Languages",
+        icon: "fa-comments",
+        help: HELP.languages,
+        removable: false,
+        action: "languages",
+        done: !!actor.getFlag(MODULE_ID, "languages"),
+        result: languageSummary,
+        img: "",
+        blurb: text("textLanguages")
       }
     ];
+
+    const showHelp = game.settings.get(MODULE_ID, "showStepHelp");
+    // Explanations start open on a brand new character and stay closed once the
+    // player has clearly done this before.
+    const helpDefault = steps.filter((step) => step.done).length === 0;
+    for (const step of steps) {
+      step.showHelp = showHelp && !!step.help;
+      step.helpOpen = this._help[step.key] ?? helpDefault;
+    }
 
     const report = checkCharacter(actor);
     const ownership = actor.ownership ?? {};
@@ -347,6 +476,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       actorName: actor.name,
       actorImg: actor.img ?? "",
+      nameHelp: showHelp ? HELP.name : "",
+      nameHelpOpen: this._help.name ?? helpDefault,
       introText: text("introText"),
       isGM: game.user.isGM,
       report,
@@ -415,6 +546,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         console.error(`${MODULE_ID} | Could not move the character`, err);
         ui.notifications.error(`Could not move the character: ${err.message}`);
       }
+    });
+
+    this.element.querySelectorAll("details[data-help]").forEach((node) => {
+      node.addEventListener("toggle", () => {
+        this._help[node.dataset.help] = node.open;
+      });
     });
 
     if (!this._hooks.length) this.registerWatchers();
@@ -540,6 +677,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static onOpenSheet() {
     this.actor?.sheet.render(true);
+  }
+
+  static onLanguages() {
+    if (!this.actor) {
+      ui.notifications.warn("That character no longer exists.");
+      return;
+    }
+    try {
+      new LanguagePicker({ actorId: this.actorId, id: `pk5e-languages-${this.actorId}` }).render(true);
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not open the language picker`, err);
+      ui.notifications.error(`Could not open the language picker: ${err.message}`);
+    }
   }
 
   static onFinalise() {

@@ -106,24 +106,6 @@
 
       <button type="button" class="pk5e-link" data-action="reset">Reset</button>
 
-      <details class="pk5e-details" open>
-        <summary>Languages (<span data-language-count>{{languageSelected}}</span> selected)</summary>
-        <p class="pk5e-note">Languages already on the sheet are ticked.</p>
-        <input type="search" data-language-search placeholder="Search languages..." autocomplete="off">
-        <div class="pk5e-packs pk5e-lang-groups">
-          {{#each languageGroups}}
-          <section class="pk5e-lang-group">
-            <h4 class="pk5e-lang-heading">{{label}}</h4>
-            {{#each languages}}
-            <label class="pk5e-pack" data-search="{{search}}">
-              <input type="checkbox" data-language="{{key}}" {{#if checked}}checked{{/if}}>
-              <span class="pk5e-pack-name">{{label}}</span>
-            </label>
-            {{/each}}
-          </section>
-          {{/each}}
-        </div>
-      </details>
       {{/if}}
 
     </div>
@@ -131,7 +113,7 @@
 
   <footer class="pk5e-footer">
     <span class="pk5e-hint">
-      Only ability scores and languages are touched. Everything else on the sheet
+      Only ability scores are touched. Everything else on the sheet
       is left exactly as the importer created it.
     </span>
     <button type="button" class="pk5e-primary" data-action="apply"

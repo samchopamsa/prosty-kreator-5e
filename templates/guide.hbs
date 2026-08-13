@@ -36,15 +36,23 @@
       <div class="pk5e-guide-step is-done">
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">1</span>
+          <i class="fa-solid fa-signature pk5e-guide-icon"></i>
           <span class="pk5e-guide-label">Name</span>
         </div>
         <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
+        {{#if nameHelp}}
+        <details class="pk5e-help" data-help="name" {{#if nameHelpOpen}}open{{/if}}>
+          <summary>What is this?</summary>
+          <p>{{nameHelp}}</p>
+        </details>
+        {{/if}}
       </div>
 
       {{#each steps}}
       <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">{{number}}</span>
+          {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
           {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
         </div>
@@ -61,14 +69,20 @@
                     data-step="{{key}}">Remove</button>
           </div>
           {{else}}
-          <button type="button" class="pk5e-link" data-action="finalise">Adjust</button>
+          <button type="button" class="pk5e-link" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">Adjust</button>
           {{/if}}
         {{else}}
           <p class="pk5e-note">{{blurb}}</p>
+          {{#if showHelp}}
+          <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
+            <summary>What is this?</summary>
+            <p>{{help}}</p>
+          </details>
+          {{/if}}
           {{#if removable}}
           <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
           {{else}}
-          <button type="button" data-action="finalise">Set {{label}}</button>
+          <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">Set {{label}}</button>
           {{/if}}
         {{/if}}
       </div>
