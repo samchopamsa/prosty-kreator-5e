@@ -681,3 +681,19 @@
   color: var(--color-shadow-primary, #ff6400);
   opacity: 0.75;
 }
+
+/* One block per chosen item, each with its own controls - a multiclassed
+   character needs to drop a single class without touching the others. */
+.pk5e-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+}
+
+.pk5e-entry + .pk5e-entry {
+  border-top: 1px dashed rgba(128, 128, 128, 0.28);
+  padding-top: 8px;
+}
+
+.pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }

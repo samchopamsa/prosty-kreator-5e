@@ -404,28 +404,59 @@ async function pressLevelUp(actor) {
     await wait(300);
   }
 
-  const find = () => {
+  // A disabled button looks identical to a missing one when clicked: nothing
+  // happens. Plutonium disables it while the character lacks the experience for
+  // the next level, so we tell the two cases apart and say which it is.
+  const isDisabled = (el) =>
+    el.disabled ||
+    el.getAttribute("aria-disabled") === "true" ||
+    /\bdisabled\b/.test(el.className);
+
+  const findAll = () => {
+    const seen = new Set();
     for (const selector of LEVEL_UP_SELECTORS) {
-      const hit = actor.sheet.element?.querySelector(selector);
-      if (hit) return hit;
+      for (const el of actor.sheet.element?.querySelectorAll(selector) ?? []) seen.add(el);
     }
-    return null;
+    return Array.from(seen);
   };
 
-  let button = find();
+  const find = () => findAll().find((el) => !isDisabled(el)) ?? null;
+
+  // Plutonium injects this button after the sheet has rendered, so a single
+  // look straight away finds nothing. Poll for a few seconds instead.
+  let button = null;
+  const deadline = Date.now() + 3000;
+  while (!button && Date.now() < deadline) {
+    button = find();
+    if (button) break;
+    await wait(200);
+  }
+
   if (!button) {
     await ensureEditMode(actor);
-    await wait(400);
+    await wait(500);
     button = find();
   }
 
   if (!button) {
+    const blocked = findAll();
+    if (blocked.length) {
+      console.warn(`${MODULE_ID} | Level-up button found but disabled`, blocked[0].className);
+      ui.notifications.warn(
+        "The level-up button is disabled, which means the character has not got the experience for the next level. Set 'How levelling works at your table' to Experience, or put the dnd5e system into its no-experience mode.",
+        { permanent: true }
+      );
+      return false;
+    }
+
+    console.warn(`${MODULE_ID} | No level-up button matched`, LEVEL_UP_SELECTORS);
     ui.notifications.warn(
       "Could not find the level-up button on the sheet. It comes from Plutonium, so it appears only while Plutonium is active."
     );
     return false;
   }
 
+  console.log(`${MODULE_ID} | Pressing Plutonium's level-up button.`);
   button.click();
   return true;
 }
@@ -719,6 +750,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       languageSummary = `${shown}${rest}`;
     }
 
+    const entryFor = (item, label, summary) => ({
+      itemId: item.id,
+      name: label ?? item.name,
+      img: item.img ?? "",
+      summary: summary ?? shortSummary(item)
+    });
+
     const steps = [
       {
         key: "species",
@@ -728,9 +766,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         help: HELP.species + importFlowNote(),
         removable: true,
         done: !!species,
-        result: species?.name ?? "",
-        img: species?.img ?? "",
-        summary: shortSummary(species),
+        entries: species ? [entryFor(species)] : [],
         blurb: text("textSpecies")
       },
       {
@@ -741,9 +777,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         help: HELP.background + importFlowNote(),
         removable: true,
         done: !!background,
-        result: background?.name ?? "",
-        img: background?.img ?? "",
-        summary: shortSummary(background),
+        entries: background ? [entryFor(background)] : [],
         blurb: text("textBackground")
       },
       {
@@ -756,12 +790,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         help: HELP.class + importFlowNote(),
         removable: true,
         done: classes.length > 0,
-        result: classLine,
-        img: cls?.img ?? "",
-        summary:
-          classes.length > 1
-            ? `Character level ${totalLevel}, across ${classes.length} classes.`
-            : shortSummary(subclass) || shortSummary(cls),
+        entries: classes.map((item) => {
+          const sub = subclassFor(item);
+          const label = `${item.name} ${item.system?.levels ?? 1}${sub ? ` - ${sub.name}` : ""}`;
+          return entryFor(item, label, shortSummary(sub) || shortSummary(item));
+        }),
+        multiclass: classes.length > 1,
+        totalLevel,
         blurb: text("textClass")
       },
       {
@@ -1001,8 +1036,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * button always ADDS - clicking it with a class already present starts a
    * multiclass rather than replacing anything.
    */
-  async removeFor(step, { confirm = true } = {}) {
-    const items = this.itemsFor(step);
+  async removeFor(step, { confirm = true, itemId = null } = {}) {
+    // With an id we remove just that one - a multiclassed character must be
+    // able to drop a single class without losing the rest.
+    const all = this.itemsFor(step);
+    const items = itemId ? all.filter((i) => i.id === itemId) : all;
     if (!items.length) return true;
 
     if (confirm) {
@@ -1071,7 +1109,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.settings.get(MODULE_ID, "levelUpMode") === "xp") {
       const ready = await grantExperienceFor(actor);
       if (!ready) return;
-      await wait(200);
+
+      // The button is only re-enabled when the sheet redraws with the new
+      // experience, so force that before going looking for it.
+      if (actor.sheet.rendered) {
+        await actor.sheet.render();
+        await wait(500);
+      }
     }
 
     await pressLevelUp(actor);
@@ -1161,14 +1205,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onReplaceStep(event, target) {
     const step = target.dataset.step;
-    const removed = await this.removeFor(step);
+    const removed = await this.removeFor(step, { itemId: target.dataset.item ?? null });
     if (!removed) return;
     await wait(200);
     await this.addFor(step);
   }
 
   static async onRemoveStep(event, target) {
-    await this.removeFor(target.dataset.step);
+    await this.removeFor(target.dataset.step, { itemId: target.dataset.item ?? null });
   }
 
   static async onPostSummary() {
