@@ -39,9 +39,23 @@ Hooks.once("init", () => {
     });
   }
 
+  game.settings.register(MODULE_ID, "autoAdvanceGm", {
+    name: "Click through the import dialogs automatically (GM)",
+    hint: "Same as below, but for you. Leave off if you want to pick sources yourself when importing.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "off",
+    choices: {
+      off: "Off - you click through",
+      plutonium: "Always use Plutonium",
+      compendium: "Always use the Compendium Browser"
+    }
+  });
+
   game.settings.register(MODULE_ID, "autoAdvance", {
-    name: "Click through the import dialogs automatically",
-    hint: "Skips the 'Use Plutonium / Use Compendium Browser' choice and presses 'Open Importer', so players land straight on the list. Recognises those windows by their wording, so an update to Plutonium can stop it working - it then simply does nothing.",
+    name: "Click through the import dialogs automatically (players)",
+    hint: "Answers the 'Use Plutonium / Use Compendium Browser' question for the player. Recognises the window by its wording, so an update to Plutonium can stop it working - it then simply does nothing.",
     scope: "world",
     config: true,
     type: String,
@@ -53,9 +67,27 @@ Hooks.once("init", () => {
     }
   });
 
+  game.settings.register(MODULE_ID, "skipSourceScreen", {
+    name: "Skip the data source screen (players)",
+    hint: "Presses 'Open Importer' for the player, using whatever sources are already ticked. Set those up first in Plutonium's World Data Source Selector, or they will land on an empty list. Works whether or not the setting above is on.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
+  game.settings.register(MODULE_ID, "skipSourceScreenGm", {
+    name: "Skip the data source screen (GM)",
+    hint: "Same, for you. Leave off if you want to choose sources when importing.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
   game.settings.register(MODULE_ID, "uncheckKeepOpen", {
     name: "Untick 'Keep Window Open' while clicking through",
-    hint: "Only applies when the setting above is clicking through the dialogs. That checkbox sits on the screen being skipped, so without this a player who had it ticked could never reach it again.",
+    hint: "Only applies when the data source screen is being skipped. That checkbox sits on the screen being skipped, so without this a player who had it ticked could never reach it again.",
     scope: "world",
     config: true,
     type: Boolean,

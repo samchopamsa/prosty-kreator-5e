@@ -205,20 +205,33 @@ function findKeepOpenCheckbox() {
  * only if we can actually see it.
  */
 async function autoAdvance() {
-  const mode = game.settings.get(MODULE_ID, "autoAdvance");
-  if (!mode || mode === "off") return;
+  const isGM = game.user?.isGM;
+  const mode = game.settings.get(MODULE_ID, isGM ? "autoAdvanceGm" : "autoAdvance");
+  const skipSources = game.settings.get(
+    MODULE_ID,
+    isGM ? "skipSourceScreenGm" : "skipSourceScreen"
+  );
 
-  const label = mode === "plutonium" ? "use plutonium" : "use compendium browser";
-  const chooser = await waitForButton([label], 4000);
-  if (!chooser) return;
-  chooser.click();
+  // Step one: the "Use Plutonium / Use Compendium Browser" choice.
+  if (mode && mode !== "off") {
+    const label = mode === "plutonium" ? "use plutonium" : "use compendium browser";
+    const chooser = await waitForButton([label], 4000);
+    if (chooser) chooser.click();
+    // The compendium browser opens straight onto its list; nothing else to skip.
+    if (mode === "compendium") return;
+  }
 
-  if (mode !== "plutonium") return;
+  // Step two: the data source screen, closed by pressing "Open Importer".
+  // Independent of step one on purpose - you may want to pick the importer
+  // yourself and still not be asked about sources every time.
+  if (!skipSources) return;
 
-  // Plutonium then shows its wizard, which needs one more click to open.
-  const opener = await waitForButton(["open importer"], 5000);
+  const opener = await waitForButton(["open importer"], 12000);
   if (!opener) return;
 
+  // Keep Window Open lives ONLY on the screen we are about to skip, so a player
+  // who had it ticked would never get another chance to untick it. We therefore
+  // untick it here, doing exactly what they would have done.
   if (game.settings.get(MODULE_ID, "uncheckKeepOpen")) {
     const keepOpen = findKeepOpenCheckbox();
     if (keepOpen?.checked) {
@@ -228,72 +241,6 @@ async function autoAdvance() {
   }
 
   opener.click();
-}
-
-/**
- * Plutonium reports progress in its own window and finishes with an "Import
- * Complete" dialog the player closes. Features keep arriving until then, and
- * further choices can still pop up, so a step is not really finished the moment
- * the first item lands on the sheet.
- *
- * We watch for that window and hold the step in an "importing" state until it
- * goes away. Recognised by its title, so if Plutonium renames it we simply stop
- * showing the notice; nothing breaks.
- */
-const IMPORT_TITLES = ["import complete", "importing", "import wizard"];
-
-function findImportWindow() {
-  const frames = document.querySelectorAll(".window-app, .application");
-  for (const frame of frames) {
-    if (frame.id?.startsWith("pk5e-")) continue;
-    const title =
-      frame.querySelector(".window-title, .window-header h4, header h1")?.textContent ?? "";
-    const text = title.trim().toLowerCase();
-    if (text && IMPORT_TITLES.some((needle) => text.includes(needle))) return frame;
-  }
-  return null;
-}
-
-function watchImport(isBusy, onFinished, timeout = 300000) {
-  const deadline = Date.now() + timeout;
-
-  // Two different situations, two different levels of certainty.
-  //
-  // Once an import window has been SEEN and then goes away, that is strong
-  // evidence the run is over - a short pause is enough to rule out another
-  // window opening straight after. Before any window has appeared we have only
-  // the absence of new items to go on, which needs far longer, because fetching
-  // data from the network can take several seconds before anything shows.
-  const AFTER_WINDOW_MS = 1500;
-  const WITHOUT_WINDOW_MS = 6000;
-
-  let appeared = false;
-  let vanishedAt = 0;
-
-  const tick = () => {
-    const open = findImportWindow();
-
-    if (open) {
-      appeared = true;
-      vanishedAt = 0;
-    } else if (appeared && !vanishedAt) {
-      vanishedAt = Date.now();
-    }
-
-    const quietFor = Date.now() - isBusy();
-
-    if (appeared && vanishedAt) {
-      const goneFor = Date.now() - vanishedAt;
-      if (goneFor > AFTER_WINDOW_MS && quietFor > AFTER_WINDOW_MS) return onFinished();
-    } else if (!appeared && quietFor > WITHOUT_WINDOW_MS) {
-      return onFinished();
-    }
-
-    if (Date.now() > deadline) return onFinished();
-    setTimeout(tick, 300);
-  };
-
-  setTimeout(tick, 500);
 }
 
 /** Confirmation dialog, tolerant of the API differing between versions. */
