@@ -29,6 +29,18 @@
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
           {{/each}}
         </select>
+        <button type="button" class="pk5e-link" data-action="setDefaultFolder">
+          {{#if folderIsDefault}}
+            Stop putting new characters here
+          {{else}}
+            Put new characters here from now on
+          {{/if}}
+        </button>
+        {{#if defaultFolderName}}
+        <p class="pk5e-note">New characters go to "{{defaultFolderName}}".</p>
+        {{else}}
+        <p class="pk5e-note">New characters are not filed automatically.</p>
+        {{/if}}
       </details>
       {{/if}}
 
@@ -95,6 +107,11 @@
         {{#if reference}}
         <button type="button" class="pk5e-link" data-action="openReference" data-kind="class">
           Read about the classes and subclasses
+        </button>
+        {{/if}}
+        {{#if levelUp}}
+        <button type="button" class="pk5e-link" data-action="levelUp">
+          Add a level or another class
         </button>
         {{/if}}
 

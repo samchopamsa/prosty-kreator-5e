@@ -307,6 +307,129 @@ async function ensureEditMode(actor) {
  * Clicks the sheet's own button. Opens the sheet if needed and flips it into
  * edit mode when the button is not visible in play mode.
  */
+/**
+ * Plutonium's own level-up button on the character sheet. It carries no text and
+ * no data-action, so it is matched on a fragment of its class name - the same
+ * approach as everywhere else here: recognise what a person would point at, and
+ * do nothing if it is not there.
+ *
+ * The window it opens offers both the next level and "Add New Class
+ * (Multiclass)", so one button covers both.
+ */
+const LEVEL_UP_SELECTORS = [
+  ".imp-cls__btn-sheet-level-up",
+  "[class*='btn-sheet-level-up']",
+  "[class*='level-up']"
+];
+
+/**
+ * Experience needed for each character level. Read from the system so a world
+ * with altered thresholds still works; the table is only a fallback.
+ */
+function experienceTable() {
+  const fromSystem = CONFIG.DND5E?.CHARACTER_EXP_LEVELS;
+  if (Array.isArray(fromSystem) && fromSystem.length >= 20) return fromSystem;
+  return [
+    0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+    85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000
+  ];
+}
+
+/**
+ * Asks which level the character should reach and tops up experience to match.
+ *
+ * Plutonium's level-up button refuses to advance a character that has not earned
+ * the experience, which is correct for play but pointless when building a
+ * character that is meant to start at level five. Experience is only ever raised,
+ * never lowered, so nothing already earned is thrown away.
+ */
+async function grantExperienceFor(actor) {
+  const table = experienceTable();
+  const currentXp = Number(actor.system?.details?.xp?.value ?? 0);
+  const currentLevel = actor.items
+    .filter((i) => i.type === "class")
+    .reduce((sum, i) => sum + (i.system?.levels ?? 0), 0);
+
+  const options = table
+    .map((xp, index) => ({ level: index + 1, xp }))
+    .filter((entry) => entry.level > Math.max(1, currentLevel))
+    .map((entry) => `<option value="${entry.level}">Level ${entry.level} (${entry.xp} XP)</option>`)
+    .join("");
+
+  if (!options) {
+    ui.notifications.info("Already at the highest level in the table.");
+    return true;
+  }
+
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+  if (!DialogV2?.prompt) {
+    ui.notifications.warn("Cannot ask for a target level in this version; set experience by hand.");
+    return true;
+  }
+
+  let target = null;
+  try {
+    target = await DialogV2.prompt({
+      window: { title: "Level up" },
+      content: `<p>Currently level ${currentLevel || 1}, ${currentXp} XP.
+                Choose the level to reach - experience will be topped up to match.</p>
+                <select name="level" style="width:100%">${options}</select>`,
+      ok: { callback: (event, button) => Number(button.form.elements.level.value) }
+    });
+  } catch (err) {
+    // Dialog cancelled: leave the sheet alone entirely.
+    return false;
+  }
+
+  if (!target) return false;
+
+  const needed = table[target - 1] ?? 0;
+  if (needed > currentXp) {
+    try {
+      await actor.update({ "system.details.xp.value": needed });
+      ui.notifications.info(`Experience set to ${needed} for level ${target}.`);
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not set experience`, err);
+      ui.notifications.error(`Could not set experience: ${err.message}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+async function pressLevelUp(actor) {
+  const sheet = actor.sheet;
+  if (!sheet.rendered) {
+    await sheet.render(true);
+    await wait(300);
+  }
+
+  const find = () => {
+    for (const selector of LEVEL_UP_SELECTORS) {
+      const hit = actor.sheet.element?.querySelector(selector);
+      if (hit) return hit;
+    }
+    return null;
+  };
+
+  let button = find();
+  if (!button) {
+    await ensureEditMode(actor);
+    await wait(400);
+    button = find();
+  }
+
+  if (!button) {
+    ui.notifications.warn(
+      "Could not find the level-up button on the sheet. It comes from Plutonium, so it appears only while Plutonium is active."
+    );
+    return false;
+  }
+
+  button.click();
+  return true;
+}
+
 async function pressSheetButton(actor, types, labels) {
   const sheet = actor.sheet;
   if (!sheet.rendered) {
@@ -454,6 +577,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       openSheet: CreationGuide.onOpenSheet,
       finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
+      setDefaultFolder: CreationGuide.onSetDefaultFolder,
+      levelUp: CreationGuide.onLevelUp,
       openReference: CreationGuide.onOpenReference,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
@@ -547,7 +672,29 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const species = actor.items.find((i) => i.type === "race" || i.type === "species");
     const background = actor.items.find((i) => i.type === "background");
-    const cls = actor.items.find((i) => i.type === "class");
+    // Every class, not just the first: a multiclassed character would otherwise
+    // silently lose half its build on this step.
+    const classes = actor.items.filter((i) => i.type === "class");
+    const subclasses = actor.items.filter((i) => i.type === "subclass");
+
+    const subclassFor = (item) =>
+      subclasses.find(
+        (sub) =>
+          !item.system?.identifier ||
+          sub.system?.classIdentifier === item.system.identifier
+      );
+
+    const cls = classes[0] ?? null;
+    const subclass = cls ? subclassFor(cls) : null;
+
+    const classLine = classes
+      .map((item) => {
+        const sub = subclassFor(item);
+        return `${item.name} ${item.system?.levels ?? 1}${sub ? ` - ${sub.name}` : ""}`;
+      })
+      .join(" · ");
+
+    const totalLevel = classes.reduce((sum, item) => sum + (item.system?.levels ?? 0), 0);
     const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
     const abilitiesDone = !!savedAbilities;
     const abilityMethod = METHOD_LABELS[savedAbilities?.method] ?? "";
@@ -605,12 +752,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         label: "Class",
         icon: "fa-shield-halved",
         reference: true,
+        levelUp: classes.length > 0,
         help: HELP.class + importFlowNote(),
         removable: true,
-        done: !!cls,
-        result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
+        done: classes.length > 0,
+        result: classLine,
         img: cls?.img ?? "",
-        summary: shortSummary(cls),
+        summary:
+          classes.length > 1
+            ? `Character level ${totalLevel}, across ${classes.length} classes.`
+            : shortSummary(subclass) || shortSummary(cls),
         blurb: text("textClass")
       },
       {
@@ -694,6 +845,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       folders: game.folders
         .filter((f) => f.type === "Actor")
         .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
+      folderIsDefault:
+        !!actor.folder?.id &&
+        actor.folder.id === game.settings.get(MODULE_ID, "defaultActorFolder"),
+      defaultFolderName:
+        game.folders.get(game.settings.get(MODULE_ID, "defaultActorFolder"))?.name ?? "",
       steps,
       allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {
@@ -903,6 +1059,41 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     } catch (err) {
       console.error(`${MODULE_ID} | Could not open the reference window`, err);
       ui.notifications.error(`Could not open the reference: ${err.message}`);
+    }
+  }
+
+  /** Remembers the folder currently chosen as the destination for new characters. */
+  /** Opens Plutonium's level-up window, which also offers multiclassing. */
+  static async onLevelUp() {
+    const actor = this.actor;
+    if (!actor) return;
+
+    if (game.settings.get(MODULE_ID, "levelUpMode") === "xp") {
+      const ready = await grantExperienceFor(actor);
+      if (!ready) return;
+      await wait(200);
+    }
+
+    await pressLevelUp(actor);
+  }
+
+  static async onSetDefaultFolder() {
+    const current = this.actor?.folder?.id ?? "";
+    const stored = game.settings.get(MODULE_ID, "defaultActorFolder");
+    const next = stored === current ? "" : current;
+
+    try {
+      await game.settings.set(MODULE_ID, "defaultActorFolder", next);
+      const folder = next ? game.folders.get(next) : null;
+      ui.notifications.info(
+        folder
+          ? `New characters will be created in "${folder.name}".`
+          : "New characters will no longer be filed automatically."
+      );
+      this.render();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not store the default folder`, err);
+      ui.notifications.error(`Could not store the default folder: ${err.message}`);
     }
   }
 

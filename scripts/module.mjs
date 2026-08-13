@@ -94,6 +94,19 @@ Hooks.once("init", () => {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "levelUpMode", {
+    name: "How levelling works at your table",
+    hint: "Milestone: the level-up button is pressed straight away. Experience: you are asked which level to reach, experience is topped up to match, and only then does the button run. Match this to the system's own Leveling Mode.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "milestone",
+    choices: {
+      milestone: "Milestone - no experience needed",
+      xp: "Experience - top it up to the chosen level first"
+    }
+  });
+
   game.settings.register(MODULE_ID, "showImportingNotice", {
     name: "Show an 'importing' notice while the importer works",
     hint: "Holds the step in an unfinished state until the import windows close. Off by default: detecting that reliably means watching another package's windows, and it tends to either clear too early or linger long after the work is done.",
@@ -135,6 +148,16 @@ Hooks.once("init", () => {
     icon: "fa-solid fa-book-open",
     type: ReferenceConfig,
     restricted: true
+  });
+
+  // Stored as a plain id and chosen in the panel, where the folder list is
+  // always current. Registering it with a list of choices meant registering
+  // after startup, and settings added then do not reliably reach the UI.
+  game.settings.register(MODULE_ID, "defaultActorFolder", {
+    scope: "world",
+    config: false,
+    type: String,
+    default: ""
   });
 
   game.settings.register(MODULE_ID, "guideButton", {
@@ -196,40 +219,7 @@ registerSheetButton();
 registerBrowserTweaks();
 registerContextMenu();
 
-/**
- * Registered at "ready" rather than "init" because the choices are the world's
- * actor folders, which do not exist yet when init runs. Adding a folder later
- * means reloading before it appears in this list.
- */
-function registerFolderSetting() {
-  const choices = { "": "— none —" };
-
-  for (const folder of game.folders.filter((f) => f.type === "Actor")) {
-    const parts = [];
-    let node = folder;
-    const guard = new Set();
-    while (node && !guard.has(node.id)) {
-      guard.add(node.id);
-      parts.unshift(node.name);
-      node = node.folder ?? null;
-    }
-    choices[folder.id] = parts.join(" / ");
-  }
-
-  game.settings.register(MODULE_ID, "defaultActorFolder", {
-    name: "Folder for new characters",
-    hint: "New characters are filed here straight away, including those made by players, who do not choose a folder themselves. Reload after adding a folder for it to appear here.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "",
-    choices
-  });
-}
-
 Hooks.once("ready", () => {
-  registerFolderSetting();
-
   const api = {
     guide: () => CreationGuide.start(),
     resume: (actorId) => CreationGuide.open(actorId),
