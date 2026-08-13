@@ -313,18 +313,19 @@ export function isIncomplete(actor) {
 
 export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
-    super(options);
+    // Size is worked out BEFORE super(): ApplicationV2 freezes this.options, so
+    // it cannot be adjusted afterwards. Fill the available height rather than
+    // opening as a narrow strip over the sheet, which was hard to read.
+    const width = Math.min(620, Math.max(360, (globalThis.innerWidth ?? 1200) - 60));
+    const height = Math.max(520, Math.min(880, (globalThis.innerHeight ?? 900) - 80));
+
+    super({
+      ...options,
+      position: { ...(options.position ?? {}), width, height }
+    });
+
     this.actorId = options.actorId ?? null;
     this._hooks = [];
-
-    // Fill the available height rather than opening as a narrow strip over the
-    // sheet, which was hard to read.
-    const available = (globalThis.innerHeight ?? 900) - 80;
-    this.options.position = {
-      ...this.options.position,
-      width: Math.min(620, (globalThis.innerWidth ?? 1200) - 60),
-      height: Math.max(520, Math.min(880, available))
-    };
     /** Per-step override of whether the explanation is expanded. */
     this._help = {};
   }
