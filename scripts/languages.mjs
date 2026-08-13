@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { preserveScroll } from "./ui.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -60,6 +61,24 @@ function keyForName(name) {
     (entry) => normalise(entry.key) === target || normalise(entry.plainLabel) === target
   );
   return hit?.key ?? null;
+}
+
+/**
+ * Readable names for stored language keys, with Common first.
+ * Unknown keys fall back to the key itself rather than disappearing.
+ */
+export function languageLabels(keys = []) {
+  const lookup = new Map(flattenLanguages().map((entry) => [entry.key, entry.plainLabel]));
+  const common = commonKey();
+  const list = Array.from(keys);
+
+  return list
+    .sort((a, b) => {
+      if (a === common) return -1;
+      if (b === common) return 1;
+      return String(lookup.get(a) ?? a).localeCompare(String(lookup.get(b) ?? b));
+    })
+    .map((key) => lookup.get(key) ?? key);
 }
 
 export function commonKey() {
@@ -156,6 +175,8 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    preserveScroll(this, [".pk5e-pane", ".pk5e-lang-groups"]);
+
     const el = this.element;
 
     el.querySelectorAll("input[data-language]").forEach((cb) => {

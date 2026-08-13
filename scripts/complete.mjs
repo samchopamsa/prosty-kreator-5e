@@ -15,6 +15,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { preserveScroll } from "./ui.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -268,6 +269,8 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
   }
 
   _onRender() {
+    preserveScroll(this, [".pk5e-pane"]);
+
     const el = this.element;
 
     el.querySelector("select[data-actor]")?.addEventListener("change", (ev) => {

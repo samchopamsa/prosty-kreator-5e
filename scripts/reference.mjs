@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { preserveScroll } from "./ui.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -108,6 +109,8 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    preserveScroll(this, [".pk5e-options", ".pk5e-detail-col"]);
+
     const search = this.element.querySelector("[data-search]");
     if (!search) return;
     search.addEventListener("input", (ev) => {

@@ -15,8 +15,9 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
-import { LanguagePicker } from "./languages.mjs";
+import { LanguagePicker, languageLabels } from "./languages.mjs";
 import { ClassReference } from "./reference.mjs";
+import { preserveScroll } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { postSummary } from "./summary.mjs";
 
@@ -557,10 +558,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
 
     const known = actor.system?.traits?.languages?.value;
-    const languageCount = known ? Array.from(known).length : 0;
-    const languageSummary = languageCount
-      ? `${languageCount} language${languageCount === 1 ? "" : "s"}`
-      : "";
+    const languageKeys = known ? Array.from(known) : [];
+    const languageCount = languageKeys.length;
+
+    let languageSummary = "";
+    if (languageCount) {
+      const MAX_SHOWN = 10;
+      const labels = languageLabels(languageKeys);
+      const shown = labels.slice(0, MAX_SHOWN).join(", ");
+      const rest = labels.length > MAX_SHOWN ? " (...)" : "";
+      languageSummary = `${languageCount} language${languageCount === 1 ? "" : "s"}: ${shown}${rest}`;
+    }
 
     const steps = [
       {
@@ -695,6 +703,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    preserveScroll(this, [".pk5e-pane"]);
+
     const input = this.element.querySelector("[data-field='name']");
     if (input) {
       const save = async (ev) => {
