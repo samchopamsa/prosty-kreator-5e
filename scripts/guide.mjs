@@ -31,7 +31,8 @@ const DEFAULT_TEXT = {
   textBackground: "Grants proficiencies, an origin feat and ability score increases.",
   textClass: "What your character can do, in combat and out of it.",
   textAbilities: "Importers skip this, so it is done here at the end.",
-  textLanguages: "Common plus two more. Roll for them or pick from the table."
+  textLanguages: "Common plus two more. Roll for them or pick from the table.",
+  textPortrait: "Optional. A picture for your character, shown on the sheet and on the token."
 };
 
 /**
@@ -247,14 +248,22 @@ function findImportWindow() {
   return null;
 }
 
-function watchImport(onFinished, timeout = 180000) {
+function watchImport(onFinished, timeout = 300000) {
   const deadline = Date.now() + timeout;
   let appeared = false;
+  let misses = 0;
 
   const tick = () => {
     const open = findImportWindow();
-    if (open) appeared = true;
-    else if (appeared) return onFinished();
+    if (open) {
+      appeared = true;
+      misses = 0;
+    } else if (appeared) {
+      // Plutonium closes one window before opening the next, so a single miss
+      // does not mean it has finished. Require a run of them.
+      misses += 1;
+      if (misses >= 5) return onFinished();
+    }
     if (Date.now() > deadline) return onFinished();
     setTimeout(tick, 300);
   };
@@ -371,12 +380,20 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // Size is worked out BEFORE super(): ApplicationV2 freezes this.options, so
     // it cannot be adjusted afterwards. Fill the available height rather than
     // opening as a narrow strip over the sheet, which was hard to read.
-    const width = Math.min(680, Math.max(360, (globalThis.innerWidth ?? 1200) - 40));
-    const height = Math.max(520, (globalThis.innerHeight ?? 900) - 40);
+    const vw = globalThis.innerWidth ?? 1200;
+    const vh = globalThis.innerHeight ?? 900;
+    const width = Math.min(980, Math.max(360, vw - 40));
+    const height = Math.max(520, vh - 40);
 
     super({
       ...options,
-      position: { ...(options.position ?? {}), width, height }
+      position: {
+        ...(options.position ?? {}),
+        width,
+        height,
+        left: Math.max(20, Math.round((vw - width) / 2)),
+        top: 20
+      }
     });
 
     this.actorId = options.actorId ?? null;
@@ -478,6 +495,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const cls = actor.items.find((i) => i.type === "class");
     const abilitiesDone = !!actor.getFlag(MODULE_ID, "abilities");
 
+    const portrait = actor.img ?? "";
+    const hasPortrait =
+      !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
+
     const known = actor.system?.traits?.languages?.value;
     const languageCount = known ? Array.from(known).length : 0;
     const languageSummary = languageCount
@@ -549,6 +570,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         result: languageSummary,
         img: "",
         blurb: text("textLanguages")
+      },
+      {
+        key: "portrait",
+        number: 7,
+        label: "Portrait",
+        icon: "fa-image",
+        removable: false,
+        optional: true,
+        action: "setPortrait",
+        done: hasPortrait,
+        result: hasPortrait ? "Portrait set" : "",
+        img: hasPortrait ? actor.img : "",
+        blurb: text("textPortrait")
       }
     ];
 
@@ -588,8 +622,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         .filter((f) => f.type === "Actor")
         .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
       steps,
-      allDone: steps.every((s) => s.done),
-      progress: `${steps.filter((s) => s.done).length} of ${steps.length}`
+      allDone: steps.every((s) => s.done || s.optional),
+      progress: (() => {
+        const required = steps.filter((s) => !s.optional);
+        return `${required.filter((s) => s.done).length} of ${required.length}`;
+      })()
     };
   }
 
@@ -760,24 +797,40 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = this.actor;
     if (!actor) return;
 
-    const FP = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
-    if (!FP) {
+    // The class moved namespaces across Foundry versions, so try each in turn.
+    const candidates = [
+      foundry.applications?.apps?.FilePicker?.implementation,
+      foundry.applications?.apps?.FilePicker,
+      globalThis.FilePicker
+    ].filter(Boolean);
+
+    if (!candidates.length) {
       ui.notifications.warn("The file picker is not available in this version.");
       return;
     }
 
-    new FP({
-      type: "image",
-      current: actor.img,
-      callback: async (path) => {
-        try {
-          await actor.update({ img: path, "prototypeToken.texture.src": path });
-        } catch (err) {
-          console.error(`${MODULE_ID} | Could not set the portrait`, err);
-          ui.notifications.error(`Could not set the portrait: ${err.message}`);
-        }
+    const apply = async (path) => {
+      if (!path) return;
+      try {
+        await actor.update({ img: path, "prototypeToken.texture.src": path });
+        ui.notifications.info("Portrait set.");
+        this.render();
+      } catch (err) {
+        console.error(`${MODULE_ID} | Could not set the portrait`, err);
+        ui.notifications.error(`Could not set the portrait: ${err.message}`);
       }
-    }).render(true);
+    };
+
+    for (const FP of candidates) {
+      try {
+        const picker = new FP({ type: "image", current: actor.img, callback: apply });
+        picker.render(true);
+        return;
+      } catch (err) {
+        console.warn(`${MODULE_ID} | File picker variant failed, trying the next`, err);
+      }
+    }
+    ui.notifications.error("Could not open the file picker. See the console for details.");
   }
 
   static async onReplaceStep(event, target) {
