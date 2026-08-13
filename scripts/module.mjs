@@ -50,6 +50,15 @@ Hooks.once("init", () => {
     }
   });
 
+  game.settings.register(MODULE_ID, "uncheckKeepOpen", {
+    name: "Untick 'Keep Window Open' while clicking through",
+    hint: "Only applies when the setting above is clicking through the dialogs. That checkbox sits on the screen being skipped, so without this a player who had it ticked could never reach it again.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, "showStepHelp", {
     name: "Show 'What is this?' explanations",
     hint: "Short plain-language notes on each step, for players new to the game. Open by default on a brand new character.",

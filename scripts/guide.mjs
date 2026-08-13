@@ -154,10 +154,32 @@ function waitForButton(labels, timeout = 5000) {
 }
 
 /**
+ * Finds the "Keep Window Open" checkbox on the importer screen.
+ *
+ * Matched by the wording next to it, because we only ever act on things a
+ * person could see and click themselves.
+ */
+function findKeepOpenCheckbox() {
+  for (const box of document.querySelectorAll("input[type='checkbox']")) {
+    if (box.closest("#pk5e-guide")) continue;
+    const row = box.closest("label, tr, div, li");
+    const text = (row?.textContent ?? "").trim().toLowerCase();
+    if (text.includes("keep window open")) return box;
+  }
+  return null;
+}
+
+/**
  * Optionally clicks through the "Use Plutonium / Use Compendium Browser" choice
  * and the importer's own "Open Importer" button, so the player lands straight
  * on the list of options. Off by default: it takes a real choice away, and it
  * leans on the wording of another package.
+ *
+ * Note the Keep Window Open step. That checkbox lives ONLY on the screen we are
+ * about to click past, so a player who had it ticked would never get another
+ * chance to untick it - the two conveniences would combine into a trap. We
+ * therefore untick it here, doing exactly what the player would have done, and
+ * only if we can actually see it.
  */
 async function autoAdvance() {
   const mode = game.settings.get(MODULE_ID, "autoAdvance");
@@ -172,7 +194,17 @@ async function autoAdvance() {
 
   // Plutonium then shows its wizard, which needs one more click to open.
   const opener = await waitForButton(["open importer"], 5000);
-  opener?.click();
+  if (!opener) return;
+
+  if (game.settings.get(MODULE_ID, "uncheckKeepOpen")) {
+    const keepOpen = findKeepOpenCheckbox();
+    if (keepOpen?.checked) {
+      keepOpen.click();
+      console.log(`${MODULE_ID} | Unticked "Keep Window Open" before opening the importer.`);
+    }
+  }
+
+  opener.click();
 }
 
 /** Confirmation dialog, tolerant of the API differing between versions. */
