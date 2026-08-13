@@ -27,6 +27,14 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Name given to a freshly created character, and the pattern we may replace. */
 const DEFAULT_NAME = "New Character";
+
+/** Readable names for the ability score methods stored on the actor. */
+const METHOD_LABELS = {
+  standard: "Standard array",
+  pointbuy: "Point buy",
+  roll: "Rolled 4d6, dropping the lowest",
+  manual: "Entered by hand"
+};
 const AUTO_NAME = /^New Character for .+$/;
 
 /** Wording the GM can override in the module settings. */
@@ -540,7 +548,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const species = actor.items.find((i) => i.type === "race" || i.type === "species");
     const background = actor.items.find((i) => i.type === "background");
     const cls = actor.items.find((i) => i.type === "class");
-    const abilitiesDone = !!actor.getFlag(MODULE_ID, "abilities");
+    const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
+    const abilitiesDone = !!savedAbilities;
+    const abilityMethod = METHOD_LABELS[savedAbilities?.method] ?? "";
 
     const portrait = actor.img ?? "";
     const hasPortrait =
@@ -550,13 +560,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const languageKeys = known ? Array.from(known) : [];
     const languageCount = languageKeys.length;
 
+    // Headline counts, detail below the line - same shape as the other steps.
+    let languageHeadline = "";
     let languageSummary = "";
     if (languageCount) {
       const MAX_SHOWN = 10;
       const labels = languageLabels(languageKeys);
       const shown = labels.slice(0, MAX_SHOWN).join(", ");
       const rest = labels.length > MAX_SHOWN ? " (...)" : "";
-      languageSummary = `${languageCount} language${languageCount === 1 ? "" : "s"}: ${shown}${rest}`;
+      languageHeadline = `${languageCount} language${languageCount === 1 ? "" : "s"}`;
+      languageSummary = `${shown}${rest}`;
     }
 
     const steps = [
@@ -613,6 +626,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
               .map(([, v]) => v.value)
               .join(" / ")
           : "",
+        summary: abilityMethod,
         img: "",
         blurb: text("textAbilities")
       },
@@ -625,7 +639,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         removable: false,
         action: "languages",
         done: !!actor.getFlag(MODULE_ID, "languages"),
-        result: languageSummary,
+        result: languageHeadline,
+        summary: languageSummary,
         img: "",
         blurb: text("textLanguages")
       },
