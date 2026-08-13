@@ -79,6 +79,13 @@
             <p>{{help}}</p>
           </details>
           {{/if}}
+          {{#if importing}}
+          <p class="pk5e-importing">
+            <i class="fa-solid fa-hourglass-half"></i>
+            Importing. Wait for the import window to finish and close it before
+            moving on - more choices may still appear.
+          </p>
+          {{/if}}
           {{#if removable}}
           <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
           {{else}}
@@ -93,6 +100,7 @@
           <span class="pk5e-guide-label">
             {{#if ready}}Ready to play{{else}}{{report.errors}} thing(s) to fix{{/if}}
           </span>
+          <button type="button" class="pk5e-link" data-action="setPortrait">Set portrait</button>
           <button type="button" class="pk5e-link" data-action="recheck">Recheck</button>
         </div>
         {{#if failures}}

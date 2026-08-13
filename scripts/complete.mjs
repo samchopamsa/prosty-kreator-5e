@@ -76,8 +76,7 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       abilityMinus: CompleteCharacter.onAbilityMinus,
       rollAbilities: CompleteCharacter.onRoll,
       reset: CompleteCharacter.onReset,
-      apply: CompleteCharacter.onApply,
-      finalize: CompleteCharacter.onFinalize
+      apply: CompleteCharacter.onApply
     }
   };
 
@@ -252,7 +251,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
             .join(" · ")
         : "",
       keepBonuses: this.keepBonuses,
-      saved: !!this._saved,
       hasSavedState: !!this.savedState,
       savedAt: this.savedState?.appliedAt
         ? new Date(this.savedState.appliedAt).toLocaleString()
@@ -348,10 +346,6 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
     this.render();
   }
 
-  static onFinalize() {
-    this.close();
-  }
-
   static async onApply() {
     const actor = this.actor;
     if (!actor || !this.isReady()) return;
@@ -387,10 +381,8 @@ export class CompleteCharacter extends HandlebarsApplicationMixin(ApplicationV2)
       }
 
       ui.notifications.info(`Updated "${actor.name}".`);
-      // Deliberately left open: the table now shows the saved result, and the
-      // player closes it themselves once they have looked at it.
-      this._saved = true;
-      this.render();
+      // Closes this popup only. The guide panel behind it stays open.
+      this.close();
       actor.sheet.render(true);
       returnToPlayMode(actor);
     } catch (err) {

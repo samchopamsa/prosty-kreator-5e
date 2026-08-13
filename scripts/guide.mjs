@@ -223,6 +223,45 @@ async function autoAdvance() {
   opener.click();
 }
 
+/**
+ * Plutonium reports progress in its own window and finishes with an "Import
+ * Complete" dialog the player closes. Features keep arriving until then, and
+ * further choices can still pop up, so a step is not really finished the moment
+ * the first item lands on the sheet.
+ *
+ * We watch for that window and hold the step in an "importing" state until it
+ * goes away. Recognised by its title, so if Plutonium renames it we simply stop
+ * showing the notice; nothing breaks.
+ */
+const IMPORT_TITLES = ["import complete", "importing", "import wizard"];
+
+function findImportWindow() {
+  const frames = document.querySelectorAll(".window-app, .application");
+  for (const frame of frames) {
+    if (frame.id?.startsWith("pk5e-")) continue;
+    const title =
+      frame.querySelector(".window-title, .window-header h4, header h1")?.textContent ?? "";
+    const text = title.trim().toLowerCase();
+    if (text && IMPORT_TITLES.some((needle) => text.includes(needle))) return frame;
+  }
+  return null;
+}
+
+function watchImport(onFinished, timeout = 180000) {
+  const deadline = Date.now() + timeout;
+  let appeared = false;
+
+  const tick = () => {
+    const open = findImportWindow();
+    if (open) appeared = true;
+    else if (appeared) return onFinished();
+    if (Date.now() > deadline) return onFinished();
+    setTimeout(tick, 300);
+  };
+
+  setTimeout(tick, 600);
+}
+
 /** Confirmation dialog, tolerant of the API differing between versions. */
 async function confirmRemoval(message) {
   const DialogV2 = foundry.applications?.api?.DialogV2;
@@ -332,8 +371,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // Size is worked out BEFORE super(): ApplicationV2 freezes this.options, so
     // it cannot be adjusted afterwards. Fill the available height rather than
     // opening as a narrow strip over the sheet, which was hard to read.
-    const width = Math.min(620, Math.max(360, (globalThis.innerWidth ?? 1200) - 60));
-    const height = Math.max(520, Math.min(880, (globalThis.innerHeight ?? 900) - 80));
+    const width = Math.min(680, Math.max(360, (globalThis.innerWidth ?? 1200) - 40));
+    const height = Math.max(520, (globalThis.innerHeight ?? 900) - 40);
 
     super({
       ...options,
@@ -344,6 +383,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._hooks = [];
     /** Per-step override of whether the explanation is expanded. */
     this._help = {};
+    /** Step whose import is still running, if any. */
+    this._importing = null;
   }
 
   static DEFAULT_OPTIONS = {
@@ -361,6 +402,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       replaceStep: CreationGuide.onReplaceStep,
       removeStep: CreationGuide.onRemoveStep,
       openSheet: CreationGuide.onOpenSheet,
+      setPortrait: CreationGuide.onSetPortrait,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
@@ -517,6 +559,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const step of steps) {
       step.showHelp = showHelp && !!step.help;
       step.helpOpen = this._help[step.key] ?? helpDefault;
+      step.importing = this._importing === step.key;
     }
 
     const report = checkCharacter(actor);
@@ -525,6 +568,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       actorName: actor.name,
       actorImg: actor.img ?? "",
+      portrait: actor.img ?? "",
       nameHelp: showHelp ? HELP.name : "",
       nameHelpOpen: this._help.name ?? helpDefault,
       introText: text("introText"),
@@ -699,7 +743,41 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static async onAddStep(event, target) {
-    await this.addFor(target.dataset.step);
+    const step = target.dataset.step;
+    const pressed = await this.addFor(step);
+    if (!pressed) return;
+
+    this._importing = step;
+    this.render();
+    watchImport(() => {
+      this._importing = null;
+      this.render();
+    });
+  }
+
+  /** Lets the player set the portrait without hunting for it on the sheet. */
+  static onSetPortrait() {
+    const actor = this.actor;
+    if (!actor) return;
+
+    const FP = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
+    if (!FP) {
+      ui.notifications.warn("The file picker is not available in this version.");
+      return;
+    }
+
+    new FP({
+      type: "image",
+      current: actor.img,
+      callback: async (path) => {
+        try {
+          await actor.update({ img: path, "prototypeToken.texture.src": path });
+        } catch (err) {
+          console.error(`${MODULE_ID} | Could not set the portrait`, err);
+          ui.notifications.error(`Could not set the portrait: ${err.message}`);
+        }
+      }
+    }).render(true);
   }
 
   static async onReplaceStep(event, target) {
