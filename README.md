@@ -1,4 +1,4 @@
-# Character Creator (D&D 5e) — 1.19.0
+# Character Creator (D&D 5e) — 1.20.0
 
 Prowadzone tworzenie postaci dla Foundry VTT, które **korzysta z narzędzi, które
 już masz**, zamiast je zastępować.
@@ -90,6 +90,7 @@ Można też w ogóle nie nadawać tego uprawnienia i tworzyć postacie za graczy
 | Narrow tooltips in the Compendium Browser | włączone |
 | Reference: compendiums to read | wszystkie |
 | Reference: GM sees every compendium | włączone |
+| Folder for new characters | brak |
 | Players may start a new character | włączone |
 
 Panel otwiera się graczowi **raz**; zamknięcie zapisuje to na postaci i więcej

@@ -74,7 +74,7 @@ const HELP = {
   background:
     "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine.",
   class:
-    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of.",
+    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of. The importer asks for the subclass and the level at the same time, so a character can start above level 1 if your table plays that way - at level 1 there is no subclass yet.",
   abilities:
     "Six numbers describing raw talent. Strength for hitting and lifting, Dexterity for aim and reflexes, Constitution for stamina and hit points, Intelligence for knowledge, Wisdom for perception and willpower, Charisma for force of personality. What matters in play is the modifier next to each score: 10 gives +0, and every two points above or below shifts it by one. Put your highest number in whatever your class uses most.",
   languages:
@@ -506,9 +506,21 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       ? { [game.user.id]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER }
       : {};
 
+    // Filed on creation rather than afterwards, so nothing ever sits loose at
+    // the top of the directory - including characters made by players, who have
+    // no folder control of their own.
+    let folder = null;
+    try {
+      const configured = game.settings.get(MODULE_ID, "defaultActorFolder");
+      if (configured && game.folders.get(configured)) folder = configured;
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not read the default folder`, err);
+    }
+
     const actor = await Actor.implementation.create({
       name: isPlayer ? `${DEFAULT_NAME} for ${game.user.name}` : DEFAULT_NAME,
       type: "character",
+      folder,
       ownership,
       prototypeToken: {
         actorLink: true,
@@ -848,6 +860,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const step = target.dataset.step;
     const pressed = await this.addFor(step);
     if (!pressed) return;
+
+    // Off by default. Detecting when someone else's import has finished means
+    // watching their windows, and every threshold that stopped it clearing too
+    // early also made it linger long after the work was done. Marking the step
+    // as soon as the item lands is slightly premature but never annoying.
+    if (!game.settings.get(MODULE_ID, "showImportingNotice")) return;
 
     this._importing = step;
     this._lastActivity = Date.now();

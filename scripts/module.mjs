@@ -94,6 +94,15 @@ Hooks.once("init", () => {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "showImportingNotice", {
+    name: "Show an 'importing' notice while the importer works",
+    hint: "Holds the step in an unfinished state until the import windows close. Off by default: detecting that reliably means watching another package's windows, and it tends to either clear too early or linger long after the work is done.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
+
   game.settings.register(MODULE_ID, "showStepHelp", {
     name: "Show 'What is this?' explanations",
     hint: "Short plain-language notes on each step, for players new to the game. Open by default on a brand new character.",
@@ -187,7 +196,40 @@ registerSheetButton();
 registerBrowserTweaks();
 registerContextMenu();
 
+/**
+ * Registered at "ready" rather than "init" because the choices are the world's
+ * actor folders, which do not exist yet when init runs. Adding a folder later
+ * means reloading before it appears in this list.
+ */
+function registerFolderSetting() {
+  const choices = { "": "— none —" };
+
+  for (const folder of game.folders.filter((f) => f.type === "Actor")) {
+    const parts = [];
+    let node = folder;
+    const guard = new Set();
+    while (node && !guard.has(node.id)) {
+      guard.add(node.id);
+      parts.unshift(node.name);
+      node = node.folder ?? null;
+    }
+    choices[folder.id] = parts.join(" / ");
+  }
+
+  game.settings.register(MODULE_ID, "defaultActorFolder", {
+    name: "Folder for new characters",
+    hint: "New characters are filed here straight away, including those made by players, who do not choose a folder themselves. Reload after adding a folder for it to appear here.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "",
+    choices
+  });
+}
+
 Hooks.once("ready", () => {
+  registerFolderSetting();
+
   const api = {
     guide: () => CreationGuide.start(),
     resume: (actorId) => CreationGuide.open(actorId),
