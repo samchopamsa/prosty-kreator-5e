@@ -31,7 +31,7 @@
         {{#if lastRoll}} &middot; last roll: <strong>{{lastRoll}}</strong>{{/if}}
       </p>
 
-      <h3>Your languages</h3>
+      <h3>Pick your languages</h3>
       <p class="pk5e-note">
         Common is always known. Chosen besides Common: <strong>{{extras}}</strong>.
         {{#if overLimit}} That is more than the usual two - you will be asked to confirm.{{/if}}
@@ -39,7 +39,7 @@
 
       <input type="search" data-language-search placeholder="Search languages..." autocomplete="off">
 
-      <div class="pk5e-packs pk5e-lang-groups">
+      <div class="pk5e-lang-groups">
         {{#each groups}}
         <section class="pk5e-lang-group">
           <h4 class="pk5e-lang-heading">{{label}}</h4>

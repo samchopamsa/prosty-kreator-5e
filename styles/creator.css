@@ -399,3 +399,82 @@
   opacity: 1;
   color: var(--color-shadow-primary, #ff6400);
 }
+
+/* ------------------------------------------------------------------ */
+/* v1.9 - clearer separation between steps                             */
+/* ------------------------------------------------------------------ */
+
+.pk5e-guide .pk5e-pane { gap: 14px; }
+
+.pk5e-guide-step {
+  border: none;
+  border-left: none;
+  border-top: 1px solid rgba(128, 128, 128, 0.28);
+  border-radius: 0;
+  padding: 12px 2px 2px;
+  gap: 6px;
+}
+
+.pk5e-guide-step:first-of-type { border-top: none; padding-top: 2px; }
+
+.pk5e-guide-head { gap: 8px; align-items: center; }
+
+.pk5e-guide-label {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.pk5e-guide-num {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+
+.pk5e-guide-step.is-done .pk5e-guide-num {
+  opacity: 1;
+  border-color: var(--color-shadow-primary, #ff6400);
+  color: var(--color-shadow-primary, #ff6400);
+}
+
+.pk5e-guide-icon { font-size: 13px; width: 18px; }
+.pk5e-guide-tick { font-size: 15px; }
+
+/* expandable explanation, with a chevron so it reads as openable */
+.pk5e-help > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  font-size: 11px;
+  opacity: 0.65;
+  padding: 2px 0;
+}
+
+.pk5e-help > summary::before {
+  content: "\f054";
+  font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free", "Font Awesome 5 Free";
+  font-weight: 900;
+  font-size: 9px;
+  transition: transform 120ms ease;
+}
+
+.pk5e-help[open] > summary::before { transform: rotate(90deg); }
+.pk5e-help > summary:hover { opacity: 1; }
+
+/* language picker: the list must always be reachable, not squeezed out
+   by the reference table above it */
+.pk5e-lang-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-height: 180px;
+  max-height: none;
+  overflow-y: auto;
+  margin-top: 6px;
+  padding-right: 4px;
+  border-top: 1px solid rgba(128, 128, 128, 0.25);
+}

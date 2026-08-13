@@ -38,20 +38,36 @@ const DEFAULT_TEXT = {
  * Plain-language explanations for someone who has never built a character.
  * Written from the rules themselves rather than copied from anywhere.
  */
-const IMPORT_FLOW =
-  " After you press the button, a small window asks where to take the entry from. " +
-  "Choose Use Plutonium, then press Open Importer in the window that follows - " +
-  "only then do you see the list to pick from.";
+/**
+ * The closing sentence of each pick step describes the clicks still ahead. When
+ * the module clicks through those dialogs itself, describing them would be
+ * describing something the player never sees.
+ */
+function importFlowNote() {
+  const mode = game.settings.get(MODULE_ID, "autoAdvance");
+
+  if (mode === "plutonium") {
+    return " After you press the button, the list of options opens by itself.";
+  }
+  if (mode === "compendium") {
+    return " After you press the button, the compendium browser opens by itself.";
+  }
+  return (
+    " After you press the button, a small window asks where to take the entry from. " +
+    "Choose Use Plutonium, then press Open Importer in the window that follows - " +
+    "only then do you see the list to pick from."
+  );
+}
 
 const HELP = {
   name:
     "Just a name for now. You can change it at any time, and nothing else depends on it.",
   species:
-    "Your character's ancestry - dwarf, elf, human and so on. It sets size and walking speed, and usually adds something innate: darkvision, a resistance, a small once-per-day ability. Under the 2024 rules your species does NOT change your ability scores; that comes from your background." + IMPORT_FLOW,
+    "Your character's ancestry - dwarf, elf, human and so on. It sets size and walking speed, and usually adds something innate: darkvision, a resistance, a small once-per-day ability. Under the 2024 rules your species does NOT change your ability scores; that comes from your background.",
   background:
-    "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine." + IMPORT_FLOW,
+    "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine.",
   class:
-    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of." + IMPORT_FLOW,
+    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of.",
   abilities:
     "Six numbers describing raw talent. Strength for hitting and lifting, Dexterity for aim and reflexes, Constitution for stamina and hit points, Intelligence for knowledge, Wisdom for perception and willpower, Charisma for force of personality. What matters in play is the modifier next to each score: 10 gives +0, and every two points above or below shifts it by one. Put your highest number in whatever your class uses most.",
   languages:
@@ -432,7 +448,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         number: 2,
         label: "Species",
         icon: "fa-dna",
-        help: HELP.species,
+        help: HELP.species + importFlowNote(),
         removable: true,
         done: !!species,
         result: species?.name ?? "",
@@ -444,7 +460,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         number: 3,
         label: "Background",
         icon: "fa-scroll",
-        help: HELP.background,
+        help: HELP.background + importFlowNote(),
         removable: true,
         done: !!background,
         result: background?.name ?? "",
@@ -456,7 +472,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         number: 4,
         label: "Class",
         icon: "fa-shield-halved",
-        help: HELP.class,
+        help: HELP.class + importFlowNote(),
         removable: true,
         done: !!cls,
         result: cls ? `${cls.name} (level ${cls.system?.levels ?? 1})` : "",
@@ -495,9 +511,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     ];
 
     const showHelp = game.settings.get(MODULE_ID, "showStepHelp");
-    // Explanations start open on a brand new character and stay closed once the
-    // player has clearly done this before.
-    const helpDefault = steps.filter((step) => step.done).length === 0;
+    // Always collapsed to start with, so the steps stay scannable. The chevron
+    // on the summary shows there is more to read.
+    const helpDefault = false;
     for (const step of steps) {
       step.showHelp = showHelp && !!step.help;
       step.helpOpen = this._help[step.key] ?? helpDefault;

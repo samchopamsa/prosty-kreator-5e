@@ -18,6 +18,13 @@
       </select>
       {{/unless}}
 
+      {{#if saved}}
+      <div class="pk5e-callout">
+        <strong>Saved.</strong>
+        <p>The table below now shows what is on the sheet. Press Finalize to close.</p>
+      </div>
+      {{/if}}
+
       {{#if hasActor}}
       <h2>{{actorName}}</h2>
       <p class="pk5e-note">{{summary}}</p>
@@ -118,6 +125,7 @@
     </span>
     <button type="button" class="pk5e-primary" data-action="apply"
             {{#unless canApply}}disabled{{/unless}}>Apply</button>
+    <button type="button" data-action="finalize">Finalize</button>
   </footer>
 
 </div>
