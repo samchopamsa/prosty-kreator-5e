@@ -73,7 +73,6 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: "Class reference", icon: "fa-solid fa-book-open", resizable: true },
     actions: {
       pickEntry: ClassReference.onPick,
-      toggleBranch: ClassReference.onToggleBranch,
       configure: ClassReference.onConfigure,
       refresh: ClassReference.onRefresh
     }
@@ -187,7 +186,9 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
       packCount: referencePackIds().length,
       tree: tree.map((branch) => ({
         ...branch,
-        open: this._open[branch.key] ?? openAll,
+        // A branch holding the entry being read stays open regardless: the
+        // reader is looking at it, so collapsing it would hide their place.
+        open: this.branchHasSelection(branch) || (this._open[branch.key] ?? openAll),
         entries: branch.entries.map((e) => ({ ...e, selected: e.uuid === this.selectedUuid })),
         children: branch.children.map((child) => ({
           ...child,
@@ -198,6 +199,14 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
       detail: this._detail,
       selected: this.findEntry(this.selectedUuid)
     };
+  }
+
+  branchHasSelection(branch) {
+    if (!this.selectedUuid) return false;
+    if (branch.entries.some((e) => e.uuid === this.selectedUuid)) return true;
+    return branch.children.some((child) =>
+      child.entries.some((e) => e.uuid === this.selectedUuid)
+    );
   }
 
   findEntry(uuid) {
@@ -215,6 +224,14 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender() {
     preserveScroll(this, [".pk5e-options", ".pk5e-detail-col"]);
+
+    // <details> toggles itself natively, so without this the panel would forget
+    // which branches the reader opened and collapse them on the next redraw.
+    this.element.querySelectorAll("details[data-branch]").forEach((node) => {
+      node.addEventListener("toggle", () => {
+        this._open[node.dataset.branch] = node.open;
+      });
+    });
 
     const search = this.element.querySelector("[data-search]");
     if (!search) return;
@@ -234,12 +251,6 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
         if (details && query) details.open = true;
       });
     });
-  }
-
-  static onToggleBranch(event, target) {
-    const key = target.dataset.branch;
-    this._open[key] = !(this._open[key] ?? true);
-    this.render();
   }
 
   static onConfigure() {

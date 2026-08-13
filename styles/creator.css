@@ -226,27 +226,36 @@
 .pk5e-guide-tick { color: var(--color-shadow-primary, #ff6400); font-weight: 700; }
 .pk5e-guide-result { margin: 0; font-size: 13px; }
 .pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 12px; padding: 3px 8px; }
-/* Chosen item shown with the same artwork the sheet uses */
+/* Once chosen, the entry gets room: a large picture beside the name and the
+   description, rather than a thumbnail on a single cramped line. */
 .pk5e-guide-chosen {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 12px;
   min-width: 0;
 }
 .pk5e-guide-chosen img {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
   object-fit: cover;
   border: none;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.15);
 }
+.pk5e-chosen-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
 .pk5e-guide-chosen .pk5e-guide-result {
-  font-size: 13px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.25;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
 }
 .pk5e-guide-actions { display: flex; gap: 12px; }
 /* v1.0 - readiness report */
@@ -631,3 +640,15 @@
 .pk5e-bulk { display: flex; gap: 6px; align-items: center; }
 .pk5e-bulk input[type="search"] { flex: 1 1 auto; min-width: 0; }
 .pk5e-bulk button { width: auto; flex: 0 0 auto; padding: 2px 10px; font-size: 12px; }
+
+.pk5e-roll-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  vertical-align: 1px;
+  background: rgba(255, 100, 0, 0.3);
+}

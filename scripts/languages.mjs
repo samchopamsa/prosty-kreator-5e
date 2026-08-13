@@ -106,7 +106,8 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     super(options);
     this.actorId = options.actorId ?? null;
     this.selected = null;
-    this.lastRoll = null;
+    /** Every roll made in this window, so the table keeps showing them all. */
+    this.rolls = [];
   }
 
   static DEFAULT_OPTIONS = {
@@ -117,6 +118,7 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 620, height: 700 },
     actions: {
       rollLanguage: LanguagePicker.onRoll,
+      clearRolls: LanguagePicker.onClearRolls,
       apply: LanguagePicker.onApply
     }
   };
@@ -158,13 +160,19 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       actorName: this.actor?.name ?? "",
       hasActor: !!this.actor,
-      table: STANDARD_TABLE.map((entry) => ({
-        ...entry,
-        automatic: entry.min === 0,
-        known: chosen.has(keyForName(entry.name)),
-        highlight: this.lastRoll !== null && this.lastRoll >= entry.min && this.lastRoll <= entry.max
-      })),
-      lastRoll: this.lastRoll,
+      table: STANDARD_TABLE.map((entry) => {
+        const hits = this.rolls.filter((value) => value >= entry.min && value <= entry.max);
+        return {
+          ...entry,
+          automatic: entry.min === 0,
+          known: chosen.has(keyForName(entry.name)),
+          highlight: hits.length > 0,
+          hits: hits.join(", "),
+          hitCount: hits.length
+        };
+      }),
+      rolls: this.rolls.join(", "),
+      rollCount: this.rolls.length,
       groups: [
         { label: "Standard Languages", languages: all.filter((l) => l.core) },
         { label: "Expanded", languages: all.filter((l) => !l.core) }
@@ -207,7 +215,7 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onRoll() {
     const roll = await new Roll("1d12").evaluate();
-    this.lastRoll = roll.total;
+    this.rolls.push(roll.total);
 
     const entry = STANDARD_TABLE.find((row) => roll.total >= row.min && roll.total <= row.max);
     if (!entry) return this.render();
@@ -224,6 +232,12 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
       this.languages.add(key);
       ui.notifications.info(`Rolled ${roll.total}: ${entry.name} added.`);
     }
+    this.render();
+  }
+
+  /** Clears the roll record. Languages already ticked are left alone. */
+  static onClearRolls() {
+    this.rolls = [];
     this.render();
   }
 

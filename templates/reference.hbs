@@ -22,7 +22,7 @@
         <div class="pk5e-options">
           {{#each tree}}
           <section class="pk5e-branch">
-            <details {{#if open}}open{{/if}}>
+            <details data-branch="{{key}}" {{#if open}}open{{/if}}>
               <summary class="pk5e-branch-head">
                 <span class="pk5e-branch-name">{{name}}</span>
                 <span class="pk5e-branch-count">{{count}}</span>

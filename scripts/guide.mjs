@@ -252,26 +252,44 @@ function findImportWindow() {
 
 function watchImport(isBusy, onFinished, timeout = 300000) {
   const deadline = Date.now() + timeout;
-  const QUIET_MS = 8000;
+
+  // Two different situations, two different levels of certainty.
+  //
+  // Once an import window has been SEEN and then goes away, that is strong
+  // evidence the run is over - a short pause is enough to rule out another
+  // window opening straight after. Before any window has appeared we have only
+  // the absence of new items to go on, which needs far longer, because fetching
+  // data from the network can take several seconds before anything shows.
+  const AFTER_WINDOW_MS = 1500;
+  const WITHOUT_WINDOW_MS = 6000;
+
   let appeared = false;
+  let vanishedAt = 0;
 
   const tick = () => {
     const open = findImportWindow();
-    if (open) appeared = true;
 
-    // Fetching data from the network takes a while, and Plutonium closes one
-    // window before opening the next, so a gap with no window on screen does
-    // NOT mean it has finished. We also treat items still arriving on the actor
-    // as proof the import is running, and only give up after a long quiet spell.
+    if (open) {
+      appeared = true;
+      vanishedAt = 0;
+    } else if (appeared && !vanishedAt) {
+      vanishedAt = Date.now();
+    }
+
     const quietFor = Date.now() - isBusy();
-    if (!open && appeared && quietFor > QUIET_MS) return onFinished();
-    if (!open && !appeared && quietFor > QUIET_MS) return onFinished();
-    if (Date.now() > deadline) return onFinished();
 
-    setTimeout(tick, 400);
+    if (appeared && vanishedAt) {
+      const goneFor = Date.now() - vanishedAt;
+      if (goneFor > AFTER_WINDOW_MS && quietFor > AFTER_WINDOW_MS) return onFinished();
+    } else if (!appeared && quietFor > WITHOUT_WINDOW_MS) {
+      return onFinished();
+    }
+
+    if (Date.now() > deadline) return onFinished();
+    setTimeout(tick, 300);
   };
 
-  setTimeout(tick, 600);
+  setTimeout(tick, 500);
 }
 
 /** Confirmation dialog, tolerant of the API differing between versions. */

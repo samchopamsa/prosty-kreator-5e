@@ -2,7 +2,7 @@
   "id": "prosty-kreator-5e",
   "title": "Prosty Kreator Postaci (D&D 5e)",
   "description": "Prowadzony krok po kroku kreator postaci dla systemu dnd5e. Czyta dane z dowolnych wybranych kompendiów (SRD, kompendia świata, importy) i przekazuje resztę systemowemu mechanizmowi Advancement.",
-  "version": "1.15.0",
+  "version": "1.16.1",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

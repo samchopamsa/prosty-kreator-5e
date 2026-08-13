@@ -19,7 +19,11 @@
           {{#each table}}
           <tr class="{{#if known}}is-known{{/if}} {{#if highlight}}is-rolled{{/if}}">
             <td class="pk5e-mod">{{roll}}</td>
-            <td>{{name}}{{#if automatic}} <span class="pk5e-abbr">always known</span>{{/if}}</td>
+            <td>
+              {{name}}
+              {{#if automatic}}<span class="pk5e-abbr">always known</span>{{/if}}
+              {{#if highlight}}<span class="pk5e-roll-badge">rolled {{hits}}</span>{{/if}}
+            </td>
             <td>{{origin}}</td>
           </tr>
           {{/each}}
@@ -28,7 +32,10 @@
 
       <p class="pk5e-note">
         <button type="button" class="pk5e-link" data-action="rollLanguage">Roll 1d12</button>
-        {{#if lastRoll}} &middot; last roll: <strong>{{lastRoll}}</strong>{{/if}}
+        {{#if rollCount}}
+          &middot; rolled so far: <strong>{{rolls}}</strong>
+          &middot; <button type="button" class="pk5e-link" data-action="clearRolls">clear</button>
+        {{/if}}
       </p>
 
       <h3>Pick your languages</h3>

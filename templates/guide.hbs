@@ -66,9 +66,11 @@
         {{else if done}}
           <div class="pk5e-guide-chosen">
             {{#if img}}<img src="{{img}}" alt="">{{/if}}
-            <span class="pk5e-guide-result">{{result}}</span>
+            <div class="pk5e-chosen-body">
+              <span class="pk5e-guide-result">{{result}}</span>
+              {{#if summary}}<p class="pk5e-guide-summary">{{summary}}</p>{{/if}}
+            </div>
           </div>
-          {{#if summary}}<p class="pk5e-guide-summary">{{summary}}</p>{{/if}}
         {{else}}
           <p class="pk5e-note">{{blurb}}</p>
         {{/if}}
