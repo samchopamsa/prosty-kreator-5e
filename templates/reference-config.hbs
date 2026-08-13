@@ -1,0 +1,48 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      <p class="pk5e-lead">
+        Which compendiums the reference window reads. Leave everything unticked
+        to read them all.
+      </p>
+      <p class="pk5e-note">
+        Which classes and subclasses appear is decided by what you put in the
+        compendium and how you name its folders - folders sharing a name are
+        merged across compendiums.
+      </p>
+
+      <div class="pk5e-bulk">
+        <input type="search" data-search placeholder="Filter compendiums..." autocomplete="off">
+        <button type="button" data-action="selectAll">Select all</button>
+        <button type="button" data-action="selectNone">Clear</button>
+      </div>
+
+      <p class="pk5e-note" data-summary>
+        {{#if usingAll}}
+          Nothing selected - all {{total}} compendiums will be read.
+        {{else}}
+          {{selected}} of {{total}} compendiums selected.
+        {{/if}}
+      </p>
+
+      <div class="pk5e-packs">
+        {{#each packs}}
+        <label class="pk5e-pack" data-search="{{search}}">
+          <input type="checkbox" data-pack="{{id}}" {{#if checked}}checked{{/if}}>
+          <span class="pk5e-pack-name">{{label}}</span>
+          <span class="pk5e-pack-origin">{{origin}}</span>
+        </label>
+        {{/each}}
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <span class="pk5e-hint">Applies to the reference window only.</span>
+    <button type="button" class="pk5e-primary" data-action="save">Save</button>
+  </footer>
+
+</div>

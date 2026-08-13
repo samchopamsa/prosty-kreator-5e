@@ -3,24 +3,46 @@
  * ---------------------------------------------------------------------------
  * A reading window for classes and subclasses.
  *
- * Plutonium's picker shows names with nothing to read, which leaves a new
- * player choosing a class blind. This window fills that gap by listing what the
- * compendiums hold and showing the full description on click.
+ * Plutonium's picker shows names with nothing to read, which leaves a new player
+ * choosing a class blind. This window fills that gap from the compendiums.
+ *
+ * The tree mirrors the folder structure, MERGED BY FOLDER NAME across every
+ * compendium being read. A "Barbarian" folder in one book's compendium and a
+ * "Barbarian" folder in another become one branch, so the player sees a single
+ * Barbarian with all its subclasses rather than one entry per book.
  *
  * IMPORTANT: this reads COMPENDIUMS. Plutonium fetches its own data at run time
- * and cannot be queried, so the two lists agree only as far as the enabled
- * books agree. With sources restricted to one Player's Handbook they match.
+ * and cannot be queried, so the two lists agree only as far as the enabled books
+ * agree.
  */
 
 import { MODULE_ID } from "./constants.mjs";
 import { preserveScroll } from "./ui.mjs";
+import { referencePackIds, ReferenceConfig, referenceIsConfigured } from "./reference-config.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-const KINDS = {
-  class: { label: "Classes", types: ["class"] },
-  subclass: { label: "Subclasses", types: ["subclass"] }
-};
+const WANTED_TYPES = ["class", "subclass"];
+
+/**
+ * Folder path of an entry as an array of names, e.g. ["Barbarian", "Subclasses"].
+ * The parent field is a document in some versions and a plain id in others.
+ */
+function folderPath(pack, folderId) {
+  const names = [];
+  const guard = new Set();
+  let current = folderId;
+
+  while (current && !guard.has(current)) {
+    guard.add(current);
+    const folder = pack.folders?.get?.(current) ?? null;
+    if (!folder) break;
+    names.unshift(folder.name);
+    const parent = folder.folder;
+    current = typeof parent === "string" ? parent : parent?.id ?? null;
+  }
+  return names;
+}
 
 export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
@@ -30,7 +52,7 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
     super({
       ...options,
       position: {
-        width: 560,
+        width: 620,
         height: Math.max(480, vh - 80),
         left: 20,
         top: 40,
@@ -38,10 +60,10 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     });
 
-    this.kind = options.kind ?? "class";
     this.selectedUuid = null;
-    this._entries = {};
     this._detail = null;
+    this._tree = null;
+    this._open = {};
   }
 
   static DEFAULT_OPTIONS = {
@@ -51,7 +73,9 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { title: "Class reference", icon: "fa-solid fa-book-open", resizable: true },
     actions: {
       pickEntry: ClassReference.onPick,
-      setKind: ClassReference.onSetKind
+      toggleBranch: ClassReference.onToggleBranch,
+      configure: ClassReference.onConfigure,
+      refresh: ClassReference.onRefresh
     }
   };
 
@@ -59,53 +83,134 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
     main: { template: `modules/${MODULE_ID}/templates/reference.hbs` }
   };
 
-  /** Every entry of the current kind, from every Item compendium. */
-  async getEntries(kind) {
-    if (this._entries[kind]) return this._entries[kind];
+  /**
+   * Builds the merged tree.
+   *
+   * Branch key is the top folder NAME, so identical folders in different
+   * compendiums collapse into one. Entries filed directly at a compendium's
+   * root land in a catch-all branch rather than disappearing.
+   */
+  async buildTree() {
+    if (this._tree) return this._tree;
 
-    const types = KINDS[kind].types;
-    const results = [];
+    const branches = new Map();
+    const loose = [];
 
-    for (const pack of game.packs.filter((p) => p.documentName === "Item")) {
+    const branchFor = (name) => {
+      if (!branches.has(name)) {
+        branches.set(name, { key: name, name, entries: [], children: new Map() });
+      }
+      return branches.get(name);
+    };
+
+    for (const packId of referencePackIds()) {
+      const pack = game.packs.get(packId);
+      if (!pack || pack.documentName !== "Item") continue;
+
       let index;
       try {
-        index = await pack.getIndex({ fields: ["system.source.book", "system.source.rules"] });
+        index = await pack.getIndex({ fields: ["system.source.book", "folder"] });
       } catch (err) {
-        console.warn(`${MODULE_ID} | Could not index ${pack.collection}`, err);
+        console.warn(`${MODULE_ID} | Could not index ${packId}`, err);
         continue;
       }
 
       for (const entry of index) {
-        if (!types.includes(entry.type)) continue;
+        if (!WANTED_TYPES.includes(entry.type)) continue;
+
         const source = entry.system?.source ?? {};
-        results.push({
+        const record = {
           uuid: `Compendium.${pack.collection}.${entry._id}`,
           name: entry.name,
           img: entry.img || "icons/svg/book.svg",
+          type: entry.type,
           origin: source.book || source.custom || pack.metadata.label,
           search: `${entry.name} ${pack.metadata.label}`.toLowerCase()
-        });
+        };
+
+        const path = folderPath(pack, entry.folder);
+        if (!path.length) {
+          loose.push(record);
+          continue;
+        }
+
+        const branch = branchFor(path[0]);
+        if (path.length === 1) {
+          branch.entries.push(record);
+        } else {
+          const childName = path[1];
+          if (!branch.children.has(childName)) {
+            branch.children.set(childName, { name: childName, entries: [] });
+          }
+          branch.children.get(childName).entries.push(record);
+        }
       }
     }
 
-    results.sort((a, b) => a.name.localeCompare(b.name) || a.origin.localeCompare(b.origin));
-    this._entries[kind] = results;
-    return results;
+    const byName = (a, b) => a.name.localeCompare(b.name);
+
+    const tree = Array.from(branches.values())
+      .map((branch) => ({
+        key: branch.key,
+        name: branch.name,
+        entries: branch.entries.sort(byName),
+        children: Array.from(branch.children.values())
+          .map((child) => ({ ...child, entries: child.entries.sort(byName) }))
+          .sort(byName),
+        count:
+          branch.entries.length +
+          Array.from(branch.children.values()).reduce((sum, c) => sum + c.entries.length, 0)
+      }))
+      .sort(byName);
+
+    if (loose.length) {
+      tree.push({
+        key: "__loose__",
+        name: "Not in a folder",
+        entries: loose.sort(byName),
+        children: [],
+        count: loose.length
+      });
+    }
+
+    this._tree = tree;
+    return tree;
   }
 
   async _prepareContext() {
-    const entries = await this.getEntries(this.kind);
+    const tree = await this.buildTree();
+    const openAll = tree.length <= 3;
+
     return {
-      kinds: Object.entries(KINDS).map(([key, config]) => ({
-        key,
-        label: config.label,
-        active: key === this.kind
+      isGM: game.user.isGM,
+      configured: referenceIsConfigured(),
+      packCount: referencePackIds().length,
+      tree: tree.map((branch) => ({
+        ...branch,
+        open: this._open[branch.key] ?? openAll,
+        entries: branch.entries.map((e) => ({ ...e, selected: e.uuid === this.selectedUuid })),
+        children: branch.children.map((child) => ({
+          ...child,
+          entries: child.entries.map((e) => ({ ...e, selected: e.uuid === this.selectedUuid }))
+        }))
       })),
-      list: entries.map((entry) => ({ ...entry, selected: entry.uuid === this.selectedUuid })),
-      empty: entries.length === 0,
+      empty: tree.length === 0,
       detail: this._detail,
-      selected: entries.find((entry) => entry.uuid === this.selectedUuid) ?? null
+      selected: this.findEntry(this.selectedUuid)
     };
+  }
+
+  findEntry(uuid) {
+    if (!uuid || !this._tree) return null;
+    for (const branch of this._tree) {
+      const direct = branch.entries.find((e) => e.uuid === uuid);
+      if (direct) return direct;
+      for (const child of branch.children) {
+        const nested = child.entries.find((e) => e.uuid === uuid);
+        if (nested) return nested;
+      }
+    }
+    return null;
   }
 
   _onRender() {
@@ -113,41 +218,65 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const search = this.element.querySelector("[data-search]");
     if (!search) return;
+
     search.addEventListener("input", (ev) => {
       const query = ev.currentTarget.value.trim().toLowerCase();
-      this.element.querySelectorAll(".pk5e-option").forEach((node) => {
-        node.style.display = !query || node.dataset.search.includes(query) ? "" : "none";
+      this.element.querySelectorAll(".pk5e-branch").forEach((branch) => {
+        let visible = 0;
+        branch.querySelectorAll(".pk5e-option").forEach((row) => {
+          const match = !query || row.dataset.search.includes(query);
+          row.style.display = match ? "" : "none";
+          if (match) visible += 1;
+        });
+        branch.style.display = visible ? "" : "none";
+        // Searching should reveal matches inside collapsed branches.
+        const details = branch.querySelector("details");
+        if (details && query) details.open = true;
       });
     });
   }
 
-  static async onSetKind(event, target) {
-    this.kind = target.dataset.kind;
-    this.selectedUuid = null;
+  static onToggleBranch(event, target) {
+    const key = target.dataset.branch;
+    this._open[key] = !(this._open[key] ?? true);
+    this.render();
+  }
+
+  static onConfigure() {
+    new ReferenceConfig({
+      onSaved: () => {
+        this._tree = null;
+        this.render();
+      }
+    }).render(true);
+  }
+
+  static onRefresh() {
+    this._tree = null;
     this._detail = null;
+    this.selectedUuid = null;
     this.render();
   }
 
   static async onPick(event, target) {
-    const uuid = target.dataset.uuid;
-    this.selectedUuid = uuid;
+    this.selectedUuid = target.dataset.uuid;
     this._detail = null;
     this.render();
 
     try {
-      const doc = await fromUuid(uuid);
+      const doc = await fromUuid(this.selectedUuid);
       const raw = doc?.system?.description?.value ?? "";
       const TE = foundry.applications?.ux?.TextEditor?.implementation ?? globalThis.TextEditor;
       let html = raw
         ? await TE.enrichHTML(raw, { relativeTo: doc, secrets: false })
         : "<p><em>No description in the compendium.</em></p>";
-      // Artwork from books the user may not own renders as a padlock.
+      // Artwork from books the reader may not own renders as a padlock.
       html = html
         .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, "")
         .replace(/<img\b[^>]*>/gi, "");
       this._detail = html;
     } catch (err) {
-      console.warn(`${MODULE_ID} | Could not read ${uuid}`, err);
+      console.warn(`${MODULE_ID} | Could not read ${this.selectedUuid}`, err);
       this._detail = "<p><em>Could not read that entry.</em></p>";
     }
     this.render();

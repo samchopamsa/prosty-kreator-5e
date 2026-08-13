@@ -593,3 +593,41 @@
 
 .pk5e-detail-col h3 { margin: 0; }
 .pk5e-detail-text { font-size: 13px; line-height: 1.45; }
+
+/* ------------------------------------------------------------------ */
+/* Reference tree                                                      */
+/* ------------------------------------------------------------------ */
+
+.pk5e-branch { display: flex; flex-direction: column; }
+
+.pk5e-branch-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 5px 4px;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.22);
+  list-style: none;
+  font-size: 13px;
+}
+
+.pk5e-branch-head::-webkit-details-marker { display: none; }
+
+.pk5e-branch-head::before {
+  content: "\25B8";
+  font-size: 10px;
+  opacity: 0.6;
+  transition: transform 120ms ease;
+}
+
+.pk5e-branch details[open] > .pk5e-branch-head::before { transform: rotate(90deg); }
+.pk5e-branch-name { font-weight: 700; flex: 1 1 auto; }
+.pk5e-branch-count { font-size: 10px; opacity: 0.5; }
+.pk5e-branch-head:hover { background: rgba(0, 0, 0, 0.06); }
+
+.pk5e-subbranch { padding-left: 10px; border-left: 1px solid rgba(128, 128, 128, 0.2); }
+.pk5e-subbranch .pk5e-lang-heading { margin: 6px 0 2px; }
+
+.pk5e-bulk { display: flex; gap: 6px; align-items: center; }
+.pk5e-bulk input[type="search"] { flex: 1 1 auto; min-width: 0; }
+.pk5e-bulk button { width: auto; flex: 0 0 auto; padding: 2px 10px; font-size: 12px; }

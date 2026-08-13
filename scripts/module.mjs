@@ -14,6 +14,8 @@ import { LanguagePicker } from "./languages.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { registerContextMenu } from "./context-menu.mjs";
+import { ClassReference } from "./reference.mjs";
+import { ReferenceConfig } from "./reference-config.mjs";
 
 Hooks.once("init", () => {
   // Wording shown in the guide panel. Leave blank to use the built-in text.
@@ -67,6 +69,22 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: true
+  });
+
+  game.settings.register(MODULE_ID, "referencePacks", {
+    scope: "world",
+    config: false,
+    type: Array,
+    default: []
+  });
+
+  game.settings.registerMenu(MODULE_ID, "referenceMenu", {
+    name: "Reference: compendiums to read",
+    label: "Choose compendiums",
+    hint: "Which compendiums the class and subclass reference window reads. Leave empty to read them all.",
+    icon: "fa-solid fa-book-open",
+    type: ReferenceConfig,
+    restricted: true
   });
 
   game.settings.register(MODULE_ID, "guideButton", {
@@ -134,6 +152,7 @@ Hooks.once("ready", () => {
     resume: (actorId) => CreationGuide.open(actorId),
     complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
     languages: (actorId) => new LanguagePicker({ actorId }).render(true),
+    reference: () => new ClassReference().render(true),
     CreationGuide,
     CompleteCharacter
   };
