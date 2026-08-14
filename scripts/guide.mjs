@@ -21,6 +21,7 @@ import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
 import { checkCharacter, itemsWithSkippedChoices } from "./validate.mjs";
+import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { postSummary } from "./summary.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -599,9 +600,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 380, height: 560 },
     actions: {
       addStep: CreationGuide.onAddStep,
-      replaceStep: CreationGuide.onReplaceStep,
       removeStep: CreationGuide.onRemoveStep,
       redoStep: CreationGuide.onRedoStep,
+      delevel: CreationGuide.onDelevel,
+      dismissOption: CreationGuide.onDismissOption,
       openSheet: CreationGuide.onOpenSheet,
       finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
@@ -894,6 +896,21 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
       // and burying it among the other warnings buried the only actionable item.
+      // Choices skipped inside Plutonium's dialogs. Kept apart from the
+      // checklist because each one carries its own fix.
+      skippedOptions: skippedOptions(actor).map((entry) => ({
+        ...entry,
+        // Level 1 means the class itself has to go and come back; above that a
+        // single level can be undone, which is far less destructive.
+        canDelevel: Number(entry.level) > 1 && classes.length > 0,
+        classId: classes[0]?.id ?? null,
+        text:
+          entry.reason === "partial"
+            ? t("option.partial", entry.label, entry.learned, entry.total)
+            : entry.level
+              ? t("option.skippedAt", entry.label, entry.level)
+              : t("option.skipped", entry.label)
+      })),
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
       players: game.users
@@ -991,6 +1008,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     });
 
     if (!this._hooks.length) this.registerWatchers();
+
+    // Plutonium's own dialogs leave no trace in the data, so they have to be
+    // watched live. Only while this panel is open, which is the whole scope the
+    // creator claims responsibility for.
+    if (!this._stopOptionWatch) {
+      this._stopOptionWatch = watchOptionDialogs(this.actor, () => this.render());
+    }
   }
 
   /**
@@ -1041,6 +1065,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   async close(options) {
     for (const [hook, id] of this._hooks) Hooks.off(hook, id);
     this._hooks = [];
+    this._stopOptionWatch?.();
+    this._stopOptionWatch = null;
 
     // Closing counts as "I have seen this" - but ONLY for a player. The GM
     // normally opens the panel first to assign the character, and marking it
@@ -1094,6 +1120,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       for (const item of items) {
         if (!this.actor.items.get(item.id)) continue;
         await deleteWithAdvancement(this.actor, item);
+      }
+      // Anything recorded about this item goes with it. Adding it again walks
+      // through the same dialogs, so the record rebuilds itself if it should.
+      if (["species", "background", "class"].includes(step)) {
+        await clearSkippedOptions(this.actor);
       }
       return true;
     } catch (err) {
@@ -1263,16 +1294,66 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     ui.notifications.error("Could not open the file picker. See the console for details.");
   }
 
-  static async onReplaceStep(event, target) {
-    const step = target.dataset.step;
-    const removed = await this.removeFor(step, { itemId: target.dataset.item ?? null });
-    if (!removed) return;
-    await wait(200);
-    await this.addFor(step);
-  }
-
   static async onRemoveStep(event, target) {
     await this.removeFor(target.dataset.step, { itemId: target.dataset.item ?? null });
+  }
+
+  /**
+   * Steps one class level back so the choices for it can be made again.
+   *
+   * Far gentler than removing the class outright, which is what a level 1
+   * mistake needs but a level 7 one certainly does not: the system reverses the
+   * one level and everything below it stays as it was.
+   */
+  static async onDelevel(event, target) {
+    const actor = this.actor;
+    const classId = target.dataset.classId;
+    const item = actor?.items?.get(classId);
+    if (!item) return;
+
+    const AdvancementManager =
+      game.dnd5e?.applications?.advancement?.AdvancementManager ??
+      globalThis.dnd5e?.applications?.advancement?.AdvancementManager;
+
+    if (!AdvancementManager?.forLevelChange) {
+      ui.notifications.warn(t("option.noDelevel"));
+      return;
+    }
+
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: t("option.delevelTitle") },
+      content: `<p>${t("option.delevelBody", item.name, item.system?.levels ?? 1)}</p>`,
+      modal: true
+    });
+    if (!confirmed) return;
+
+    try {
+      const manager = AdvancementManager.forLevelChange(actor, classId, -1);
+      if (manager?.steps?.length) manager.render(true);
+      // The record belongs to the level being undone; re-levelling records anew.
+      await clearSkippedOptions(actor, {
+        label: target.dataset.label,
+        level: Number(target.dataset.level) || null
+      });
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not step the level back`, err);
+      ui.notifications.warn(t("option.noDelevel"));
+    }
+  }
+
+  /**
+   * Forgets one recorded option.
+   *
+   * The record cannot tell that the player went and sorted it out by hand, so
+   * without this an entry could sit there forever, insisting on a problem that
+   * no longer exists.
+   */
+  static async onDismissOption(event, target) {
+    await clearSkippedOptions(this.actor, {
+      label: target.dataset.label,
+      level: Number(target.dataset.level) || null
+    });
+    this.render();
   }
 
   /**

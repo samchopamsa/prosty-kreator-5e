@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.35.0**
+- Wersja modułu: **1.36.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -320,6 +320,36 @@ pustki dawałoby trzy fałszywe alarmy na każdym poprawnym klesze. Zasada: przy
 nieznanym typie milczymy. Przeoczone ostrzeżenie to niedogodność, fałszywe niszczy
 zaufanie do całej listy kontrolnej.
 
+### Wybory wewnątrz okien Plutonium
+
+Osobny mechanizm, bo te wybory **nie zostawiają śladu w danych**. Wojownik, który
+pominął styl walki, z punktu widzenia systemu jest kompletny. Jedyny moment, gdy
+ta informacja istnieje, to chwila, w której okno jest na ekranie — więc czujka
+(`option-watch.mjs`) obserwuje kliknięcia i zapisuje werdykt jako flagę aktora.
+
+To świadomie przyjęte drugie źródło prawdy. Działa **tylko przy otwartym panelu**,
+czyli dokładnie w zakresie, za który kreator odpowiada.
+
+Trzy reguły, wyprowadzone z obserwacji prawdziwego importu:
+
+| okno | reguła |
+| --- | --- |
+| `Choose Option: …` | wyjście czymkolwiek poza OK = pominięte; Skip, Cancel i krzyżyk dają ten sam skutek |
+| `Select Cantrips` / `Select Spells` | czytany licznik `learned: X/Y`; `X < Y` to brak, **nawet po OK** |
+| `Import Complete` | tekst „was cancelled" = import przepadł, więc wszystkie zapisy z tej sesji kasujemy |
+
+Druga reguła jest istotna: okno zaklęć pozwala nacisnąć OK przy niepełnym wyborze
+(dwie sztuczki z trzech) i nic dalej tego nie zauważa.
+
+OK rozpoznawane jest po klasie `ve-btn-primary`, nie po tekście — tekst zmienia się
+z językiem interfejsu. **Uwaga:** w oknie ekwipunku przycisk Confirm nie jest primary,
+dlatego czujka patrzy wyłącznie na okna `Choose Option:` i okna zaklęć.
+
+Naprawa zależy od poziomu: przy pierwszym trzeba usunąć klasę i dodać ponownie,
+powyżej wystarczy **cofnięcie jednego poziomu** przez `forLevelChange(actor, classId, -1)`
+— reszta postaci zostaje nietknięta. Do tego link „już to poprawiłem", żeby wpis
+nie mógł utknąć na zawsze, gdy gracz ogarnie sprawę ręcznie.
+
 ### Wymagania wieloklasowości
 
 Sprawdzane dopiero wtedy, gdy postać ma **więcej niż jedną klasę** — przy jednej klasie
@@ -470,6 +500,7 @@ Flagi w przestrzeni `prosty-kreator-5e`:
 | `abilities` | Przypisane atrybuty bazowe i metoda. Zapobiega podwójnemu liczeniu bonusów przy ponownym uruchomieniu. |
 | `languages` | Krok języków został domknięty. |
 | `guideDismissed` | Gracz zamknął panel — automatyczne otwieranie już nie wraca. |
+| `skippedOptions` | Wybory pominięte w oknach Plutonium. Czyszczone przy usunięciu przedmiotu i linkiem „już to poprawiłem". |
 
 Brak flagi `abilities` lub `languages` oznacza dla modułu „krok niezrobiony” — stąd
 `isIncomplete()` i wpis w menu kontekstowym.
@@ -495,6 +526,7 @@ prosty-kreator-5e/
 │   ├── context-menu.mjs     „Start / resume creation” w menu prawego klawisza
 │   ├── browser-tweaks.mjs   zawężenie dymków w Compendium Browser
 │   ├── summary.mjs          karta postaci na czat
+│   ├── option-watch.mjs     czujka na pominięte wybory w oknach Plutonium
 │   ├── validate.mjs         kontrola gotowości
 │   └── ui.mjs               pamiętanie pozycji przewijania
 ├── styles/
@@ -567,7 +599,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.35.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.36.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

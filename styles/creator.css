@@ -698,7 +698,15 @@
 
 .pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }
 
-.pk5e-reference-callout { margin-bottom: 4px; }
+/* No accent bar here. The skipped-choices warning uses the same callout shape
+   with a coloured bar, and a bar on this purely informational block made the
+   class step look like it was reporting a problem. */
+.pk5e-reference-callout {
+  margin-bottom: 4px;
+  border-left: none;
+  padding-left: 0;
+  background: none;
+}
 
 /* A text link, not a button. A second full-width button here looked like an
    alternative way of choosing the class, which is exactly what it is not. */
@@ -868,3 +876,11 @@
   font-size: 15px;
   line-height: 1;
 }
+
+.pk5e-option-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.pk5e-option-actions button:not(.pk5e-link) { width: 100%; font-size: 12px; }

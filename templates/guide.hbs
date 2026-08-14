@@ -107,8 +107,6 @@
                 </div>
               </div>
               <div class="pk5e-guide-actions">
-                <button type="button" class="pk5e-link" data-action="replaceStep"
-                        data-step="{{../key}}" data-item="{{itemId}}">{{pkT "guide.change"}}</button>
                 <button type="button" class="pk5e-link" data-action="removeStep"
                         data-step="{{../key}}" data-item="{{itemId}}">{{pkT "guide.remove"}}</button>
               </div>
@@ -172,6 +170,29 @@
         {{/if}}
       </div>
       {{/each}}
+
+      {{#if skippedOptions}}
+      <section class="pk5e-skipped">
+        {{#each skippedOptions}}
+        <div class="pk5e-callout pk5e-skipped-item">
+          <strong>{{pkT "option.title"}}</strong>
+          <p>{{text}}</p>
+          <div class="pk5e-option-actions">
+            {{#if canDelevel}}
+            <button type="button" data-action="delevel" data-class-id="{{classId}}"
+                    data-label="{{label}}" data-level="{{level}}">
+              {{pkT "option.delevelButton" level}}
+            </button>
+            {{/if}}
+            <button type="button" class="pk5e-link" data-action="dismissOption"
+                    data-label="{{label}}" data-level="{{level}}">
+              {{pkT "option.dismiss"}}
+            </button>
+          </div>
+        </div>
+        {{/each}}
+      </section>
+      {{/if}}
 
       <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
         <div class="pk5e-guide-head">
