@@ -697,3 +697,8 @@
 }
 
 .pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }
+
+.pk5e-reference-callout { margin-bottom: 4px; }
+.pk5e-reference-callout button { width: 100%; margin-top: 6px; font-size: 12px; }
+
+.pk5e-lang-switch { display: flex; gap: 2px; flex: 0 0 auto; }

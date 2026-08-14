@@ -1,0 +1,362 @@
+/**
+ * i18n.mjs
+ * ---------------------------------------------------------------------------
+ * Translations for the screens a PLAYER sees: the creation panel, the ability
+ * score window and the language window.
+ *
+ * Deliberately NOT translated: module settings, the compendium source screens,
+ * diagnostic messages in the console, and anything coming out of a compendium
+ * or an importer. Those are the GM's territory or someone else's data.
+ *
+ * This does not use Foundry's own translation files, because those follow the
+ * language of the whole interface. Here a player can switch just this module,
+ * which matters when the group runs Foundry in English but plays in Polish.
+ */
+
+import { MODULE_ID } from "./constants.mjs";
+
+const STRINGS = {
+  en: {
+    "guide.title": "New Character",
+    "guide.intro":
+      "Seven steps. Each one opens the same dialog the character sheet uses, so anything you have installed works exactly as usual. Those windows appear on top of this one - close them and come back here.",
+    "guide.missing": "This character no longer exists.",
+    "guide.ownership": "Ownership and filing",
+    "guide.player": "Player",
+    "guide.playerHint": "Who can open and edit this character.",
+    "guide.nobody": "— nobody yet —",
+    "guide.folder": "Folder",
+    "guide.noFolder": "— none —",
+    "guide.setDefaultFolder": "Put new characters here from now on",
+    "guide.unsetDefaultFolder": "Stop putting new characters here",
+    "guide.defaultFolderIs": "New characters go to \"{0}\".",
+    "guide.noDefaultFolder": "New characters are not filed automatically.",
+
+    "step.name": "Name",
+    "step.species": "Species",
+    "step.background": "Background",
+    "step.class": "Class",
+    "step.abilities": "Ability scores",
+    "step.languages": "Languages",
+    "step.portrait": "Portrait",
+
+    "guide.optional": "optional",
+    "guide.whatIsThis": "What is this?",
+    "guide.importing":
+      "Importing. Wait for the import window to finish, then close it - more choices may still appear before it is done.",
+    "guide.choose": "Choose {0}",
+    "guide.set": "Set {0}",
+    "guide.addOptional": "Add {0} (optional)",
+    "guide.change": "Change",
+    "guide.remove": "Remove",
+    "guide.referenceTitle": "Not sure which class?",
+    "guide.referenceBody":
+      "The importer shows names only. Read what each class and subclass actually does before you choose.",
+    "guide.referenceButton": "Browse the classes and subclasses",
+    "guide.levelUp": "Add a level or another class",
+    "guide.ready": "Ready to play",
+    "guide.toFix": "{0} thing(s) to fix",
+    "guide.recheck": "Recheck",
+    "guide.allGood": "Everything checks out.",
+    "guide.progress": "{0} of {1} steps done",
+    "guide.postToChat": "Post to chat",
+    "guide.finalize": "Finalize",
+    "guide.finishFirst": "Finish the remaining steps first",
+    "guide.multiclass": "Character level {0}, across {1} classes.",
+    "guide.languageCount": "{0} languages",
+    "guide.languageCountOne": "1 language",
+    "guide.portraitSet": "Portrait set",
+
+    "help.name":
+      "Just a name for now. You can change it at any time, and nothing else depends on it.",
+    "help.species":
+      "Your character's ancestry - dwarf, elf, human and so on. It sets size and walking speed, and usually adds something innate: darkvision, a resistance, a small once-per-day ability. Under the 2024 rules your species does NOT change your ability scores; that comes from your background.",
+    "help.background":
+      "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine.",
+    "help.class":
+      "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of. The importer asks for the subclass and the level at the same time, so a character can start above level 1 if your table plays that way - at level 1 there is no subclass yet.",
+    "help.abilities":
+      "Six numbers describing raw talent. Strength for hitting and lifting, Dexterity for aim and reflexes, Constitution for stamina and hit points, Intelligence for knowledge, Wisdom for perception and willpower, Charisma for force of personality. What matters in play is the modifier next to each score: 10 gives +0, and every two points above or below shifts it by one. Put your highest number in whatever your class uses most.",
+    "help.languages":
+      "Everyone speaks Common. Your character knows two more, which you can roll for or choose. Languages rarely decide a fight, but they open doors when the party meets someone who does not speak Common.",
+    "help.portrait":
+      "Optional. A picture for your character, shown on the sheet and on the token.",
+
+    "blurb.species": "Determines your speed, size and innate traits.",
+    "blurb.background":
+      "Grants proficiencies, an origin feat and ability score increases.",
+    "blurb.class": "What your character can do, in combat and out of it.",
+    "blurb.abilities": "Importers skip this, so it is done here at the end.",
+    "blurb.languages": "Common plus two more. Roll for them or pick from the table.",
+    "blurb.portrait":
+      "Optional. A picture for your character, shown on the sheet and on the token.",
+
+    "flow.prompt":
+      " After you press the button, a small window asks where to take the entry from. Choose Use Plutonium, then press Open Importer in the window that follows - only then do you see the list to pick from.",
+    "flow.plutonium": " After you press the button, the list of options opens by itself.",
+    "flow.compendium":
+      " After you press the button, the compendium browser opens by itself.",
+
+    "method.standard": "Standard array",
+    "method.pointbuy": "Point buy",
+    "method.roll": "Rolled 4d6, dropping the lowest",
+    "method.manual": "Entered by hand",
+
+    "check.species": "Species",
+    "check.speciesHint": "Sets your size, speed and innate traits.",
+    "check.background": "Background",
+    "check.backgroundHint": "Grants proficiencies and an origin feat.",
+    "check.class": "Class at level 1 or higher",
+    "check.classHint": "Without it there are no class features.",
+    "check.hp": "Hit points above zero",
+    "check.hpHint": "Usually means the class advancement was cancelled.",
+    "check.speed": "Walking speed set",
+    "check.speedHint": "Comes from the species; zero means it never applied.",
+    "check.abilities": "Ability scores assigned",
+    "check.abilitiesHint": "Importers leave every score at ten. Use the final step.",
+    "check.language": "At least one language",
+    "check.languageHint": "Most characters know Common.",
+    "check.skills": "Skill proficiencies",
+    "check.skillsHint": "Background and class normally grant several.",
+    "check.inventory": "Something in the inventory",
+    "check.inventoryHint": "No starting equipment was taken.",
+    "check.portrait": "Portrait chosen",
+    "check.portraitHint": "Optional, but it helps everyone at the table.",
+
+    "abilities.title": "Ability scores",
+    "abilities.lead":
+      "For characters built by an importer, which fills in the class, species, background and gear but never asks for ability scores.",
+    "abilities.character": "Character",
+    "abilities.chooseActor": "— choose —",
+    "abilities.previously": "Previously completed",
+    "abilities.previouslyOn": "Previously completed on {0}",
+    "abilities.previouslyBody":
+      "Your earlier assignment is restored below, so applying again will not stack anything twice.",
+    "abilities.bonusMeasured": "Bonuses are measured against the base saved last time.",
+    "abilities.bonusAdvancements":
+      "Bonuses are read from the increases declared on this character's own items; whatever is on the sheet is ignored.",
+    "abilities.bonusNone": "The scores are written exactly as assigned, with nothing added.",
+    "abilities.methodStandard": "Standard array",
+    "abilities.methodPointBuy": "Point buy",
+    "abilities.methodRoll": "Roll dice",
+    "abilities.methodManual": "Manual",
+    "abilities.rollButton": "Roll 4d6, drop lowest",
+    "abilities.pointsLeft": "Points remaining",
+    "abilities.of": "of",
+    "abilities.colAbility": "Ability",
+    "abilities.colNow": "Now",
+    "abilities.colAssign": "Assign",
+    "abilities.colBonus": "Bonus",
+    "abilities.colResult": "Result",
+    "abilities.colMod": "Mod",
+    "abilities.reset": "Reset",
+    "abilities.footer": "Only ability scores are touched.",
+    "abilities.apply": "Apply",
+
+    "lang.title": "Languages",
+    "lang.lead":
+      "Your character knows at least three languages: Common plus two languages you roll or choose from the Standard Languages table.",
+    "lang.colRoll": "1d12",
+    "lang.colLanguage": "Language",
+    "lang.colOrigin": "Origin",
+    "lang.alwaysKnown": "always known",
+    "lang.rolled": "rolled {0}",
+    "lang.rollButton": "Roll 1d12",
+    "lang.rolledSoFar": "rolled so far",
+    "lang.clear": "clear",
+    "lang.pick": "Pick your languages",
+    "lang.commonNote": "Common is always known. Chosen besides Common:",
+    "lang.overLimit": "That is more than the usual two - you will be asked to confirm.",
+    "lang.search": "Search languages...",
+    "lang.standard": "Standard Languages",
+    "lang.expanded": "Expanded",
+    "lang.footer": "Only languages are changed. Nothing else on the sheet is touched.",
+    "lang.save": "Save"
+  },
+
+  pl: {
+    "guide.title": "Nowa postać",
+    "guide.intro":
+      "Siedem kroków. Każdy otwiera to samo okno, którego używa karta postaci, więc wszystko, co masz zainstalowane, działa jak zwykle. Te okna pojawiają się na wierzchu - zamknij je i wróć tutaj.",
+    "guide.missing": "Ta postać już nie istnieje.",
+    "guide.ownership": "Właściciel i folder",
+    "guide.player": "Gracz",
+    "guide.playerHint": "Kto może otwierać i edytować tę postać.",
+    "guide.nobody": "— jeszcze nikt —",
+    "guide.folder": "Folder",
+    "guide.noFolder": "— brak —",
+    "guide.setDefaultFolder": "Twórz tu nowe postacie",
+    "guide.unsetDefaultFolder": "Przestań tu tworzyć nowe postacie",
+    "guide.defaultFolderIs": "Nowe postacie trafiają do \"{0}\".",
+    "guide.noDefaultFolder": "Nowe postacie nie są nigdzie katalogowane.",
+
+    "step.name": "Imię",
+    "step.species": "Gatunek",
+    "step.background": "Pochodzenie",
+    "step.class": "Klasa",
+    "step.abilities": "Atrybuty",
+    "step.languages": "Języki",
+    "step.portrait": "Portret",
+
+    "guide.optional": "opcjonalne",
+    "guide.whatIsThis": "Co to jest?",
+    "guide.importing":
+      "Trwa import. Poczekaj, aż okno importu skończy pracę, i zamknij je - po drodze mogą pojawić się kolejne wybory.",
+    "guide.choose": "Wybierz: {0}",
+    "guide.set": "Ustaw: {0}",
+    "guide.addOptional": "Dodaj: {0} (opcjonalnie)",
+    "guide.change": "Zmień",
+    "guide.remove": "Usuń",
+    "guide.referenceTitle": "Nie wiesz, którą klasę wybrać?",
+    "guide.referenceBody":
+      "Importer pokazuje same nazwy. Przeczytaj, co naprawdę potrafi każda klasa i podklasa, zanim zdecydujesz.",
+    "guide.referenceButton": "Przeglądaj klasy i podklasy",
+    "guide.levelUp": "Dodaj poziom lub kolejną klasę",
+    "guide.ready": "Gotowa do gry",
+    "guide.toFix": "Do poprawienia: {0}",
+    "guide.recheck": "Sprawdź ponownie",
+    "guide.allGood": "Wszystko się zgadza.",
+    "guide.progress": "Ukończono {0} z {1} kroków",
+    "guide.postToChat": "Wyślij na czat",
+    "guide.finalize": "Zakończ",
+    "guide.finishFirst": "Najpierw dokończ pozostałe kroki",
+    "guide.multiclass": "Poziom postaci {0}, w {1} klasach.",
+    "guide.languageCount": "Języki: {0}",
+    "guide.languageCountOne": "1 język",
+    "guide.portraitSet": "Portret ustawiony",
+
+    "help.name":
+      "Na razie tylko nazwa. Możesz ją zmienić w każdej chwili i nic od niej nie zależy.",
+    "help.species":
+      "Pochodzenie rodowe twojej postaci - krasnolud, elf, człowiek i tak dalej. Określa rozmiar i szybkość marszu, zwykle dodaje też coś wrodzonego: widzenie w ciemności, odporność, drobną zdolność raz na dzień. W zasadach z 2024 gatunek NIE zmienia atrybutów - te podnosi pochodzenie.",
+    "help.background":
+      "Czym twoja postać zajmowała się przed przygodą: żołnierz, uczony, przestępca. Daje dwie biegłości w umiejętnościach, narzędzie, atut startowy oraz podwyższenia atrybutów - jeden o 2 i drugi o 1 albo trzy po 1. Wybierz takie, którego umiejętności pasują do postaci, jaką sobie wyobrażasz.",
+    "help.class":
+      "Twoja rola w drużynie i największa decyzja w całym procesie. Określa, ile wytrzymasz, czym umiesz walczyć i co potrafisz w starciu. Wojownik i Barbarzyńca najłatwiej wybaczają błędy przy pierwszej postaci; Czarodziej i Druid wymagają pilnowania największej liczby rzeczy. Importer pyta jednocześnie o podklasę i poziom, więc postać może zaczynać wyżej niż na pierwszym - na pierwszym poziomie podklasy jeszcze nie ma.",
+    "help.abilities":
+      "Sześć liczb opisujących surowy talent. Siła do ciosów i dźwigania, Zręczność do celności i refleksu, Kondycja do wytrzymałości i punktów życia, Intelekt do wiedzy, Mądrość do spostrzegawczości i silnej woli, Charyzma do siły osobowości. W grze liczy się modyfikator obok wyniku: 10 daje +0, a każde dwa punkty w górę lub w dół przesuwają go o jeden. Najwyższą liczbę wpisz tam, gdzie twoja klasa korzysta najczęściej.",
+    "help.languages":
+      "Wspólnym mówią wszyscy. Twoja postać zna jeszcze dwa języki - możesz je wylosować albo wybrać. Języki rzadko rozstrzygają walkę, ale otwierają drzwi, gdy drużyna spotka kogoś, kto nie mówi Wspólnym.",
+    "help.portrait":
+      "Opcjonalne. Obrazek twojej postaci, widoczny na karcie i na żetonie.",
+
+    "blurb.species": "Określa szybkość, rozmiar i cechy wrodzone.",
+    "blurb.background": "Daje biegłości, atut startowy i podwyższenia atrybutów.",
+    "blurb.class": "Co twoja postać potrafi w walce i poza nią.",
+    "blurb.abilities": "Importery to pomijają, więc robimy to tutaj, na koniec.",
+    "blurb.languages": "Wspólny plus dwa kolejne. Wylosuj je albo wybierz z tabeli.",
+    "blurb.portrait": "Opcjonalne. Obrazek widoczny na karcie i na żetonie.",
+
+    "flow.prompt":
+      " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz Use Plutonium, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
+    "flow.plutonium": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
+    "flow.compendium": " Po naciśnięciu przycisku przeglądarka kompendiów otworzy się sama.",
+
+    "method.standard": "Zestaw standardowy",
+    "method.pointbuy": "Zakup punktowy",
+    "method.roll": "Rzut 4k6 z odrzuceniem najniższej",
+    "method.manual": "Wpisane ręcznie",
+
+    "check.species": "Gatunek",
+    "check.speciesHint": "Określa rozmiar, szybkość i cechy wrodzone.",
+    "check.background": "Pochodzenie",
+    "check.backgroundHint": "Daje biegłości i atut startowy.",
+    "check.class": "Klasa na 1. poziomie lub wyższym",
+    "check.classHint": "Bez niej postać nie ma żadnych cech klasowych.",
+    "check.hp": "Punkty życia powyżej zera",
+    "check.hpHint": "Zwykle znaczy, że przerwano okno awansu klasy.",
+    "check.speed": "Ustawiona szybkość",
+    "check.speedHint": "Pochodzi od gatunku; zero znaczy, że się nie zastosowała.",
+    "check.abilities": "Przypisane atrybuty",
+    "check.abilitiesHint": "Importery zostawiają wszędzie dziesiątki. Użyj ostatniego kroku.",
+    "check.language": "Przynajmniej jeden język",
+    "check.languageHint": "Większość postaci zna Wspólny.",
+    "check.skills": "Biegłości w umiejętnościach",
+    "check.skillsHint": "Pochodzenie i klasa zwykle dają ich kilka.",
+    "check.inventory": "Coś w ekwipunku",
+    "check.inventoryHint": "Nie wzięto ekwipunku startowego.",
+    "check.portrait": "Wybrany portret",
+    "check.portraitHint": "Opcjonalny, ale ułatwia życie całemu stołowi.",
+
+    "abilities.title": "Atrybuty",
+    "abilities.lead":
+      "Dla postaci zbudowanych importerem, który wypełnia klasę, gatunek, pochodzenie i ekwipunek, ale nigdy nie pyta o atrybuty.",
+    "abilities.character": "Postać",
+    "abilities.chooseActor": "— wybierz —",
+    "abilities.previously": "Uzupełniano już wcześniej",
+    "abilities.previouslyOn": "Uzupełniano już wcześniej: {0}",
+    "abilities.previouslyBody":
+      "Poprzednie przypisanie zostało przywrócone poniżej, więc ponowne zatwierdzenie niczego nie naliczy dwa razy.",
+    "abilities.bonusMeasured": "Premie liczone względem bazy zapisanej ostatnim razem.",
+    "abilities.bonusAdvancements":
+      "Premie odczytane z podwyższeń zadeklarowanych w przedmiotach tej postaci; to, co jest na karcie, jest pomijane.",
+    "abilities.bonusNone": "Wartości zostaną wpisane dokładnie tak, jak je przydzielisz.",
+    "abilities.methodStandard": "Zestaw standardowy",
+    "abilities.methodPointBuy": "Zakup punktowy",
+    "abilities.methodRoll": "Rzut kośćmi",
+    "abilities.methodManual": "Ręcznie",
+    "abilities.rollButton": "Rzuć 4k6, odrzuć najniższą",
+    "abilities.pointsLeft": "Pozostało punktów",
+    "abilities.of": "z",
+    "abilities.colAbility": "Atrybut",
+    "abilities.colNow": "Teraz",
+    "abilities.colAssign": "Przydziel",
+    "abilities.colBonus": "Premia",
+    "abilities.colResult": "Wynik",
+    "abilities.colMod": "Mod.",
+    "abilities.reset": "Wyczyść",
+    "abilities.footer": "Zmieniane są wyłącznie atrybuty.",
+    "abilities.apply": "Zatwierdź",
+
+    "lang.title": "Języki",
+    "lang.lead":
+      "Twoja postać zna co najmniej trzy języki: Wspólny oraz dwa, które wylosujesz albo wybierzesz z tabeli języków standardowych.",
+    "lang.colRoll": "1k12",
+    "lang.colLanguage": "Język",
+    "lang.colOrigin": "Pochodzenie",
+    "lang.alwaysKnown": "znany zawsze",
+    "lang.rolled": "wylosowano {0}",
+    "lang.rollButton": "Rzuć 1k12",
+    "lang.rolledSoFar": "dotychczasowe rzuty",
+    "lang.clear": "wyczyść",
+    "lang.pick": "Wybierz języki",
+    "lang.commonNote": "Wspólny znany jest zawsze. Wybrano poza nim:",
+    "lang.overLimit": "To więcej niż zwyczajowe dwa - poprosimy o potwierdzenie.",
+    "lang.search": "Szukaj języków...",
+    "lang.standard": "Języki standardowe",
+    "lang.expanded": "Rozszerzone",
+    "lang.footer": "Zmieniane są wyłącznie języki. Reszta karty pozostaje nietknięta.",
+    "lang.save": "Zapisz"
+  }
+};
+
+/** Language actually in force: the player's own choice, else the world default. */
+export function currentLanguage() {
+  try {
+    const mine = game.settings.get(MODULE_ID, "language");
+    if (mine && mine !== "auto") return mine;
+    return game.settings.get(MODULE_ID, "defaultLanguage") || "en";
+  } catch (err) {
+    return "en";
+  }
+}
+
+/** Translated string, with {0}, {1}... replaced by the arguments given. */
+export function t(key, ...args) {
+  const lang = currentLanguage();
+  const text = STRINGS[lang]?.[key] ?? STRINGS.en[key] ?? key;
+  return args.length
+    ? text.replace(/\{(\d+)\}/g, (match, index) => args[index] ?? match)
+    : text;
+}
+
+export const LANGUAGE_CHOICES = { en: "English", pl: "Polski" };
+
+/** Makes {{pkT "key"}} available inside the templates. */
+export function registerTranslationHelper() {
+  if (typeof Handlebars === "undefined") return;
+  Handlebars.registerHelper("pkT", (key, ...rest) => {
+    const args = rest.slice(0, -1);
+    return t(key, ...args);
+  });
+}

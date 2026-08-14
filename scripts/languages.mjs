@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { t } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -114,7 +115,7 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     id: "pk5e-languages",
     tag: "div",
     classes: ["pk5e-creator"],
-    window: { title: "Languages", icon: "fa-solid fa-comments", resizable: true },
+    window: { title: t("lang.title"), icon: "fa-solid fa-comments", resizable: true },
     position: { width: 620, height: 700 },
     actions: {
       rollLanguage: LanguagePicker.onRoll,
@@ -174,8 +175,8 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
       rolls: this.rolls.join(", "),
       rollCount: this.rolls.length,
       groups: [
-        { label: "Standard Languages", languages: all.filter((l) => l.core) },
-        { label: "Expanded", languages: all.filter((l) => !l.core) }
+        { label: t("lang.standard"), languages: all.filter((l) => l.core) },
+        { label: t("lang.expanded"), languages: all.filter((l) => !l.core) }
       ].filter((group) => group.languages.length),
       extras,
       overLimit: extras > 2

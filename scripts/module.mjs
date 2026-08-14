@@ -14,10 +14,28 @@ import { LanguagePicker } from "./languages.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { registerContextMenu } from "./context-menu.mjs";
+import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, "defaultLanguage", {
+    name: "Panel language",
+    hint: "Language of the creation panel, the ability score window and the language window. Players can override this for themselves. Settings, compendium screens and imported content stay in English.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: "en",
+    choices: LANGUAGE_CHOICES
+  });
+
+  game.settings.register(MODULE_ID, "language", {
+    scope: "client",
+    config: false,
+    type: String,
+    default: "auto"
+  });
+
   // Wording shown in the guide panel. Leave blank to use the built-in text.
   const textSettings = {
     introText: "Panel: opening paragraph",
@@ -88,6 +106,15 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "uncheckKeepOpen", {
     name: "Untick 'Keep Window Open' while clicking through",
     hint: "Only applies when the data source screen is being skipped. That checkbox sits on the screen being skipped, so without this a player who had it ticked could never reach it again.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  game.settings.register(MODULE_ID, "openReferenceWithClass", {
+    name: "Open the class reference alongside the importer",
+    hint: "The importer lists class names with nothing to read. This opens the reading window next to it, so a new player can find out what a Paladin actually does before picking one.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -229,6 +256,7 @@ Hooks.once("init", () => {
   });
 });
 
+registerTranslationHelper();
 registerSheetButton();
 registerBrowserTweaks();
 registerContextMenu();

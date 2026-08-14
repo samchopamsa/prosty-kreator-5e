@@ -4,42 +4,42 @@
     <div class="pk5e-pane">
 
       {{#if missing}}
-        <p class="pk5e-empty">This character no longer exists.</p>
+        <p class="pk5e-empty">{{pkT "guide.missing"}}</p>
       {{else}}
 
-      <p class="pk5e-lead">{{introText}}</p>
+      <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
 
       {{#if isGM}}
       <details class="pk5e-details" open>
-        <summary>Ownership and filing</summary>
+        <summary>{{pkT "guide.ownership"}}</summary>
 
-        <label class="pk5e-label" for="pk5e-owner">Player</label>
+        <label class="pk5e-label" for="pk5e-owner">{{pkT "guide.player"}}</label>
         <select id="pk5e-owner" data-owner>
-          <option value="">— nobody yet —</option>
+          <option value="">{{pkT "guide.nobody"}}</option>
           {{#each players}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
           {{/each}}
         </select>
-        <p class="pk5e-note">Who can open and edit this character.</p>
+        <p class="pk5e-note">{{pkT "guide.playerHint"}}</p>
 
-        <label class="pk5e-label" for="pk5e-folder">Folder</label>
+        <label class="pk5e-label" for="pk5e-folder">{{pkT "guide.folder"}}</label>
         <select id="pk5e-folder" data-folder>
-          <option value="">— none —</option>
+          <option value="">{{pkT "guide.noFolder"}}</option>
           {{#each folders}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
           {{/each}}
         </select>
         <button type="button" class="pk5e-link" data-action="setDefaultFolder">
           {{#if folderIsDefault}}
-            Stop putting new characters here
+            {{pkT "guide.unsetDefaultFolder"}}
           {{else}}
-            Put new characters here from now on
+            {{pkT "guide.setDefaultFolder"}}
           {{/if}}
         </button>
         {{#if defaultFolderName}}
-        <p class="pk5e-note">New characters go to "{{defaultFolderName}}".</p>
+        <p class="pk5e-note">{{pkT "guide.defaultFolderIs" defaultFolderName}}</p>
         {{else}}
-        <p class="pk5e-note">New characters are not filed automatically.</p>
+        <p class="pk5e-note">{{pkT "guide.noDefaultFolder"}}</p>
         {{/if}}
       </details>
       {{/if}}
@@ -49,12 +49,12 @@
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">1</span>
           <i class="fa-solid fa-signature pk5e-guide-icon"></i>
-          <span class="pk5e-guide-label">Name</span>
+          <span class="pk5e-guide-label">{{pkT "step.name"}}</span>
         </div>
         <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
         {{#if nameHelp}}
         <details class="pk5e-help" data-help="name" {{#if nameHelpOpen}}open{{/if}}>
-          <summary>What is this?</summary>
+          <summary>{{pkT "guide.whatIsThis"}}</summary>
           <p>{{nameHelp}}</p>
         </details>
         {{/if}}
@@ -66,21 +66,25 @@
           <span class="pk5e-guide-num">{{number}}</span>
           {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
-          {{#if optional}}<span class="pk5e-abbr">optional</span>{{/if}}
+          {{#if optional}}<span class="pk5e-abbr">{{pkT "guide.optional"}}</span>{{/if}}
           {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
         </div>
         {{#if reference}}
-        <button type="button" class="pk5e-link pk5e-step-toplink"
-                data-action="openReference" data-kind="class">
-          Read about the classes and subclasses
-        </button>
+        <div class="pk5e-callout pk5e-reference-callout">
+          <strong>{{pkT "guide.referenceTitle"}}</strong>
+          <p>
+            {{pkT "guide.referenceBody"}}
+          </p>
+          <button type="button" data-action="openReference" data-kind="class">
+            {{pkT "guide.referenceButton"}}
+          </button>
+        </div>
         {{/if}}
 
         {{#if importing}}
           <p class="pk5e-importing">
             <i class="fa-solid fa-hourglass-half"></i>
-            Importing. Wait for the import window to finish, then close it - more
-            choices may still appear before it is done.
+            {{pkT "guide.importing"}}
           </p>
         {{else if done}}
           {{#if entries}}
@@ -99,9 +103,9 @@
               </div>
               <div class="pk5e-guide-actions">
                 <button type="button" class="pk5e-link" data-action="replaceStep"
-                        data-step="{{../key}}" data-item="{{itemId}}">Change</button>
+                        data-step="{{../key}}" data-item="{{itemId}}">{{pkT "guide.change"}}</button>
                 <button type="button" class="pk5e-link" data-action="removeStep"
-                        data-step="{{../key}}" data-item="{{itemId}}">Remove</button>
+                        data-step="{{../key}}" data-item="{{itemId}}">{{pkT "guide.remove"}}</button>
               </div>
             </div>
             {{/each}}
@@ -114,7 +118,7 @@
               </div>
             </div>
             <button type="button" class="pk5e-link"
-                    data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">Change</button>
+                    data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">{{pkT "guide.change"}}</button>
           {{/if}}
         {{else}}
           <div class="pk5e-guide-chosen">
@@ -129,24 +133,24 @@
         {{#unless importing}}
           {{#unless done}}
             {{#if removable}}
-            <button type="button" data-action="addStep" data-step="{{key}}">Choose {{label}}</button>
+            <button type="button" data-action="addStep" data-step="{{key}}">{{pkT "guide.choose" label}}</button>
             {{else}}
             <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">
-              {{#if optional}}Add {{label}} (optional){{else}}Set {{label}}{{/if}}
+              {{#if optional}}{{pkT "guide.addOptional" label}}{{else}}{{pkT "guide.set" label}}{{/if}}
             </button>
             {{/if}}
           {{/unless}}
 
           {{#if levelUp}}
           <button type="button" class="pk5e-link" data-action="levelUp">
-            Add a level or another class
+            {{pkT "guide.levelUp"}}
           </button>
           {{/if}}
         {{/unless}}
 
         {{#if showHelp}}
         <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
-          <summary>What is this?</summary>
+          <summary>{{pkT "guide.whatIsThis"}}</summary>
           <p>{{help}}</p>
         </details>
         {{/if}}
@@ -156,9 +160,9 @@
       <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-label">
-            {{#if ready}}Ready to play{{else}}{{report.errors}} thing(s) to fix{{/if}}
+            {{#if ready}}{{pkT "guide.ready"}}{{else}}{{pkT "guide.toFix" report.errors}}{{/if}}
           </span>
-          <button type="button" class="pk5e-link" data-action="recheck">Recheck</button>
+          <button type="button" class="pk5e-link" data-action="recheck">{{pkT "guide.recheck"}}</button>
         </div>
         {{#if failures}}
         <ul class="pk5e-report-list">
@@ -170,7 +174,7 @@
           {{/each}}
         </ul>
         {{else}}
-        <p class="pk5e-note">Everything checks out.</p>
+        <p class="pk5e-note">{{pkT "guide.allGood"}}</p>
         {{/if}}
       </section>
 
@@ -180,12 +184,18 @@
   </div>
 
   <footer class="pk5e-footer">
-    <button type="button" data-action="postSummary">Post to chat</button>
+    <span class="pk5e-lang-switch">
+      {{#each languages}}
+      <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"
+              data-action="setLanguage" data-lang="{{code}}">{{label}}</button>
+      {{/each}}
+    </span>
+    <button type="button" data-action="postSummary">{{pkT "guide.postToChat"}}</button>
     <span class="pk5e-hint">{{progress}}</span>
     <button type="button" class="pk5e-primary" data-action="finalizeGuide"
             {{#unless allDone}}disabled{{/unless}}
-            data-tooltip="{{#unless allDone}}Finish the remaining steps first{{/unless}}">
-      Finalize
+            data-tooltip="{{#unless allDone}}{{pkT "guide.finishFirst"}}{{/unless}}">
+      {{pkT "guide.finalize"}}
     </button>
   </footer>
 

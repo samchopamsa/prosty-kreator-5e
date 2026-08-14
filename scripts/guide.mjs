@@ -17,6 +17,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { LanguagePicker, languageLabels } from "./languages.mjs";
 import { ClassReference } from "./reference.mjs";
+import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { postSummary } from "./summary.mjs";
@@ -29,25 +30,16 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DEFAULT_NAME = "New Character";
 
 /** Readable names for the ability score methods stored on the actor. */
-const METHOD_LABELS = {
-  standard: "Standard array",
-  pointbuy: "Point buy",
-  roll: "Rolled 4d6, dropping the lowest",
-  manual: "Entered by hand"
+const METHOD_KEYS = {
+  standard: "method.standard",
+  pointbuy: "method.pointbuy",
+  roll: "method.roll",
+  manual: "method.manual"
 };
 const AUTO_NAME = /^New Character for .+$/;
 
 /** Wording the GM can override in the module settings. */
-const DEFAULT_TEXT = {
-  introText:
-    "Five steps. Each one opens the same dialog the character sheet uses, so anything you have installed works exactly as usual. Those windows appear on top of this one - close them and come back here.",
-  textSpecies: "Determines your speed, size and innate traits.",
-  textBackground: "Grants proficiencies, an origin feat and ability score increases.",
-  textClass: "What your character can do, in combat and out of it.",
-  textAbilities: "Importers skip this, so it is done here at the end.",
-  textLanguages: "Common plus two more. Roll for them or pick from the table.",
-  textPortrait: "Optional. A picture for your character, shown on the sheet and on the token."
-};
+
 
 /**
  * Plain-language explanations for someone who has never built a character.
@@ -60,38 +52,21 @@ const DEFAULT_TEXT = {
  */
 function importFlowNote() {
   const mode = game.settings.get(MODULE_ID, "autoAdvance");
-
-  if (mode === "plutonium") {
-    return " After you press the button, the list of options opens by itself.";
-  }
-  if (mode === "compendium") {
-    return " After you press the button, the compendium browser opens by itself.";
-  }
-  return (
-    " After you press the button, a small window asks where to take the entry from. " +
-    "Choose Use Plutonium, then press Open Importer in the window that follows - " +
-    "only then do you see the list to pick from."
-  );
+  if (mode === "plutonium" || plutoniumAnswersItself()) return t("flow.plutonium");
+  if (mode === "compendium") return t("flow.compendium");
+  return t("flow.prompt");
 }
 
-const HELP = {
-  name:
-    "Just a name for now. You can change it at any time, and nothing else depends on it.",
-  species:
-    "Your character's ancestry - dwarf, elf, human and so on. It sets size and walking speed, and usually adds something innate: darkvision, a resistance, a small once-per-day ability. Under the 2024 rules your species does NOT change your ability scores; that comes from your background.",
-  background:
-    "What your character did before adventuring: soldier, sage, criminal. It grants two skill proficiencies, a tool, a starting feat, and the ability score increases - one ability by 2 and another by 1, or three abilities by 1 each. Pick one whose skills suit the character you imagine.",
-  class:
-    "Your role in the party and the biggest single decision here. It decides how tough you are, what you are trained with, and what you can do in a fight. Fighter and Barbarian are the most forgiving if this is your first character; Wizard and Druid have the most to keep track of. The importer asks for the subclass and the level at the same time, so a character can start above level 1 if your table plays that way - at level 1 there is no subclass yet.",
-  abilities:
-    "Six numbers describing raw talent. Strength for hitting and lifting, Dexterity for aim and reflexes, Constitution for stamina and hit points, Intelligence for knowledge, Wisdom for perception and willpower, Charisma for force of personality. What matters in play is the modifier next to each score: 10 gives +0, and every two points above or below shifts it by one. Put your highest number in whatever your class uses most.",
-  languages:
-    "Everyone speaks Common. Your character knows two more, which you can roll for or choose. Languages rarely decide a fight, but they open doors when the party meets someone who does not speak Common."
-};
 
-function text(key) {
-  const custom = game.settings.get(MODULE_ID, key);
-  return (typeof custom === "string" && custom.trim()) || DEFAULT_TEXT[key];
+
+/**
+ * The GM's own wording wins; otherwise the translated default. A GM who has
+ * written custom text presumably wants exactly that text, in any language.
+ */
+function text(settingKey, translationKey) {
+  const custom = game.settings.get(MODULE_ID, settingKey);
+  if (typeof custom === "string" && custom.trim()) return custom;
+  return t(translationKey);
 }
 
 /** What each step adds, and how to find its button and its item. */
@@ -631,6 +606,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
       openReference: CreationGuide.onOpenReference,
+      setLanguage: CreationGuide.onSetLanguage,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
@@ -748,7 +724,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const totalLevel = classes.reduce((sum, item) => sum + (item.system?.levels ?? 0), 0);
     const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
     const abilitiesDone = !!savedAbilities;
-    const abilityMethod = METHOD_LABELS[savedAbilities?.method] ?? "";
+    const abilityMethod = METHOD_KEYS[savedAbilities?.method]
+      ? t(METHOD_KEYS[savedAbilities.method])
+      : "";
 
     const portrait = actor.img ?? "";
     const hasPortrait =
@@ -766,7 +744,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       const labels = languageLabels(languageKeys);
       const shown = labels.slice(0, MAX_SHOWN).join(", ");
       const rest = labels.length > MAX_SHOWN ? " (...)" : "";
-      languageHeadline = `${languageCount} language${languageCount === 1 ? "" : "s"}`;
+      languageHeadline =
+        languageCount === 1 ? t("guide.languageCountOne") : t("guide.languageCount", languageCount);
       languageSummary = `${shown}${rest}`;
     }
 
@@ -781,33 +760,33 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       {
         key: "species",
         number: 2,
-        label: "Species",
+        label: t("step.species"),
         icon: "fa-dna",
-        help: HELP.species + importFlowNote(),
+        help: t("help.species") + importFlowNote(),
         removable: true,
         done: !!species,
         entries: species ? [entryFor(species)] : [],
-        blurb: text("textSpecies")
+        blurb: text("textSpecies", "blurb.species")
       },
       {
         key: "background",
         number: 3,
-        label: "Background",
+        label: t("step.background"),
         icon: "fa-scroll",
-        help: HELP.background + importFlowNote(),
+        help: t("help.background") + importFlowNote(),
         removable: true,
         done: !!background,
         entries: background ? [entryFor(background)] : [],
-        blurb: text("textBackground")
+        blurb: text("textBackground", "blurb.background")
       },
       {
         key: "class",
         number: 4,
-        label: "Class",
+        label: t("step.class"),
         icon: "fa-shield-halved",
         reference: true,
         levelUp: classes.length > 0,
-        help: HELP.class + importFlowNote(),
+        help: t("help.class") + importFlowNote(),
         removable: true,
         done: classes.length > 0,
         entries: classes.map((item) => {
@@ -817,14 +796,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         }),
         multiclass: classes.length > 1,
         totalLevel,
-        blurb: text("textClass")
+        blurb: text("textClass", "blurb.class")
       },
       {
         key: "abilities",
         number: 5,
-        label: "Ability scores",
+        label: t("step.abilities"),
         icon: "fa-dice-d20",
-        help: HELP.abilities,
+        help: t("help.abilities"),
         removable: false,
         done: abilitiesDone,
         result: abilitiesDone
@@ -834,34 +813,34 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           : "",
         summary: abilityMethod,
         img: "",
-        blurb: text("textAbilities")
+        blurb: text("textAbilities", "blurb.abilities")
       },
       {
         key: "languages",
         number: 6,
-        label: "Languages",
+        label: t("step.languages"),
         icon: "fa-comments",
-        help: HELP.languages,
+        help: t("help.languages"),
         removable: false,
         action: "languages",
         done: !!actor.getFlag(MODULE_ID, "languages"),
         result: languageHeadline,
         summary: languageSummary,
         img: "",
-        blurb: text("textLanguages")
+        blurb: text("textLanguages", "blurb.languages")
       },
       {
         key: "portrait",
         number: 7,
-        label: "Portrait",
+        label: t("step.portrait"),
         icon: "fa-image",
         removable: false,
         optional: true,
         action: "setPortrait",
         done: hasPortrait,
-        result: hasPortrait ? "Portrait set" : "",
+        result: hasPortrait ? t("guide.portraitSet") : "",
         img: hasPortrait ? actor.img : "",
-        blurb: text("textPortrait")
+        blurb: text("textPortrait", "blurb.portrait")
       }
     ];
 
@@ -882,10 +861,15 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       actorName: actor.name,
       actorImg: actor.img ?? "",
       portrait: actor.img ?? "",
-      nameHelp: showHelp ? HELP.name : "",
+      nameHelp: showHelp ? t("help.name") : "",
       nameHelpOpen: this._help.name ?? helpDefault,
       introText: text("introText"),
       isGM: game.user.isGM,
+      languages: Object.entries(LANGUAGE_CHOICES).map(([code, label]) => ({
+        code,
+        label,
+        selected: code === currentLanguage()
+      })),
       report,
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
@@ -912,7 +896,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         // here too - otherwise the tally silently disagrees with the numbering.
         const required = steps.filter((step) => !step.optional);
         const done = required.filter((step) => step.done).length + 1;
-        return `${done} of ${required.length + 1} steps done`;
+        return t("guide.progress", done, required.length + 1);
       })()
     };
   }
@@ -1087,6 +1071,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onAddStep(event, target) {
     const step = target.dataset.step;
+
+    // The importer lists class names with nothing to read, so open the reference
+    // alongside it. It sits on the left, the importer opens centred.
+    if (step === "class" && game.settings.get(MODULE_ID, "openReferenceWithClass")) {
+      try {
+        new ClassReference({ kind: "class" }).render(true);
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not open the reference alongside`, err);
+      }
+    }
+
     const pressed = await this.addFor(step);
     if (!pressed) return;
 
@@ -1111,6 +1106,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Lets the player set the portrait without hunting for it on the sheet. */
   /** Opens the reading window for classes and subclasses. */
+  /** Per-user language switch; does not touch anyone else's view. */
+  static async onSetLanguage(event, target) {
+    try {
+      await game.settings.set(MODULE_ID, "language", target.dataset.lang);
+      this.render();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not change the panel language`, err);
+    }
+  }
+
   static onOpenReference(event, target) {
     try {
       new ClassReference({ kind: target.dataset.kind ?? "class" }).render(true);

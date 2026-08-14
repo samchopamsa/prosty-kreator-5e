@@ -8,13 +8,11 @@
         <p class="pk5e-note">{{summary}}</p>
       {{else}}
         <p class="pk5e-lead">
-          For characters built by an importer such as Plutonium, which fills in
-          the class, species, background and gear but never asks for ability
-          scores.
+          {{pkT "abilities.lead"}}
         </p>
-        <label class="pk5e-label" for="pk5e-actor">Character</label>
+        <label class="pk5e-label" for="pk5e-actor">{{pkT "abilities.character"}}</label>
         <select id="pk5e-actor" data-actor>
-          <option value="">— choose —</option>
+          <option value="">{{pkT "abilities.chooseActor"}}</option>
           {{#each actors}}
           <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
           {{/each}}
@@ -26,57 +24,55 @@
 
       {{#if hasSavedState}}
       <div class="pk5e-callout">
-        <strong>Previously completed{{#if savedAt}} on {{savedAt}}{{/if}}.</strong>
+        <strong>{{#if savedAt}}{{pkT "abilities.previouslyOn" savedAt}}{{else}}{{pkT "abilities.previously"}}{{/if}}</strong>
         <p>
-          Your earlier assignment is restored below, so applying again will not
-          stack anything twice.
+          {{pkT "abilities.previouslyBody"}}
         </p>
       </div>
       {{/if}}
 
       <p class="pk5e-note">
         {{#if isMeasured}}
-          Bonuses are measured against the base saved last time.
+          {{pkT "abilities.bonusMeasured"}}
         {{/if}}
         {{#if isFromAdvancements}}
-          Bonuses are read from the increases declared on this character's own
-          items; whatever is on the sheet is ignored.
+          {{pkT "abilities.bonusAdvancements"}}
         {{/if}}
         {{#if isIgnored}}
-          The scores are written exactly as assigned, with nothing added.
+          {{pkT "abilities.bonusNone"}}
         {{/if}}
-        Change this under Module Settings.
+
       </p>
 
       <div class="pk5e-methods">
         <label><input type="radio" name="pk5e-cmethod" data-method="standard"
-                      {{#if isStandard}}checked{{/if}}> Standard array</label>
+                      {{#if isStandard}}checked{{/if}}> {{pkT "abilities.methodStandard"}}</label>
         <label><input type="radio" name="pk5e-cmethod" data-method="pointbuy"
-                      {{#if isPointBuy}}checked{{/if}}> Point buy</label>
+                      {{#if isPointBuy}}checked{{/if}}> {{pkT "abilities.methodPointBuy"}}</label>
         <label><input type="radio" name="pk5e-cmethod" data-method="roll"
-                      {{#if isRoll}}checked{{/if}}> Roll dice</label>
+                      {{#if isRoll}}checked{{/if}}> {{pkT "abilities.methodRoll"}}</label>
         <label><input type="radio" name="pk5e-cmethod" data-method="manual"
-                      {{#if isManual}}checked{{/if}}> Manual</label>
+                      {{#if isManual}}checked{{/if}}> {{pkT "abilities.methodManual"}}</label>
       </div>
 
       {{#if isRoll}}
       <p class="pk5e-note">
-        <button type="button" class="pk5e-link" data-action="rollAbilities">Roll 4d6, drop lowest</button>
+        <button type="button" class="pk5e-link" data-action="rollAbilities">{{pkT "abilities.rollButton"}}</button>
       </p>
       {{/if}}
       {{#if isPointBuy}}
-      <p class="pk5e-note">Points remaining: <strong>{{pointsLeft}}</strong> of {{pointsTotal}}.</p>
+      <p class="pk5e-note">{{pkT "abilities.pointsLeft"}}: <strong>{{pointsLeft}}</strong> {{pkT "abilities.of"}} {{pointsTotal}}.</p>
       {{/if}}
 
       <table class="pk5e-abilities">
         <thead>
           <tr>
-            <th>Ability</th>
-            <th>Now</th>
-            <th>Assign</th>
-            <th>Bonus</th>
-            <th>Result</th>
-            <th>Mod</th>
+            <th>{{pkT "abilities.colAbility"}}</th>
+            <th>{{pkT "abilities.colNow"}}</th>
+            <th>{{pkT "abilities.colAssign"}}</th>
+            <th>{{pkT "abilities.colBonus"}}</th>
+            <th>{{pkT "abilities.colResult"}}</th>
+            <th>{{pkT "abilities.colMod"}}</th>
           </tr>
         </thead>
         <tbody>
@@ -113,16 +109,16 @@
         </tbody>
       </table>
 
-      <button type="button" class="pk5e-link" data-action="reset">Reset</button>
+      <button type="button" class="pk5e-link" data-action="reset">{{pkT "abilities.reset"}}</button>
       {{/if}}
 
     </div>
   </div>
 
   <footer class="pk5e-footer">
-    <span class="pk5e-hint">Only ability scores are touched.</span>
+    <span class="pk5e-hint">{{pkT "abilities.footer"}}</span>
     <button type="button" class="pk5e-primary" data-action="apply"
-            {{#unless canApply}}disabled{{/unless}}>Apply</button>
+            {{#unless canApply}}disabled{{/unless}}>{{pkT "abilities.apply"}}</button>
   </footer>
 
 </div>
