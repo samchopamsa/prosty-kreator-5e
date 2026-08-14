@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.33.0**
+- Wersja modułu: **1.34.2**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -254,6 +254,8 @@ zaobserwowanej podczas testów.
 
 **Błędy — blokują grę:**
 
+- pominięte wybory przy gatunku, pochodzeniu lub klasie
+
 - brak gatunku, pochodzenia albo klasy na poziomie 1+
 - punkty życia równe zeru (zwykle: anulowany advancement klasy)
 - szybkość równa zeru (gatunek się nie zaaplikował)
@@ -263,7 +265,8 @@ zaobserwowanej podczas testów.
 
 - brak języków
 - brak biegłości w umiejętnościach
-- pusty ekwipunek
+- pusty ekwipunek (pomijając `Unarmed Strike`, który jest przyznawany zawsze)
+- przyznane komórki zaklęć, ale ani jednego zaklęcia na karcie
 - brak portretu
 - niespełnione wymagania wieloklasowości
 
@@ -272,6 +275,43 @@ HP, AC, szybkość, sześć atrybutów z modyfikatorami) — MG widzi nowe posta
 każdej karty osobno.
 
 Przycisk **„Finalize”** zamyka panel i otwiera gotową kartę. Jest aktywny dopiero, gdy nie ma błędów.
+
+### Pominięte okna wyboru
+
+Najczęstsza usterka zgłaszana przez graczy: importer otwiera okna wyboru
+(biegłości, podniesienie atrybutów, rozmiar), gracz je zamyka, i nie ma jak wrócić.
+
+Kreator to wykrywa i pokazuje nad listą kontrolną komunikat z przyciskiem
+**„Usuń i dodaj ponownie"**, który robi obie rzeczy naraz — usuwa przez systemowy
+mechanizm cofania rozwoju, a potem od razu otwiera importer.
+
+Sprawdzane są **wszystkie** przedmioty tego rodzaju: gatunek, pochodzenie, klasa
+i podklasa. Ta sama reguła, bez listy oczekiwań — pytamy przedmiot, jakie ma wpisy,
+i sprawdzamy tylko te, które istnieją. Nazwy rodzajów mają w polskim dwie formy
+(`check.kind.*` w mianowniku, `check.kindOf.*` w dopełniaczu), bo „dla pochodzenia"
+i „(pochodzenie)" to różne przypadki.
+
+Wykrywanie opiera się na czterech typach wpisów Advancement, w których pustka
+naprawdę znaczy „pominięto":
+
+| typ wpisu | pominięte | uzupełnione |
+| --- | --- | --- |
+| `Size` | `{"size":""}` | `{"size":"med"}` |
+| `AbilityScoreImprovement` | `{"type":"asi"}` | `+ assignments` |
+| `Trait` | `{"chosen":[]}` | `{"chosen":["skills:his",…]}` |
+| `ItemChoice` | brak `added` | `added` z wpisami |
+
+Ta sama zasada rządzi sprawdzaniem zaklęć: pytamy o **przyznane komórki**
+(`system.spells.*.max`), a nie o zadeklarowaną progresję klasy. Mistyczny Rycerz
+i Arkanista deklarują progresję, nie mając na pierwszym poziomie czego rzucać,
+a klasa z dodatku może działać jeszcze inaczej. Komórki to wynik, który system
+policzył dla **tej** postaci na **tym** poziomie — gdy ich nie ma, milczymy.
+
+**Wszystkie pozostałe typy są pomijane.** `ScaleValue` jest pusty na **każdej**
+postaci — trzyma wartości liczone z poziomu, nie wybory — więc sprawdzanie samej
+pustki dawałoby trzy fałszywe alarmy na każdym poprawnym klesze. Zasada: przy
+nieznanym typie milczymy. Przeoczone ostrzeżenie to niedogodność, fałszywe niszczy
+zaufanie do całej listy kontrolnej.
 
 ### Wymagania wieloklasowości
 
@@ -520,7 +560,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.33.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.34.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

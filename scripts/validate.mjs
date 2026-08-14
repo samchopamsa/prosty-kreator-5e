@@ -66,6 +66,71 @@ export function multiclassProblems(actor) {
   return problems;
 }
 
+/**
+ * Advancement entries whose emptiness actually means "the player skipped this".
+ *
+ * Deliberately a short list. Measured on two characters, identical but for the
+ * player cancelling the choice dialogs:
+ *
+ *   Size                      skipped {"size":""}   done {"size":"med"}
+ *   AbilityScoreImprovement   skipped {"type":"asi"} done {..."assignments":{"int":2,"wis":1}}
+ *   Trait (Skills)            skipped {"chosen":[]} done {"chosen":["skills:his",...]}
+ *
+ * ScaleValue is empty on BOTH - it holds values derived from level, not
+ * choices - so checking every empty entry would give three false alarms on
+ * every correct cleric. Anything not listed here is ignored: a missed warning
+ * is a nuisance, a false one destroys trust in the whole checklist.
+ */
+const CHOICE_TYPES = ["Trait", "AbilityScoreImprovement", "Size", "ItemChoice"];
+
+/** True when a choice was offered and nothing came back. */
+function choiceWasSkipped(advancement) {
+  const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
+  if (!CHOICE_TYPES.includes(type)) return false;
+
+  const value = advancement.value?.toObject?.() ?? advancement.value ?? {};
+
+  switch (type) {
+    case "Trait":
+      return Array.isArray(value.chosen) ? value.chosen.length === 0 : !value.chosen;
+    case "AbilityScoreImprovement":
+      // A background that grants fixed increases has no assignments to make;
+      // only flag the type that asks the player to distribute them.
+      return value.type === "asi" && !Object.keys(value.assignments ?? {}).length;
+    case "Size":
+      return !value.size;
+    case "ItemChoice":
+      return !Object.keys(value.added ?? {}).length;
+    default:
+      return false;
+  }
+}
+
+/**
+ * Which of species, background and class were added with choices skipped.
+ *
+ * Reported per item, not per entry: the player does not need to know that it
+ * was specifically the Skills trait. They need to know the background is
+ * incomplete and how to fix it, which is the same fix either way.
+ */
+export function itemsWithSkippedChoices(actor) {
+  const WANTED = ["race", "species", "background", "class", "subclass"];
+  const problems = [];
+
+  for (const item of actor?.items ?? []) {
+    if (!WANTED.includes(item.type)) continue;
+
+    const advancements = Array.from(
+      item.advancement?.byId?.values?.() ?? item.system?.advancement ?? []
+    );
+    if (!advancements.some(choiceWasSkipped)) continue;
+
+    problems.push({ id: item.id, name: item.name, type: item.type });
+  }
+
+  return problems;
+}
+
 export function checkCharacter(actor) {
   const checks = [];
   const add = (ok, level, label, hint) => checks.push({ ok, level, label, hint });
@@ -109,14 +174,50 @@ export function checkCharacter(actor) {
   const skills = Object.values(system.skills ?? {}).filter((s) => Number(s.value) > 0);
   add(skills.length > 0, WARNING, t("check.skills"), t("check.skillsHint"));
 
-  const inventory = actor.items.filter((i) =>
-    ["weapon", "equipment", "consumable", "tool", "loot", "container"].includes(i.type)
+  // Unarmed Strike is granted automatically to every character, so counting
+  // items outright let an empty pack pass the check.
+  const inventory = actor.items.filter(
+    (i) =>
+      ["weapon", "equipment", "consumable", "tool", "loot", "container"].includes(i.type) &&
+      i.name !== "Unarmed Strike"
   );
   add(inventory.length > 0, WARNING, t("check.inventory"), t("check.inventoryHint"));
+
+  // Spells, checked against SLOTS rather than the class's declared progression.
+  //
+  // Progression is a property of the class as a whole: an Eldritch Knight or
+  // Arcane Trickster declares one while having nothing to cast at level 1, and
+  // a homebrew class may declare one and work differently again. Slots are what
+  // the system actually worked out for THIS character at THIS level, so if
+  // there are none we say nothing.
+  //
+  // A warning rather than an error: a caster with no spells is crippled but not
+  // unplayable, and blocking Finalize over it would be too strong for a check
+  // that depends on how someone's compendium is put together.
+  const slots = Object.values(system.spells ?? {}).reduce(
+    (sum, slot) => sum + (Number(slot?.max) || 0),
+    0
+  );
+  if (slots > 0) {
+    const spells = actor.items.filter((i) => i.type === "spell").length;
+    add(spells > 0, WARNING, t("check.spells"), t("check.spellsHint"));
+  }
 
   const portrait = actor.img ?? "";
   const hasPortrait = portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
   add(!!hasPortrait, WARNING, t("check.portrait"), t("check.portraitHint"));
+
+  // Skipped choice dialogs. An error, because the character is genuinely
+  // missing things the rules grant - and the only reliable fix is to remove the
+  // item and add it again.
+  for (const problem of itemsWithSkippedChoices(actor)) {
+    add(
+      false,
+      ERROR,
+      t("check.skipped", problem.name),
+      t("check.skippedHint", t(`check.kindOf.${problem.type}`))
+    );
+  }
 
   // A warning rather than an error, deliberately: plenty of tables allow
   // multiclassing without the ability requirement, and the module has no

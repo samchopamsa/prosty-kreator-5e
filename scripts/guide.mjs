@@ -20,7 +20,7 @@ import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
-import { checkCharacter } from "./validate.mjs";
+import { checkCharacter, itemsWithSkippedChoices } from "./validate.mjs";
 import { postSummary } from "./summary.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -601,6 +601,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       addStep: CreationGuide.onAddStep,
       replaceStep: CreationGuide.onReplaceStep,
       removeStep: CreationGuide.onRemoveStep,
+      redoStep: CreationGuide.onRedoStep,
       openSheet: CreationGuide.onOpenSheet,
       finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
@@ -878,6 +879,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         selected: code === currentLanguage()
       })),
       report,
+      // Surfaced separately from the checklist: this one has a fix attached,
+      // and burying it among the other warnings buried the only actionable item.
+      skipped: itemsWithSkippedChoices(actor).map((problem) => ({
+        ...problem,
+        step: problem.type === "background" ? "background" : problem.type === "class" || problem.type === "subclass" ? "class" : "species",
+        // Two forms: "(pochodzenie)" after the verb, "dla pochodzenia" after
+        // the preposition. English repeats the same word for both.
+        kind: t(`check.kind.${problem.type}`),
+        kindOf: t(`check.kindOf.${problem.type}`)
+      })),
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
       players: game.users
@@ -1257,6 +1268,24 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async onRemoveStep(event, target) {
     await this.removeFor(target.dataset.step, { itemId: target.dataset.item ?? null });
+  }
+
+  /**
+   * Removes an item whose choices were skipped and immediately offers it again.
+   *
+   * Two separate operations for the player would mean remembering what to
+   * re-add and finding it a second time, at the exact moment they have just
+   * been told they did something wrong.
+   */
+  static async onRedoStep(event, target) {
+    const step = target.dataset.step;
+    const removed = await this.removeFor(step, { itemId: target.dataset.item ?? null });
+    if (!removed) return;
+
+    // The removal may open the system's advancement reversal window; give the
+    // sheet a moment to settle before reaching for its buttons.
+    await wait(400);
+    await CreationGuide.onAddStep(event, target);
   }
 
   static async onPostSummary() {

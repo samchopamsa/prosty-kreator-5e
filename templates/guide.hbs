@@ -158,6 +158,20 @@
       </div>
       {{/each}}
 
+      {{#if skipped}}
+      <section class="pk5e-skipped">
+        {{#each skipped}}
+        <div class="pk5e-callout pk5e-skipped-item">
+          <strong>{{pkT "guide.skippedTitle" name}}</strong>
+          <p>{{pkT "guide.skippedBody" kindOf}}</p>
+          <button type="button" data-action="redoStep" data-step="{{step}}" data-item="{{id}}">
+            {{pkT "guide.skippedFix" kind}}
+          </button>
+        </div>
+        {{/each}}
+      </section>
+      {{/if}}
+
       <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-label">

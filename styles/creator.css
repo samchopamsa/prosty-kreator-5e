@@ -849,3 +849,12 @@
 /* Long feature names in prose would otherwise widen the panel. */
 .pk5e-panel-detail p,
 .pk5e-panel-detail li { overflow-wrap: anywhere; }
+
+/* Skipped-choice callouts: an error with a fix attached, so it sits above the
+   checklist rather than inside it. */
+.pk5e-skipped { margin-bottom: 8px; }
+.pk5e-skipped-item {
+  border-left: 3px solid rgba(220, 90, 90, 0.85);
+  margin-bottom: 6px;
+}
+.pk5e-skipped-item button { width: 100%; margin-top: 6px; font-size: 12px; }
