@@ -18,6 +18,10 @@ import { MODULE_ID } from "./constants.mjs";
 const STRINGS = {
   en: {
     "guide.title": "New Character",
+    "guide.disclaimerTitle": "Before you start - three things about how this works",
+    "guide.disclaimerSource": "Species, background and class come from the importer, which is not part of this creator. Its windows open on top of this panel and ask their own questions.",
+    "guide.disclaimerComplete": "Work through every one of those windows to the end. Closing one with Skip, Cancel or the X leaves that choice unmade, and the step will be incomplete.",
+    "guide.disclaimerRedo": "A finished step cannot be edited afterwards. To change anything you remove it and start that step again.",
     "guide.intro":
       "Seven steps, in order. Some of them hand you over to the importer, which opens as its own separate window on top of this panel - it is not part of the creator, and it may ask several questions of its own. Work through it, close it, and come back here: this panel keeps track of what has already reached the character sheet.",
     "guide.missing": "This character no longer exists.",
@@ -169,6 +173,9 @@ const STRINGS = {
     "option.delevelBody": "Undo the most recent level of {0} (currently level {1})? Everything below it stays as it is, and you can level up again straight away.",
     "option.noDelevel": "This version of the system cannot step a level back. Remove the class and add it again instead.",
     "option.dismiss": "I have sorted this out",
+    "option.delevelShort": "Step a level back",
+    "option.partialAsi": "{1} point(s) were left unspent in \"{0}\".",
+    "option.partialSelect": "A choice was left unset in \"{0}\".",
     "check.spells": "Spells on the sheet",
     "check.spellsHint": "This character has spell slots but nothing to cast. The import may have been closed before the spells were picked.",
     "check.multiclass": "Multiclass requirement: {0}",
@@ -230,6 +237,10 @@ const STRINGS = {
 
   pl: {
     "guide.title": "Nowa postać",
+    "guide.disclaimerTitle": "Zanim zaczniesz - trzy rzeczy o tym, jak to działa",
+    "guide.disclaimerSource": "Gatunek, pochodzenie i klasa pochodzą z importera, który nie jest częścią kreatora. Jego okna otwierają się nad tym panelem i zadają własne pytania.",
+    "guide.disclaimerComplete": "Przejdź każde z tych okien do końca. Zamknięcie przyciskiem Skip, Cancel albo krzyżykiem zostawia wybór niedokonany, a krok będzie niepełny.",
+    "guide.disclaimerRedo": "Ukończonego kroku nie da się później edytować. Żeby cokolwiek zmienić, usuwasz go i rozpoczynasz od nowa.",
     "guide.intro":
       "Siedem kroków, po kolei. Część z nich przekazuje cię do importera, który otwiera się jako osobne okno nad tym panelem - nie jest częścią kreatora i potrafi zadać kilka własnych pytań. Przejdź przez nie, zamknij je i wróć tutaj: panel pilnuje, co już trafiło na kartę postaci.",
     "guide.missing": "Ta postać już nie istnieje.",
@@ -375,6 +386,9 @@ const STRINGS = {
     "option.delevelBody": "Cofnąć ostatni poziom klasy {0} (obecnie poziom {1})? Wszystko poniżej zostaje bez zmian, a awans można powtórzyć od razu.",
     "option.noDelevel": "Ta wersja systemu nie potrafi cofnąć poziomu. Usuń klasę i dodaj ją ponownie.",
     "option.dismiss": "Już to poprawiłem",
+    "option.delevelShort": "Cofnij poziom",
+    "option.partialAsi": "W oknie \"{0}\" nie rozdzielono {1} pkt.",
+    "option.partialSelect": "W oknie \"{0}\" nie wskazano wyboru z listy.",
     "check.spells": "Zaklęcia na karcie",
     "check.spellsHint": "Ta postać ma komórki zaklęć, ale nie ma czego rzucać. Import mógł zostać zamknięty przed wyborem zaklęć.",
     "check.multiclass": "Wymagania wieloklasowości: {0}",

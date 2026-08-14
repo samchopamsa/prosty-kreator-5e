@@ -761,6 +761,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const entryFor = (item, label, summary, alsoCheck = null) => ({
       itemId: item.id,
+      // Above level 1 a single level can be stepped back, which is far less
+      // destructive than removing the class. Offered on the entry itself rather
+      // than only alongside a detected problem: a player who realises they
+      // misclicked should not have to wait for the module to notice.
+      canDelevel: item.type === "class" && Number(item.system?.levels ?? 1) > 1,
+      level: Number(item.system?.levels ?? 1),
       name: label ?? item.name,
       img: item.img ?? "",
       summary: summary ?? shortSummary(item),
@@ -904,12 +910,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         // single level can be undone, which is far less destructive.
         canDelevel: Number(entry.level) > 1 && classes.length > 0,
         classId: classes[0]?.id ?? null,
-        text:
-          entry.reason === "partial"
-            ? t("option.partial", entry.label, entry.learned, entry.total)
-            : entry.level
+        // Each kind of unfinished choice reads differently: spells count what
+        // was learned, an ability increase counts points left, a dropdown just
+        // sits unset. One generic sentence covered none of them well.
+        text: (() => {
+          if (entry.reason !== "partial") {
+            return entry.level
               ? t("option.skippedAt", entry.label, entry.level)
-              : t("option.skipped", entry.label)
+              : t("option.skipped", entry.label);
+          }
+          if (entry.total != null) return t("option.partial", entry.label, entry.learned, entry.total);
+          if (entry.remaining != null) return t("option.partialAsi", entry.label, entry.remaining);
+          return t("option.partialSelect", entry.label);
+        })()
       })),
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
@@ -1363,15 +1376,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * re-add and finding it a second time, at the exact moment they have just
    * been told they did something wrong.
    */
+  /**
+   * Removes an item whose choices were skipped.
+   *
+   * It used to re-open the importer straight afterwards, which sounded helpful
+   * and was not: removing opens the system's advancement reversal window, so
+   * the sheet is busy and the re-add never actually fired. All it managed was
+   * to open the class reading panel over the top of nothing. Now it removes,
+   * and the player presses the step's own button when the sheet has settled -
+   * exactly what plain Remove does.
+   */
   static async onRedoStep(event, target) {
-    const step = target.dataset.step;
-    const removed = await this.removeFor(step, { itemId: target.dataset.item ?? null });
-    if (!removed) return;
-
-    // The removal may open the system's advancement reversal window; give the
-    // sheet a moment to settle before reaching for its buttons.
-    await wait(400);
-    await CreationGuide.onAddStep(event, target);
+    await this.removeFor(target.dataset.step, { itemId: target.dataset.item ?? null });
   }
 
   static async onPostSummary() {

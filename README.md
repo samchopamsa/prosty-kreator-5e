@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.36.0**
+- Wersja modułu: **1.37.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -97,6 +97,12 @@ Panel można otworzyć na cztery sposoby:
 - **Przycisk na karcie postaci** (obok przycisków odpoczynku) — „Start creation" / „Resume creation"
 - **Prawy klik na postaci w drzewie aktorów → „Start / resume creation"** (tylko gdy coś zostało do zrobienia)
 - **Automatycznie** — przy pierwszym otwarciu niedokończonej postaci przez gracza (można wyłączyć)
+
+Na samej górze stoi **ostrzeżenie na czerwono** — trzy zdania o tym, że gatunek,
+pochodzenie i klasa pochodzą z importera spoza kreatora, że jego okna trzeba przejść
+do końca (Skip, Cancel i krzyżyk zostawiają wybór niedokonany), oraz że ukończonego
+kroku nie da się edytować, można go tylko rozpocząć od nowa. Wszystkie trzy punkty
+opisują sposoby, na jakie krok potrafi po cichu wyjść niepełny.
 
 Panel otwiera się jako duże okno na środku ekranu i pamięta pozycję przewijania między
 przerysowaniami. Każda postać ma własne okno panelu, więc dwa jednocześnie sobie nie przeszkadzają.
@@ -332,11 +338,18 @@ czyli dokładnie w zakresie, za który kreator odpowiada.
 
 Trzy reguły, wyprowadzone z obserwacji prawdziwego importu:
 
-| okno | reguła |
+Reguły trzymane są jako **tablica `DIALOGS`**, po jednym wpisie na rodzaj okna.
+Każdy ma własne pojęcie „skończone", bo jedno okno liczy nauczone zaklęcia, drugie
+punkty do rozdania, trzecie tylko sprawdza, czy lista rozwijana zeszła z myślnika.
+Nowe okno to nowy wiersz w tablicy, nie kolejny warunek w kodzie.
+
+| okno | co znaczy „skończone" |
 | --- | --- |
-| `Choose Option: …` | wyjście czymkolwiek poza OK = pominięte; Skip, Cancel i krzyżyk dają ten sam skutek |
-| `Select Cantrips` / `Select Spells` | czytany licznik `learned: X/Y`; `X < Y` to brak, **nawet po OK** |
-| `Import Complete` | tekst „was cancelled" = import przepadł, więc wszystkie zapisy z tej sesji kasujemy |
+| `Choose Option: …` | dojście do OK wystarczy; Skip, Cancel i krzyżyk to pominięcie |
+| `Select Cantrips` / `Select Spells` | licznik `learned: X/Y` musi mieć `X = Y`, **nawet po OK** |
+| `Ability Score Improvement—Level N` | `Remaining: 0`; zatwierdzane przyciskiem **Confirm**, nie OK |
+| `Additional Spells (…)` | każda lista rozwijana musi mieć wybraną wartość, nie myślnik |
+| `Import Complete` | tekst „was cancelled" = import przepadł, zapisy z tej sesji kasujemy |
 
 Druga reguła jest istotna: okno zaklęć pozwala nacisnąć OK przy niepełnym wyborze
 (dwie sztuczki z trzech) i nic dalej tego nie zauważa.
@@ -347,7 +360,9 @@ dlatego czujka patrzy wyłącznie na okna `Choose Option:` i okna zaklęć.
 
 Naprawa zależy od poziomu: przy pierwszym trzeba usunąć klasę i dodać ponownie,
 powyżej wystarczy **cofnięcie jednego poziomu** przez `forLevelChange(actor, classId, -1)`
-— reszta postaci zostaje nietknięta. Do tego link „już to poprawiłem", żeby wpis
+— reszta postaci zostaje nietknięta. Odnośnik **„Cofnij poziom"** stoi przy każdej klasie
+powyżej pierwszego poziomu, niezależnie od tego, czy moduł cokolwiek wykrył: gracz,
+który sam zauważy pomyłkę, nie powinien czekać, aż zauważy ją moduł. Do tego link „już to poprawiłem", żeby wpis
 nie mógł utknąć na zawsze, gdy gracz ogarnie sprawę ręcznie.
 
 ### Wymagania wieloklasowości
@@ -599,7 +614,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.36.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.37.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

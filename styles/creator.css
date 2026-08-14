@@ -884,3 +884,20 @@
   margin-top: 6px;
 }
 .pk5e-option-actions button:not(.pk5e-link) { width: 100%; font-size: 12px; }
+
+/* The disclaimer. Red, because every point in it describes a way the step can
+   silently go wrong - but bordered rather than filled, so it reads as a notice
+   at the top of the panel and not as an error about the character in hand. */
+.pk5e-disclaimer {
+  border: 1px solid rgba(220, 90, 90, 0.6);
+  border-left-width: 3px;
+  border-radius: 0 4px 4px 0;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(230, 130, 130, 0.95);
+}
+.pk5e-disclaimer strong { display: block; margin-bottom: 4px; }
+.pk5e-disclaimer ul { margin: 0; padding-left: 16px; }
+.pk5e-disclaimer li { margin: 2px 0; }

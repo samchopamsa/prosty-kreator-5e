@@ -39,31 +39,94 @@
 
 import { MODULE_ID } from "./constants.mjs";
 
-const CHOICE_TITLE = /^choose option:/i;
-const SPELL_TITLE = /^select (cantrips|spells)/i;
+/**
+ * One entry per kind of dialog Plutonium can put up.
+ *
+ * A list rather than a chain of conditions, because each new dialog turned out
+ * to need its own idea of "finished": one counts spells learned, another counts
+ * points remaining, a third just wants a dropdown to be off its dash. Adding a
+ * dialog should be adding a row here, not another branch in the reading code.
+ *
+ *   match      recognises the dialog from its title
+ *   confirms   does this button mean "I am done"
+ *   complete   given the dialog, was the choice actually finished
+ *   describe   what to call it in the warning
+ */
+const DIALOGS = [
+  {
+    id: "choice",
+    // "Choose Option: Fighting Style (Level 1)"
+    match: (title) => /^choose option:/i.test(title),
+    confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^ok$/i.test(text),
+    // Nothing to measure: reaching OK at all means something was picked.
+    complete: () => true,
+    describe: (title) => {
+      const text = title.replace(/^choose option:/i, "").trim();
+      const level = text.match(/\(level\s*(\d+)\)\s*$/i);
+      return {
+        label: text.replace(/\s*\(level\s*\d+\)\s*$/i, "").trim() || text,
+        level: level ? Number(level[1]) : null
+      };
+    }
+  },
+  {
+    id: "spells",
+    // "Select Cantrips", "Select Spells"
+    match: (title) => /^select (cantrips|spells)/i.test(title),
+    confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^ok$/i.test(text),
+    // "Cantrips learned: 2/3" - OK is accepted with the choice half made, and
+    // nothing downstream notices the missing one.
+    complete: (app) => {
+      const found = (app.textContent ?? "").match(/learned:\s*(\d+)\s*\/\s*(\d+)/i);
+      if (!found) return true;
+      return Number(found[1]) >= Number(found[2])
+        ? true
+        : { learned: Number(found[1]), total: Number(found[2]) };
+    },
+    describe: (title) => ({ label: title.trim(), level: null })
+  },
+  {
+    id: "asi",
+    // "Ability Score Improvement-Level 4", confirmed with "Confirm"
+    match: (title) => /ability score improvement/i.test(title),
+    confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^(ok|confirm)$/i.test(text),
+    // "Remaining: 2" - points left to spend.
+    complete: (app) => {
+      const found = (app.textContent ?? "").match(/remaining:\s*(\d+)/i);
+      if (!found) return true;
+      return Number(found[1]) === 0 ? true : { remaining: Number(found[1]) };
+    },
+    describe: (title) => {
+      const level = title.match(/level\s*(\d+)/i);
+      return { label: "Ability Score Improvement", level: level ? Number(level[1]) : null };
+    }
+  },
+  {
+    id: "additional-spells",
+    // "Additional Spells (Elf; Drow Lineage)" - a dropdown left on its dash.
+    match: (title) => /^additional spells/i.test(title),
+    confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^ok$/i.test(text),
+    complete: (app) => {
+      const selects = Array.from(app.querySelectorAll("select"));
+      if (!selects.length) return true;
+      // A dash or an empty value means nothing was chosen.
+      const unset = selects.filter((select) => {
+        const value = (select.value ?? "").trim();
+        return !value || /^[-\u2014\u2013]$/.test(value);
+      });
+      return unset.length ? { unset: unset.length } : true;
+    },
+    describe: (title) => ({ label: title.trim(), level: null })
+  }
+];
+
 const COMPLETE_TITLE = /^import complete/i;
 const CANCELLED = /was cancelled/i;
-
-/** "Cantrips learned: 2/3" -> { learned: 2, total: 3 } */
-const COUNTER = /learned:\s*(\d+)\s*\/\s*(\d+)/i;
 
 export const SKIPPED_FLAG = "skippedOptions";
 
 function titleOf(app) {
   return app?.querySelector?.(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
-}
-
-/**
- * Strips the dialog title down to what the player would call it.
- * "Choose Option: Fighting Style (Level 1)" -> { label: "Fighting Style", level: 1 }
- */
-function parseChoiceTitle(title) {
-  const text = title.replace(CHOICE_TITLE, "").trim();
-  const level = text.match(/\(level\s*(\d+)\)\s*$/i);
-  return {
-    label: text.replace(/\s*\(level\s*\d+\)\s*$/i, "").trim() || text,
-    level: level ? Number(level[1]) : null
-  };
 }
 
 /**
@@ -112,7 +175,7 @@ export function watchOptionDialogs(actor, onChange) {
     }
   };
 
-  /** Which button was used to leave a dialog. OK is the only one that counts. */
+  /** Which button was used to leave a dialog, and whether the choice was finished. */
   const onClick = (event) => {
     if (stopped) return;
 
@@ -132,33 +195,21 @@ export function watchOptionDialogs(actor, onChange) {
       return;
     }
 
-    if (CHOICE_TITLE.test(title)) {
-      const { label, level } = parseChoiceTitle(title);
-      // OK is the only primary button in these dialogs, which is steadier than
-      // matching the word - the text changes with the interface language.
-      const confirmed = button.classList.contains("ve-btn-primary") || /^ok$/i.test(text);
-      if (confirmed) clear(label, level);
-      else record({ label, level, reason: "skipped" });
+    const dialog = DIALOGS.find((entry) => entry.match(title));
+    if (!dialog) return;
+
+    const { label, level } = dialog.describe(title);
+
+    if (!dialog.confirms(button, text)) {
+      record({ label, level, reason: "skipped" });
       return;
     }
 
-    if (SPELL_TITLE.test(title)) {
-      const label = title.trim();
-      const counter = (app.textContent ?? "").match(COUNTER);
-      const confirmed = button.classList.contains("ve-btn-primary") || /^ok$/i.test(text);
-
-      if (!confirmed) {
-        record({ label, level: null, reason: "skipped" });
-        return;
-      }
-      // Confirmed, but possibly with the choice half made. Nothing downstream
-      // notices two cantrips where three were due, so it is checked here.
-      if (counter && Number(counter[1]) < Number(counter[2])) {
-        record({ label, level: null, reason: "partial", learned: Number(counter[1]), total: Number(counter[2]) });
-      } else {
-        clear(label, null);
-      }
-    }
+    // Confirmed - but a dialog can be confirmed with the choice half made, so
+    // each kind is asked whether it considers itself finished.
+    const verdict = dialog.complete(app);
+    if (verdict === true) clear(label, level);
+    else record({ label, level, reason: "partial", ...verdict });
   };
 
   // Capture phase: Plutonium's own handler closes the dialog, and by the time a
