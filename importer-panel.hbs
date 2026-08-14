@@ -1,0 +1,65 @@
+<div class="pk5e-root pk5e-panel-root">
+
+  <div class="pk5e-panel-picker">
+    <input type="search" data-panel-search value="{{query}}"
+           placeholder="{{placeholder}}" autocomplete="off">
+    <button type="button" class="pk5e-panel-caret" data-action="toggleList"
+            aria-label="{{labels.pick}}">
+      <i class="fa-solid {{#if listOpen}}fa-chevron-up{{else}}fa-chevron-down{{/if}}"></i>
+    </button>
+  </div>
+
+  {{#if limited}}
+  <div class="pk5e-panel-limited">
+    <button type="button" class="pk5e-link" data-action="clearPick">{{labels.showAll}}</button>
+  </div>
+  {{/if}}
+
+  {{#if listOpen}}
+  <div class="pk5e-panel-list">
+    {{#if empty}}
+    <p class="pk5e-empty">{{labels.empty}}</p>
+    {{else}}
+      {{#each groups}}
+      <section class="pk5e-panel-group">
+        {{#if uuid}}
+        <button type="button" class="pk5e-panel-class {{#if selected}}is-selected{{/if}}"
+                data-action="pickEntry" data-uuid="{{uuid}}">{{name}}</button>
+        {{else}}
+        <div class="pk5e-panel-class is-plain">{{name}}</div>
+        {{/if}}
+
+        {{#each subclasses}}
+        <button type="button" class="pk5e-panel-sub {{#if selected}}is-selected{{/if}}"
+                data-action="pickEntry" data-uuid="{{uuid}}">{{name}}</button>
+        {{/each}}
+      </section>
+      {{else}}
+      <p class="pk5e-empty">{{labels.noResults}}</p>
+      {{/each}}
+    {{/if}}
+  </div>
+  {{/if}}
+
+  <div class="pk5e-panel-detail">
+    {{#if notice}}
+    <p class="pk5e-panel-notice">{{notice}}</p>
+    {{/if}}
+
+    {{#if selected}}
+    <header class="pk5e-panel-head">
+      <h3>{{selected.name}}</h3>
+      <span class="pk5e-panel-origin">{{selected.origin}}</span>
+    </header>
+    {{/if}}
+
+    {{#if detail}}
+    <div class="pk5e-detail-body">{{{detail}}}</div>
+    {{else}}
+      {{#unless notice}}
+      <p class="pk5e-empty">{{labels.nothing}}</p>
+      {{/unless}}
+    {{/if}}
+  </div>
+
+</div>

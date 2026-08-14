@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.31.2**
+- Wersja modułu: **1.32.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -17,6 +17,7 @@ mechanizm Advancement działają dokładnie tak jak zwykle.
 - [Instalacja](#instalacja)
 - [Jak to wygląda dla gracza](#jak-to-wygląda-dla-gracza)
 - [Siedem kroków panelu](#siedem-kroków-panelu)
+- [Panel opisów przy importerze](#panel-opisów-przy-importerze)
 - [Okno referencji klas i podklas](#okno-referencji-klas-i-podklas)
 - [Kontrola gotowości postaci](#kontrola-gotowości-postaci)
 - [Języki interfejsu](#języki-interfejsu)
@@ -156,6 +157,47 @@ Ustaw to zgodnie z trybem awansowania w samym systemie.
 
 ---
 
+## Panel opisów przy importerze
+
+Wąskie okno, które staje obok importera i pokazuje opis tego, co gracz właśnie
+kliknął na liście. Importer podaje same nazwy — panel dopowiada, co one znaczą,
+bez otwierania drugiego okna i bez szukania wpisu ręcznie.
+
+- Otwiera się razem z importerem w kroku klasy (ustawienie `openReferenceWithClass`).
+- Zamyka się, gdy zamknie się importer albo gdy klasa wyląduje na karcie.
+- Na górze pole wyszukiwania, które po kliknięciu rozwija listę: klasy jako pozycje
+  wybieralne, podklasy wcięte pod nimi. Pisanie filtruje, nagłówek klasy zostaje
+  widoczny nawet wtedy, gdy sam nie pasuje do wpisanego tekstu — lista domen bez
+  „Cleric” nad nimi nic nie mówi.
+- Ustawia się z boku importera: po lewej, jeśli jest miejsce, inaczej po prawej.
+
+### Jak rozpoznaje, co kliknięto
+
+Odczytuje z wiersza listy nazwę, typ (klasa czy podklasa), kod podręcznika i klasę
+macierzystą. Wszystkie cztery są w znacznikach 5etools: nazwa w `span.ve-col-9`
+(pogrubiona dla klas), klasa macierzysta w `title="Class: …"`, kod źródła jako
+sufiks klasy CSS `ve-source__XPHB`. Zaznaczenie oznaczane jest klasą
+`list-multi-selected`.
+
+Dopasowanie do kompendium: **dokładna nazwa w obrębie tej samej klasy macierzystej**.
+Kod podręcznika rozstrzyga tylko remisy. Mierzone na 127 wpisach — trafiło wszystkie.
+
+Świadomie **nie ma** normalizacji nazw ani dopasowania po zawieraniu się nazw. Oba
+dały zero trafień na prawdziwych danych, a drugie wyprodukowało jedno fałszywe:
+„Twilight Domain” dopasowało się do „Light Domain”, bo jedna nazwa zawiera drugą.
+
+**Uwaga:** `system.source.book` w kompendium to etykieta dla człowieka („PHB 2024”,
+„TCoE”) i nie zgadza się z kodami importera. Kanoniczny kod siedzi w
+`flags.plutonium.source` i to jego porównujemy.
+
+### Gdy nie ma dopasowania
+
+Panel pisze wprost, czego brakuje, i otwiera listę **zawężoną do podklas tej klasy**,
+którą wskazał importer. Gdy nie ma nawet samej klasy, pokazuje pełną listę — lista
+zawężona do zera byłaby gorsza niż brak zawężenia.
+
+---
+
 ## Okno referencji klas i podklas
 
 Importer pokazuje same nazwy — nowy gracz wybiera klasę na ślepo. To okno czyta kompendia
@@ -289,7 +331,7 @@ nie pada, a moduł te ustawienia sam pomija.
 
 | Ustawienie | Zakres | Domyślnie | Opis |
 | --- | --- | --- | --- |
-| Open the class reference alongside the importer | świat | Tak | Okno referencji otwiera się razem z importerem klasy |
+| Show class descriptions beside the importer | świat | Tak | Steruje panelem opisów; szerokie okno referencji działa niezależnie |
 | How existing ability score increases are recognised | świat | advancements | Patrz [Atrybuty](#atrybuty-krok-5) |
 | How levelling works at your table | świat | milestone | Milestone / Experience |
 | Show an „importing” notice while the importer works | świat | Nie | Domyślnie wyłączone — wykrywanie cudzych okien albo gaśnie za wcześnie, albo wisi za długo |
@@ -344,7 +386,8 @@ characterCreator.guide()            // nowa postać + panel
 characterCreator.resume(actorId)    // panel dla istniejącej postaci
 characterCreator.complete(actorId)  // samo okno atrybutów
 characterCreator.languages(actorId) // samo okno języków
-characterCreator.reference()        // okno referencji klas
+characterCreator.reference()        // szerokie okno referencji
+characterCreator.importerPanel()    // wąski panel opisów
 ```
 
 Dodatkowo `characterCreator.CreationGuide` i `.CompleteCharacter` — klasy, gdyby trzeba było
@@ -394,6 +437,7 @@ prosty-kreator-5e/
     ├── guide.hbs
     ├── complete.hbs
     ├── languages.hbs
+    ├── importer-panel.hbs
     ├── reference.hbs
     └── reference-config.hbs
 ```
@@ -422,6 +466,10 @@ prosty-kreator-5e/
   zobaczysz je dwa razy; etykieta kompendium jest widoczna.
 - **Awanse powyżej poziomu 1** są przekazywane systemowi i Plutonium — moduł tylko naciska przycisk.
 - Referencja czyta **tylko kompendia**, nie dane pobierane przez Plutonium w locie.
+- Panel opisów sięga do znaczników cudzego pakietu. Gdy 5etools je zmieni, panel
+  przestanie cokolwiek znajdować — kreator działa dalej bez zmian.
+- Panel obsługuje **wyłącznie importer klas**. Gatunki i pochodzenia mają własną
+  prezentację w importerze.
 - Wykrywanie zakończenia importu jest z założenia niepełne (ustawienie „importing notice”
   domyślnie wyłączone) — panel obserwuje kartę, nie cudze okna.
 
@@ -452,7 +500,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.31.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.32.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
