@@ -16,6 +16,7 @@ import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { registerContextMenu } from "./context-menu.mjs";
 import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
+import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
 Hooks.once("init", () => {
@@ -113,8 +114,8 @@ Hooks.once("init", () => {
   });
 
   game.settings.register(MODULE_ID, "openReferenceWithClass", {
-    name: "Open the class reference alongside the importer",
-    hint: "The importer lists class names with nothing to read. This opens the reading window next to it, so a new player can find out what a Paladin actually does before picking one.",
+    name: "Show class descriptions beside the importer",
+    hint: "The importer lists class names with nothing to read. This opens a narrow panel next to it that follows along: click a class or subclass in the importer and its description appears in the panel. When an entry is not in your compendiums the panel offers a list to pick from instead. The wide reference window is unaffected and stays available from the class step.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -268,8 +269,10 @@ Hooks.once("ready", () => {
     complete: (actorId) => new CompleteCharacter({ actorId }).render(true),
     languages: (actorId) => new LanguagePicker({ actorId }).render(true),
     reference: () => new ClassReference().render(true),
+    importerPanel: () => openImporterPanel(),
     CreationGuide,
-    CompleteCharacter
+    CompleteCharacter,
+    ImporterPanel
   };
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = api;

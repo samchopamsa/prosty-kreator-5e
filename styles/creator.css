@@ -711,3 +711,109 @@
 .pk5e-reference-link:hover { opacity: 0.75; }
 
 .pk5e-lang-switch { display: flex; gap: 2px; flex: 0 0 auto; }
+
+/* ---------------------------------------------------------------------------
+   Narrow panel beside the importer
+   --------------------------------------------------------------------------- */
+
+.pk5e-panel-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 6px;
+}
+
+/* The picker: a search field that doubles as the closed state of the list. */
+.pk5e-panel-picker {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.pk5e-panel-picker input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+}
+.pk5e-panel-caret {
+  flex: 0 0 auto;
+  width: 28px;
+  padding: 0;
+  font-size: 11px;
+}
+
+.pk5e-panel-limited { flex: 0 0 auto; font-size: 11px; }
+
+/* The dropdown lives INSIDE the window with its own scroll. Positioned
+   absolutely it would be clipped by the window edge at this width. */
+.pk5e-panel-list {
+  flex: 0 1 auto;
+  max-height: 45%;
+  overflow-y: auto;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 3px;
+  padding: 4px;
+}
+
+.pk5e-panel-group { margin-bottom: 6px; }
+.pk5e-panel-group:last-child { margin-bottom: 0; }
+
+.pk5e-panel-class {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  cursor: pointer;
+}
+/* A class with no entry of its own is a heading, not a target. */
+.pk5e-panel-class.is-plain { cursor: default; opacity: 0.65; }
+
+.pk5e-panel-sub {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  padding: 2px 4px 2px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.pk5e-panel-class:hover:not(.is-plain),
+.pk5e-panel-sub:hover { background: rgba(128, 128, 128, 0.15); }
+.pk5e-panel-class.is-selected,
+.pk5e-panel-sub.is-selected { background: rgba(128, 128, 128, 0.28); }
+
+.pk5e-panel-detail {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.pk5e-panel-head {
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  margin-bottom: 6px;
+  padding-bottom: 3px;
+}
+.pk5e-panel-head h3 { margin: 0; font-size: 14px; }
+.pk5e-panel-origin { font-size: 11px; opacity: 0.7; }
+
+.pk5e-panel-notice {
+  margin: 0 0 6px;
+  padding: 5px 7px;
+  font-size: 11px;
+  border-left: 3px solid rgba(224, 164, 88, 0.8);
+  background: rgba(128, 128, 128, 0.1);
+}
+
+/* Tables in class descriptions overflow badly at this width. */
+.pk5e-panel-detail table { width: 100%; font-size: 11px; table-layout: fixed; }
+.pk5e-panel-detail td,
+.pk5e-panel-detail th { word-break: break-word; }

@@ -17,6 +17,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { LanguagePicker, languageLabels } from "./languages.mjs";
 import { ClassReference } from "./reference.mjs";
+import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
@@ -994,7 +995,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // on the sheet the decision is made, so it goes away by itself rather
       // than sitting over the importer's remaining dialogs. Only on arrival:
       // removing a class is a reason to go back to reading, not to stop.
-      if (added && ["class", "subclass"].includes(doc.type)) ClassReference.closeIfOpen();
+      if (added && ["class", "subclass"].includes(doc.type)) {
+        ClassReference.closeIfOpen();
+        ImporterPanel.closeIfOpen();
+      }
 
       this.render();
     };
@@ -1086,13 +1090,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   static async onAddStep(event, target) {
     const step = target.dataset.step;
 
-    // The importer lists class names with nothing to read, so open the reference
-    // alongside it. It sits on the left, the importer opens centred.
+    // The importer lists class names with nothing to read, so open the narrow
+    // panel beside it. That one follows whatever the player highlights; the
+    // wide reference window stays available from the link in this step.
     if (step === "class" && game.settings.get(MODULE_ID, "openReferenceWithClass")) {
       try {
-        new ClassReference({ kind: "class" }).render(true);
+        openImporterPanel();
       } catch (err) {
-        console.warn(`${MODULE_ID} | Could not open the reference alongside`, err);
+        console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
       }
     }
 
