@@ -18,7 +18,7 @@ import { MODULE_ID } from "./constants.mjs";
 const STRINGS = {
   en: {
     "guide.title": "New Character",
-    "guide.disclaimerTitle": "Before you start - three things about how this works",
+    "guide.disclaimerTitle": "Before you start - how this creator works",
     "guide.disclaimerSource": "Species, background and class come from the importer, which is not part of this creator. Its windows open on top of this panel and ask their own questions.",
     "guide.disclaimerComplete": "Work through every one of those windows to the end. Closing one with Skip, Cancel or the X leaves that choice unmade, and the step will be incomplete.",
     "guide.disclaimerRedo": "A finished step cannot be edited afterwards. To change anything you remove it and start that step again.",
@@ -57,7 +57,7 @@ const STRINGS = {
     "guide.optional": "optional",
     "guide.whatIsThis": "What is this?",
     "guide.importing":
-      "Importing. Wait for the import window to finish, then close it - more choices may still appear before it is done.",
+      "Importing. Work through every window the importer opens, right to the last one - if nothing seems to be happening, one of them may be hidden behind another window.",
     "guide.choose": "Choose {0}",
     "guide.set": "Set {0}",
     "guide.addOptional": "Add {0} (optional)",
@@ -237,7 +237,7 @@ const STRINGS = {
 
   pl: {
     "guide.title": "Nowa postać",
-    "guide.disclaimerTitle": "Zanim zaczniesz - trzy rzeczy o tym, jak to działa",
+    "guide.disclaimerTitle": "Zanim zaczniesz - sprawdź, jak działa kreator postaci",
     "guide.disclaimerSource": "Gatunek, pochodzenie i klasa pochodzą z importera, który nie jest częścią kreatora. Jego okna otwierają się nad tym panelem i zadają własne pytania.",
     "guide.disclaimerComplete": "Przejdź każde z tych okien do końca. Zamknięcie przyciskiem Skip, Cancel albo krzyżykiem zostawia wybór niedokonany, a krok będzie niepełny.",
     "guide.disclaimerRedo": "Ukończonego kroku nie da się później edytować. Żeby cokolwiek zmienić, usuwasz go i rozpoczynasz od nowa.",
@@ -273,7 +273,7 @@ const STRINGS = {
     "guide.optional": "opcjonalny",
     "guide.whatIsThis": "Co to jest?",
     "guide.importing":
-      "Trwa import. Poczekaj, aż okno importu skończy pracę, i zamknij je - po drodze mogą pojawić się kolejne wybory.",
+      "Trwa import. Przejdź przez wszystkie okna, które otwiera importer, aż do ostatniego - jeśli nic się nie dzieje, któreś może być schowane pod innym oknem.",
     "guide.choose": "Wybierz {0}",
     "guide.set": "Ustaw {0}",
     "guide.addOptional": "Dodaj {0} (opcjonalnie)",

@@ -883,6 +883,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       step.hasSkipped = (step.entries ?? []).some((entry) => entry.skipped);
     }
 
+    // Open the first time this character's panel is opened, folded away after
+    // that. Worked out once per window rather than per render: setting the flag
+    // updates the actor, which redraws, and the notice would collapse under the
+    // reader mid-sentence.
+    if (this._disclaimerOpen === undefined) {
+      this._disclaimerOpen = !actor.getFlag(MODULE_ID, "disclaimerSeen");
+      if (this._disclaimerOpen) {
+        actor
+          .setFlag(MODULE_ID, "disclaimerSeen", true)
+          .catch((err) => console.warn(`${MODULE_ID} | Could not record the notice`, err));
+      }
+    }
+
     const report = checkCharacter(actor);
     const ownership = actor.ownership ?? {};
 
@@ -899,6 +912,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         label,
         selected: code === currentLanguage()
       })),
+      disclaimerOpen: this._disclaimerOpen,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
       // and burying it among the other warnings buried the only actionable item.
@@ -1026,7 +1040,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // watched live. Only while this panel is open, which is the whole scope the
     // creator claims responsibility for.
     if (!this._stopOptionWatch) {
-      this._stopOptionWatch = watchOptionDialogs(this.actor, () => this.render());
+      this._stopOptionWatch = watchOptionDialogs(
+        this.actor,
+        () => this.render(),
+        ({ cancelled }) => {
+          // "Import Complete" is the importer saying it is done. Until it
+          // appears the step stays marked as in progress, which also covers the
+          // case that prompted this: a dialog buried under another window.
+          this._importing = null;
+          this._importCancelled = cancelled;
+          this.render();
+        }
+      );
     }
   }
 
@@ -1164,16 +1189,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const pressed = await this.addFor(step);
     if (!pressed) return;
 
-    // Off by default. Detecting when someone else's import has finished means
-    // watching their windows, and every threshold that stopped it clearing too
-    // early also made it linger long after the work was done. Marking the step
-    // as soon as the item lands is slightly premature but never annoying.
+    // This used to be guesswork - watch for activity, give up after a quiet
+    // spell - and every threshold that stopped it clearing too early made it
+    // linger long after the work was done. The importer's own "Import Complete"
+    // window settles it, so the notice now ends when the importer says so.
     if (!game.settings.get(MODULE_ID, "showImportingNotice")) return;
 
     this._importing = step;
+    this._importCancelled = false;
     this._lastActivity = Date.now();
     this.render();
 
+    // Still a fallback: if the player closes the panel and reopens it mid-import
+    // the watcher missed the completion, and the notice must not stick forever.
     watchImport(
       () => this._lastActivity,
       () => {

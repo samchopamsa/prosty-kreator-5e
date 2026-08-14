@@ -104,21 +104,59 @@ const DIALOGS = [
   {
     id: "additional-spells",
     // "Additional Spells (Elf; Drow Lineage)" - a dropdown left on its dash.
-    match: (title) => /^additional spells/i.test(title),
+    // Some of these dialogs have no title in the bar at all - the one Magic
+    // Initiate puts up is blank - so the body is checked as well.
+    match: (title, app) =>
+      /^additional spells/i.test(title) || /additional spells/i.test(app.textContent ?? ""),
     confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^ok$/i.test(text),
     complete: (app) => {
-      const selects = Array.from(app.querySelectorAll("select"));
-      if (!selects.length) return true;
-      // A dash or an empty value means nothing was chosen.
-      const unset = selects.filter((select) => {
-        const value = (select.value ?? "").trim();
-        return !value || /^[-\u2014\u2013]$/.test(value);
-      });
-      return unset.length ? { unset: unset.length } : true;
+      // Two ways of being unset: a dropdown still on its dash, and a spell slot
+      // still showing its "(select a spell)" placeholder.
+      const unset = unsetSelects(app) + placeholders(app);
+      return unset ? { unset } : true;
     },
-    describe: (title) => ({ label: title.trim(), level: null })
+    describe: (title, app) => ({ label: labelFor(title, app, "Additional Spells"), level: null })
+  },
+  {
+    id: "feats",
+    // "Feats" / "Select a Feat (Category: Dark Gift)"
+    match: (title, app) =>
+      /^feats?$/i.test(title.trim()) || /select a feat/i.test(app.textContent ?? ""),
+    confirms: (button, text) => button.classList.contains("ve-btn-primary") || /^(ok|confirm)$/i.test(text),
+    complete: (app) => {
+      // A category with nothing in it still shows the dropdown, so an empty
+      // list and an unmade choice look the same from here. Both are worth
+      // reporting: either way the character did not get the feat.
+      const unset = unsetSelects(app);
+      return unset ? { unset } : true;
+    },
+    describe: (title, app) => ({ label: labelFor(title, app, "Feats"), level: null })
   }
 ];
+
+/** Dropdowns left on a dash or empty. */
+function unsetSelects(app) {
+  return Array.from(app.querySelectorAll("select")).filter((select) => {
+    const value = (select.value ?? "").trim();
+    return !value || /^[-\u2014\u2013]$/.test(value);
+  }).length;
+}
+
+/** Spell slots still showing their placeholder rather than a chosen spell. */
+function placeholders(app) {
+  return ((app.textContent ?? "").match(/\(select a spell\)/gi) ?? []).length;
+}
+
+/**
+ * A name for a dialog that may not have one in its title bar.
+ * Falls back to the first heading in the body, then to a fixed name.
+ */
+function labelFor(title, app, fallback) {
+  const clean = title.trim();
+  if (clean) return clean;
+  const heading = app.querySelector("b, strong, h1, h2, h3, .ve-bold")?.textContent?.trim();
+  return heading || fallback;
+}
 
 const COMPLETE_TITLE = /^import complete/i;
 const CANCELLED = /was cancelled/i;
@@ -136,7 +174,7 @@ function titleOf(app) {
  * @param {Function} onChange  Called after the flag changes, to redraw.
  * @returns {Function} Call to stop watching.
  */
-export function watchOptionDialogs(actor, onChange) {
+export function watchOptionDialogs(actor, onChange, onImportEnd) {
   if (!actor) return () => {};
 
   // Recorded during this import and not yet committed. Held back because an
@@ -190,15 +228,20 @@ export function watchOptionDialogs(actor, onChange) {
 
     // The whole import fell through: nothing that happened inside it applies.
     if (COMPLETE_TITLE.test(title)) {
-      if (CANCELLED.test(app.textContent ?? "")) pending = [];
+      const cancelled = CANCELLED.test(app.textContent ?? "");
+      if (cancelled) pending = [];
       commit();
+      // The one dependable "the importer has finished" signal. Watching for
+      // items landing on the sheet said so too early - they arrive partway
+      // through the chain, while dialogs are still to come.
+      onImportEnd?.({ cancelled });
       return;
     }
 
-    const dialog = DIALOGS.find((entry) => entry.match(title));
+    const dialog = DIALOGS.find((entry) => entry.match(title, app));
     if (!dialog) return;
 
-    const { label, level } = dialog.describe(title);
+    const { label, level } = dialog.describe(title, app);
 
     if (!dialog.confirms(button, text)) {
       record({ label, level, reason: "skipped" });

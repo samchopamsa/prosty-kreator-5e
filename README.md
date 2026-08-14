@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.37.0**
+- Wersja modułu: **1.38.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -98,7 +98,8 @@ Panel można otworzyć na cztery sposoby:
 - **Prawy klik na postaci w drzewie aktorów → „Start / resume creation"** (tylko gdy coś zostało do zrobienia)
 - **Automatycznie** — przy pierwszym otwarciu niedokończonej postaci przez gracza (można wyłączyć)
 
-Na samej górze stoi **ostrzeżenie na czerwono** — trzy zdania o tym, że gatunek,
+Na samej górze stoi **zwijane ostrzeżenie na czerwono** — rozwinięte przy pierwszym
+otwarciu panelu dla danej postaci, potem zwinięte do samego nagłówka — trzy zdania o tym, że gatunek,
 pochodzenie i klasa pochodzą z importera spoza kreatora, że jego okna trzeba przejść
 do końca (Skip, Cancel i krzyżyk zostawiają wybór niedokonany), oraz że ukończonego
 kroku nie da się edytować, można go tylko rozpocząć od nowa. Wszystkie trzy punkty
@@ -338,6 +339,10 @@ czyli dokładnie w zakresie, za który kreator odpowiada.
 
 Trzy reguły, wyprowadzone z obserwacji prawdziwego importu:
 
+Część okien **nie ma tytułu w pasku** — to, które wystawia Magic Initiate, jest puste —
+więc reguła może dopasowywać się także po treści, a nazwę do komunikatu bierze
+z pierwszego nagłówka w środku.
+
 Reguły trzymane są jako **tablica `DIALOGS`**, po jednym wpisie na rodzaj okna.
 Każdy ma własne pojęcie „skończone", bo jedno okno liczy nauczone zaklęcia, drugie
 punkty do rozdania, trzecie tylko sprawdza, czy lista rozwijana zeszła z myślnika.
@@ -348,8 +353,15 @@ Nowe okno to nowy wiersz w tablicy, nie kolejny warunek w kodzie.
 | `Choose Option: …` | dojście do OK wystarczy; Skip, Cancel i krzyżyk to pominięcie |
 | `Select Cantrips` / `Select Spells` | licznik `learned: X/Y` musi mieć `X = Y`, **nawet po OK** |
 | `Ability Score Improvement—Level N` | `Remaining: 0`; zatwierdzane przyciskiem **Confirm**, nie OK |
-| `Additional Spells (…)` | każda lista rozwijana musi mieć wybraną wartość, nie myślnik |
+| `Additional Spells (…)` | każda lista rozwijana musi mieć wybraną wartość, a każdy slot zaklęcia nie może zostać na `(select a spell)` |
+| `Feats` / `Select a Feat (…)` | lista rozwijana musi mieć wybraną wartość; pusta kategoria wygląda tak samo jak niedokonany wybór i też jest zgłaszana |
 | `Import Complete` | tekst „was cancelled" = import przepadł, zapisy z tej sesji kasujemy |
+
+Okno `Import Complete` służy też za **jedyny pewny sygnał zakończenia importu**.
+Wcześniej powiadomienie „trwa import" gasło po okresie ciszy, co albo kończyło się
+za wcześnie, albo wisiało długo po wszystkim. Teraz kończy je importer. To pokrywa
+przypadek, od którego się zaczęło: okno wyboru schowane pod innym oknem — krok
+pozostaje oznaczony jako trwający, a treść powiadomienia mówi wprost, gdzie szukać.
 
 Druga reguła jest istotna: okno zaklęć pozwala nacisnąć OK przy niepełnym wyborze
 (dwie sztuczki z trzech) i nic dalej tego nie zauważa.
@@ -515,6 +527,7 @@ Flagi w przestrzeni `prosty-kreator-5e`:
 | `abilities` | Przypisane atrybuty bazowe i metoda. Zapobiega podwójnemu liczeniu bonusów przy ponownym uruchomieniu. |
 | `languages` | Krok języków został domknięty. |
 | `guideDismissed` | Gracz zamknął panel — automatyczne otwieranie już nie wraca. |
+| `disclaimerSeen` | Ostrzeżenie na górze było już raz pokazane rozwinięte. |
 | `skippedOptions` | Wybory pominięte w oknach Plutonium. Czyszczone przy usunięciu przedmiotu i linkiem „już to poprawiłem". |
 
 Brak flagi `abilities` lub `languages` oznacza dla modułu „krok niezrobiony” — stąd
@@ -614,7 +627,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.37.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.38.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

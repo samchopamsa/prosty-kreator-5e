@@ -898,6 +898,20 @@
   line-height: 1.45;
   color: rgba(230, 130, 130, 0.95);
 }
-.pk5e-disclaimer strong { display: block; margin-bottom: 4px; }
+.pk5e-disclaimer > summary {
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.pk5e-disclaimer > summary::-webkit-details-marker { display: none; }
+/* A chevron rather than the browser triangle, to match the step help blocks. */
+.pk5e-disclaimer > summary::before {
+  content: "\25B8";
+  display: inline-block;
+  width: 12px;
+  transition: transform 0.12s ease;
+}
+.pk5e-disclaimer[open] > summary::before { transform: rotate(90deg); }
+.pk5e-disclaimer[open] > summary { margin-bottom: 4px; }
 .pk5e-disclaimer ul { margin: 0; padding-left: 16px; }
 .pk5e-disclaimer li { margin: 2px 0; }

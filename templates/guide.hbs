@@ -7,14 +7,14 @@
         <p class="pk5e-empty">{{pkT "guide.missing"}}</p>
       {{else}}
 
-      <div class="pk5e-disclaimer">
-        <strong>{{pkT "guide.disclaimerTitle"}}</strong>
+      <details class="pk5e-disclaimer" {{#if disclaimerOpen}}open{{/if}}>
+        <summary>{{pkT "guide.disclaimerTitle"}}</summary>
         <ul>
           <li>{{pkT "guide.disclaimerSource"}}</li>
           <li>{{pkT "guide.disclaimerComplete"}}</li>
           <li>{{pkT "guide.disclaimerRedo"}}</li>
         </ul>
-      </div>
+      </details>
 
       <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
 
