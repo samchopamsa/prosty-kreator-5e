@@ -46,16 +46,20 @@ function folderPath(pack, folderId) {
 
 export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
-    // Opened to the left so it does not land on top of the importer, which
-    // Foundry centres. Both are ordinary windows and can be dragged.
+    // Centred. It used to open hard left so it could sit beside the importer,
+    // but that job belongs to the narrow panel now: this window is opened
+    // deliberately, on its own, to browse.
     const vh = globalThis.innerHeight ?? 900;
+    const vw = globalThis.innerWidth ?? 1400;
+    const width = Math.min(620, Math.max(420, vw - 80));
+    const height = Math.max(480, vh - 120);
     super({
       ...options,
       position: {
-        width: 620,
-        height: Math.max(480, vh - 80),
-        left: 20,
-        top: 40,
+        width,
+        height,
+        left: Math.max(10, Math.round((vw - width) / 2)),
+        top: Math.max(10, Math.round((vh - height) / 2)),
         ...(options.position ?? {})
       }
     });

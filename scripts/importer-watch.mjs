@@ -46,6 +46,17 @@ const BULK_THRESHOLD = 8;
  */
 const SETTLE_MS = 60;
 
+/**
+ * How long the panel waits for a recognisable importer before saying so.
+ *
+ * This reaches into another package's markup, so it will eventually break: a
+ * 5etools release renames a class and the panel quietly shows nothing. Silent
+ * is the worst way for that to happen - the GM would hear about it from a
+ * confused player, weeks later. So we say it out loud, once, to the GM only,
+ * naming what we looked for.
+ */
+const WATCHDOG_MS = 6000;
+
 function titleOf(app) {
   return app.querySelector(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
 }
@@ -53,6 +64,34 @@ function titleOf(app) {
 function findImporter() {
   return Array.from(document.querySelectorAll(".ve-app")).find((app) =>
     TITLE_MATCH.test(titleOf(app))
+  );
+}
+
+/**
+ * Reports, once, that the markup no longer looks like we expect.
+ *
+ * `stage` says how far recognition got, which is the useful part: no window at
+ * all points at the title or the ve-app class, while a window with no readable
+ * rows points at the row markup.
+ */
+let warned = false;
+
+function warnMarkup(stage, detail = {}) {
+  if (warned || !game.user?.isGM) return;
+  warned = true;
+  console.warn(
+    `${MODULE_ID} | The importer panel could not read Plutonium's window (${stage}).\n` +
+      "The panel reads another package's markup, so a Plutonium or 5etools update can " +
+      "break it without breaking anything else. Character creation is unaffected: the " +
+      "panel simply stays empty, and the wide reference window still works.\n" +
+      "Looked for:",
+    {
+      window: ".ve-app with a title matching /import classes/i",
+      list: "div.veapp__list",
+      row: "label containing span.ve-col-9",
+      selection: "class list-multi-selected",
+      ...detail
+    }
   );
 }
 
@@ -96,6 +135,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
   let stopped = false;
   let pending = [];
   let timer = null;
+  let watchdog = null;
 
   /**
    * Decides what the player actually asked to read.
@@ -119,6 +159,18 @@ export function watchImporter({ onSelect, onClose } = {}) {
   const attach = (candidate) => {
     if (stopped || app === candidate) return;
     app = candidate;
+    clearTimeout(watchdog);
+
+    // Found the window - but is the list inside it still shaped as we expect?
+    const list = app.querySelector(".veapp__list");
+    const readable = list
+      ? Array.from(list.querySelectorAll("label")).some((row) => readRow(row))
+      : false;
+    if (!readable) {
+      warnMarkup(list ? "rows unreadable" : "list container not found", {
+        found: list ? "div.veapp__list present, no row yielded a name" : "no div.veapp__list"
+      });
+    }
 
     inner = new MutationObserver((mutations) => {
       const picked = [];
@@ -176,9 +228,18 @@ export function watchImporter({ onSelect, onClose } = {}) {
   const existing = findImporter();
   if (existing) attach(existing);
 
+  // Nothing found yet is normal - the importer usually opens a moment after the
+  // panel. Nothing found after several seconds is not.
+  if (!app) {
+    watchdog = setTimeout(() => {
+      if (!stopped && !app) warnMarkup("no importer window found");
+    }, WATCHDOG_MS);
+  }
+
   return () => {
     stopped = true;
     clearTimeout(timer);
+    clearTimeout(watchdog);
     inner?.disconnect();
     outer.disconnect();
   };

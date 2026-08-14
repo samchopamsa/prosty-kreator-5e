@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.32.1**
+- Wersja modułu: **1.33.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -210,14 +210,15 @@ i wyświetla opisy do przeczytania.
 - Drzewo odwzorowuje strukturę folderów, **scaloną po nazwie folderu** między kompendiami.
   Folder „Barbarian” w kompendium jednego podręcznika i taki sam w drugim to jedna gałąź —
   gracz widzi jednego Barbarzyńcę ze wszystkimi podklasami, a nie jednego na książkę.
-- Otwiera się po lewej stronie, żeby nie zasłaniać importera (Foundry centruje okna importera).
+- Otwiera się wyśrodkowane. Wcześniej stawało po lewej, żeby zmieścić się obok importera,
+  ale tę rolę przejął panel opisów — to okno otwiera się teraz świadomie, samo.
 - Przy ustawieniu `openReferenceWithClass` otwiera się samo, razem z importerem w kroku klasy.
 - **Zamyka się samo**, gdy klasa albo podklasa wyląduje na karcie — decyzja zapadła, więc okno
   nie zostaje nad resztą okien importera. Usunięcie klasy przyciskiem „Remove” go nie zamyka:
   to powód, żeby wrócić do czytania. Zamknięcie importera bez wyboru też go zostawia otwartym.
 - W panelu jest podlinkowanym tekstem, nie przyciskiem — przycisk pełnej szerokości obok
   „Choose Class” wyglądał jak druga droga do wybrania klasy, czyli dokładnie odwrotnie
-  niż jest w rzeczywistości.
+  niż jest w rzeczywistości. Opis mówi wprost, że okno jest tylko do czytania.
 
 **Ważne:** okno czyta **kompendia**. Plutonium pobiera swoje dane w locie i nie da się go
 odpytać, więc obie listy zgadzają się tylko o tyle, o ile zgadzają się włączone podręczniki.
@@ -264,12 +265,26 @@ zaobserwowanej podczas testów.
 - brak biegłości w umiejętnościach
 - pusty ekwipunek
 - brak portretu
+- niespełnione wymagania wieloklasowości
 
 Przycisk **„Post to chat”** wystawia kartę postaci na czat (portret, gatunek/pochodzenie/klasa,
 HP, AC, szybkość, sześć atrybutów z modyfikatorami) — MG widzi nowe postacie bez otwierania
 każdej karty osobno.
 
 Przycisk **„Finalize”** zamyka panel i otwiera gotową kartę. Jest aktywny dopiero, gdy nie ma błędów.
+
+### Wymagania wieloklasowości
+
+Sprawdzane dopiero wtedy, gdy postać ma **więcej niż jedną klasę** — przy jednej klasie
+zasada w ogóle nie obowiązuje. Wymagania czytane są z pola `system.primaryAbility` na
+przedmiocie klasy, a nie z tabeli wpisanej w kod, więc pozostaną poprawne, gdy nowy
+podręcznik doda klasę.
+
+Pole rozróżnia dwa warianty: Paladyn wymaga 13 w Sile **i** Charyzmie (`all: true`),
+Wojownik w Sile **albo** Zręczności (`all: false`).
+
+Klasa bez wypełnionego pola jest pomijana — brak informacji o wymaganiu to nie to samo
+co wymaganie zerowe.
 
 ---
 
@@ -464,14 +479,15 @@ prosty-kreator-5e/
 
 ## Znane ograniczenia
 
-- **Wieloklasowość** jest obsługiwana tylko o tyle, o ile obsługuje ją system — panel pokazuje
-  łączny poziom i listę klas, ale nie waliduje wymagań wieloklasowych.
+- **Wieloklasowość** — panel ostrzega, gdy wymagania atrybutów nie są spełnione, ale nie
+  blokuje: część stołów rezygnuje z tej zasady. Poza tym awanse obsługuje system.
 - **Duplikaty** nie są filtrowane. Jeśli to samo pochodzenie siedzi w dwóch kompendiach,
   zobaczysz je dwa razy; etykieta kompendium jest widoczna.
 - **Awanse powyżej poziomu 1** są przekazywane systemowi i Plutonium — moduł tylko naciska przycisk.
 - Referencja czyta **tylko kompendia**, nie dane pobierane przez Plutonium w locie.
 - Panel opisów sięga do znaczników cudzego pakietu. Gdy 5etools je zmieni, panel
-  przestanie cokolwiek znajdować — kreator działa dalej bez zmian.
+  przestanie cokolwiek znajdować — kreator działa dalej bez zmian. **MG dostanie wtedy
+  ostrzeżenie w konsoli** (F12) z listą selektorów, których panel szukał; gracz nic nie widzi.
 - Panel obsługuje **wyłącznie importer klas**. Gatunki i pochodzenia mają własną
   prezentację w importerze.
 - Wykrywanie zakończenia importu jest z założenia niepełne (ustawienie „importing notice”
@@ -504,7 +520,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.32.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.33.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

@@ -59,10 +59,10 @@ const STRINGS = {
     "guide.addOptional": "Add {0} (optional)",
     "guide.change": "Change",
     "guide.remove": "Remove",
-    "guide.referenceTitle": "Not sure which class?",
+    "guide.referenceTitle": "Browse the class compendium",
     "guide.referenceBody":
-      "The importer shows names only. Read what each class and subclass actually does before you choose.",
-    "guide.referenceButton": "Browse all classes and subclasses",
+      "The full list of classes and subclasses with their descriptions. Reading only - it picks nothing and changes nothing on your sheet.",
+    "guide.referenceButton": "Open the compendium",
 
     "panel.title": "Class descriptions",
     "panel.searchPlaceholder": "Search classes and subclasses",
@@ -144,6 +144,10 @@ const STRINGS = {
     "check.inventory": "Something in the inventory",
     "check.inventoryHint": "No starting equipment was taken.",
     "check.portrait": "Portrait chosen",
+    "check.multiclass": "Multiclass requirement: {0}",
+    "check.multiclassHint": "Taking levels in more than one class normally needs 13 in {0}. Some tables drop this rule - ask your GM.",
+    "check.andJoin": " and ",
+    "check.orJoin": " or ",
     "check.portraitHint": "Optional, but it helps everyone at the table.",
 
     "abilities.title": "Ability scores",
@@ -237,10 +241,10 @@ const STRINGS = {
     "guide.addOptional": "Dodaj {0} (opcjonalnie)",
     "guide.change": "Zmień",
     "guide.remove": "Usuń",
-    "guide.referenceTitle": "Nie wiesz, którą klasę wybrać?",
+    "guide.referenceTitle": "Przeglądaj kompendium klas",
     "guide.referenceBody":
-      "Importer pokazuje same nazwy. Przeczytaj, co naprawdę potrafi każda klasa i podklasa, zanim zdecydujesz.",
-    "guide.referenceButton": "Przeglądaj wszystkie klasy i podklasy",
+      "Pełna lista klas i podklas wraz z opisami. Tylko do czytania - niczego nie wybiera i nic nie zmienia na karcie.",
+    "guide.referenceButton": "Otwórz kompendium",
 
     "panel.title": "Opisy klas",
     "panel.searchPlaceholder": "Szukaj klas i podklas",
@@ -319,6 +323,10 @@ const STRINGS = {
     "check.inventory": "Coś w ekwipunku",
     "check.inventoryHint": "Nie wzięto ekwipunku startowego.",
     "check.portrait": "Wybrany portret",
+    "check.multiclass": "Wymagania wieloklasowości: {0}",
+    "check.multiclassHint": "Łączenie klas zwykle wymaga 13 w {0}. Część stołów rezygnuje z tej zasady - zapytaj MG.",
+    "check.andJoin": " i ",
+    "check.orJoin": " albo ",
     "check.portraitHint": "Opcjonalny, ale ułatwia życie całemu stołowi.",
 
     "abilities.title": "Atrybuty",

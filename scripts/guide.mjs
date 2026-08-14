@@ -899,11 +899,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       steps,
       allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {
-        // The name always counts as done, and is shown as step 1, so include it
-        // here too - otherwise the tally silently disagrees with the numbering.
-        const required = steps.filter((step) => !step.optional);
-        const done = required.filter((step) => step.done).length + 1;
-        return t("guide.progress", done, required.length + 1);
+        // Every step is counted, optional ones included, because the intro
+        // promises seven and the numbering shows seven. A tally that quietly
+        // drops the portrait reads as a contradiction in the same window.
+        const done = steps.filter((step) => step.done).length + 1;
+        return t("guide.progress", done, steps.length + 1);
       })()
     };
   }

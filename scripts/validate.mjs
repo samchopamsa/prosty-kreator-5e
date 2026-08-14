@@ -17,6 +17,55 @@ import { t } from "./i18n.mjs";
 const ERROR = "error";
 const WARNING = "warning";
 
+/**
+ * Multiclass prerequisites, read from the class items themselves.
+ *
+ * The 2024 rules ask for 13 in a class's primary ability before you may take a
+ * level in it, and the same of the class you already have. dnd5e stores that as
+ * system.primaryAbility: { value: ["str", "cha"], all: true }, where `all`
+ * decides whether every listed ability is required or any one of them will do -
+ * Paladin needs Strength AND Charisma, Fighter needs Strength OR Dexterity.
+ *
+ * Read from the item rather than from a table in this file, so it stays right
+ * when a new book adds a class. A class item without the field is skipped: a
+ * missing requirement is not the same as a requirement of nothing.
+ */
+export function multiclassRequirement(classItem) {
+  const primary = classItem?.system?.primaryAbility;
+  const abilities = Array.from(primary?.value ?? []).filter(Boolean);
+  if (!abilities.length) return null;
+  return { abilities, all: Boolean(primary?.all) };
+}
+
+/** Does the character meet a requirement returned by multiclassRequirement()? */
+export function meetsRequirement(actor, requirement, threshold = 13) {
+  if (!requirement) return true;
+  const score = (key) => Number(actor?.system?.abilities?.[key]?.value ?? 0);
+  return requirement.all
+    ? requirement.abilities.every((key) => score(key) >= threshold)
+    : requirement.abilities.some((key) => score(key) >= threshold);
+}
+
+/**
+ * Classes on a multiclassed character whose prerequisite is not met.
+ *
+ * Only reported once a second class is present: on a single-class character the
+ * requirement does not apply at all, and warning about it would be wrong.
+ */
+export function multiclassProblems(actor) {
+  const classes = actor?.items?.filter((i) => i.type === "class") ?? [];
+  if (classes.length < 2) return [];
+
+  const problems = [];
+  for (const cls of classes) {
+    const requirement = multiclassRequirement(cls);
+    if (!requirement) continue;
+    if (meetsRequirement(actor, requirement)) continue;
+    problems.push({ name: cls.name, ...requirement });
+  }
+  return problems;
+}
+
 export function checkCharacter(actor) {
   const checks = [];
   const add = (ok, level, label, hint) => checks.push({ ok, level, label, hint });
@@ -68,6 +117,26 @@ export function checkCharacter(actor) {
   const portrait = actor.img ?? "";
   const hasPortrait = portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
   add(!!hasPortrait, WARNING, t("check.portrait"), t("check.portraitHint"));
+
+  // A warning rather than an error, deliberately: plenty of tables allow
+  // multiclassing without the ability requirement, and the module has no
+  // business forbidding something the GM agreed to.
+  const multiclass = multiclassProblems(actor);
+  if (multiclass.length) {
+    const abilityNames = (problem) =>
+      problem.abilities
+        .map((key) => CONFIG.DND5E?.abilities?.[key]?.label ?? key.toUpperCase())
+        .join(problem.all ? t("check.andJoin") : t("check.orJoin"));
+
+    for (const problem of multiclass) {
+      add(
+        false,
+        WARNING,
+        t("check.multiclass", problem.name),
+        t("check.multiclassHint", abilityNames(problem))
+      );
+    }
+  }
 
   const errors = checks.filter((c) => !c.ok && c.level === ERROR).length;
   const warnings = checks.filter((c) => !c.ok && c.level === WARNING).length;
