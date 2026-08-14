@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.34.2**
+- Wersja modułu: **1.35.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -281,9 +281,16 @@ Przycisk **„Finalize”** zamyka panel i otwiera gotową kartę. Jest aktywny 
 Najczęstsza usterka zgłaszana przez graczy: importer otwiera okna wyboru
 (biegłości, podniesienie atrybutów, rozmiar), gracz je zamyka, i nie ma jak wrócić.
 
-Kreator to wykrywa i pokazuje nad listą kontrolną komunikat z przyciskiem
-**„Usuń i dodaj ponownie"**, który robi obie rzeczy naraz — usuwa przez systemowy
+Kreator to wykrywa i pokazuje komunikat **wprost pod tym wpisem, którego dotyczy** —
+nie zbiorczo na dole panelu, gdzie ostrzeżenie stało daleko od rzeczy, o której mówi,
+a przy dwóch klasach nie było wiadomo, której dotyczy. W nagłówku kroku zamiast ptaszka
+pojawia się wykrzyknik, więc problem widać bez przewijania.
+
+Przycisk **„Usuń i dodaj ponownie"** robi obie rzeczy naraz — usuwa przez systemowy
 mechanizm cofania rozwoju, a potem od razu otwiera importer.
+
+Podklasa jest pokazywana wewnątrz wpisu swojej klasy, więc jej pominięte wybory
+raportowane są tam — usunięcie klasy i tak zabiera podklasę ze sobą.
 
 Sprawdzane są **wszystkie** przedmioty tego rodzaju: gatunek, pochodzenie, klasa
 i podklasa. Ta sama reguła, bez listy oczekiwań — pytamy przedmiot, jakie ma wpisy,
@@ -560,7 +567,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.34.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.35.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

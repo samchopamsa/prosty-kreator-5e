@@ -67,7 +67,11 @@
           {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
           {{#if optional}}<span class="pk5e-abbr">{{pkT "guide.optional"}}</span>{{/if}}
-          {{#if done}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
+          {{#if hasSkipped}}
+            <span class="pk5e-guide-alert">!</span>
+          {{else if done}}
+            <span class="pk5e-guide-tick">&#10003;</span>
+          {{/if}}
         </div>
         {{#if reference}}
         <div class="pk5e-callout pk5e-reference-callout">
@@ -108,6 +112,17 @@
                 <button type="button" class="pk5e-link" data-action="removeStep"
                         data-step="{{../key}}" data-item="{{itemId}}">{{pkT "guide.remove"}}</button>
               </div>
+
+              {{#if skipped}}
+              <div class="pk5e-callout pk5e-skipped-item">
+                <strong>{{pkT "guide.skippedTitle"}}</strong>
+                <p>{{pkT "guide.skippedBody" kindOf}}</p>
+                <button type="button" data-action="redoStep"
+                        data-step="{{../key}}" data-item="{{itemId}}">
+                  {{pkT "guide.skippedFix" kind}}
+                </button>
+              </div>
+              {{/if}}
             </div>
             {{/each}}
           {{else}}
@@ -157,20 +172,6 @@
         {{/if}}
       </div>
       {{/each}}
-
-      {{#if skipped}}
-      <section class="pk5e-skipped">
-        {{#each skipped}}
-        <div class="pk5e-callout pk5e-skipped-item">
-          <strong>{{pkT "guide.skippedTitle" name}}</strong>
-          <p>{{pkT "guide.skippedBody" kindOf}}</p>
-          <button type="button" data-action="redoStep" data-step="{{step}}" data-item="{{id}}">
-            {{pkT "guide.skippedFix" kind}}
-          </button>
-        </div>
-        {{/each}}
-      </section>
-      {{/if}}
 
       <section class="pk5e-report {{#if ready}}is-ready{{/if}}">
         <div class="pk5e-guide-head">

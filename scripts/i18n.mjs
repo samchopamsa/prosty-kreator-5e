@@ -144,7 +144,7 @@ const STRINGS = {
     "check.inventory": "Something in the inventory",
     "check.inventoryHint": "No starting equipment was taken.",
     "check.portrait": "Portrait chosen",
-    "guide.skippedTitle": "{0}: choices were skipped",
+    "guide.skippedTitle": "Choices were skipped",
     "guide.skippedBody": "The option dialogs for the {0} were closed without picking anything. Are you sure you want to continue? Remove it and add it again to set every option.",
     "guide.skippedFix": "Remove and add the {0} again",
 
@@ -341,7 +341,7 @@ const STRINGS = {
     "check.inventory": "Coś w ekwipunku",
     "check.inventoryHint": "Nie wzięto ekwipunku startowego.",
     "check.portrait": "Wybrany portret",
-    "guide.skippedTitle": "{0}: pominięto wybory",
+    "guide.skippedTitle": "Pominięto wybory",
     "guide.skippedBody": "Zamknięto okna opcji dla {0} bez wskazania wyboru. Na pewno chcesz kontynuować? Usuń i dodaj ponownie, by określić wszystkie opcje.",
     "guide.skippedFix": "Usuń i dodaj ponownie ({0})",
 

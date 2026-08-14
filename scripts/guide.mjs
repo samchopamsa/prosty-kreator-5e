@@ -751,11 +751,22 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       languageSummary = `${shown}${rest}`;
     }
 
-    const entryFor = (item, label, summary) => ({
+    // Which items were added with their choice dialogs skipped. Looked up once
+    // per render and attached to the entry itself: collected at the bottom of
+    // the panel the warning sat a long way from the thing it was about, and
+    // with two classes there was no telling which one it meant.
+    const skippedIds = new Set(itemsWithSkippedChoices(actor).map((problem) => problem.id));
+
+    const entryFor = (item, label, summary, alsoCheck = null) => ({
       itemId: item.id,
       name: label ?? item.name,
       img: item.img ?? "",
-      summary: summary ?? shortSummary(item)
+      summary: summary ?? shortSummary(item),
+      // A subclass is shown inside its class's entry, so its skipped choices
+      // have to be reported there - removing the class takes it with it anyway.
+      skipped: skippedIds.has(item.id) || (alsoCheck ? skippedIds.has(alsoCheck.id) : false),
+      kind: t(`check.kind.${item.type}`),
+      kindOf: t(`check.kindOf.${item.type}`)
     });
 
     const steps = [
@@ -797,7 +808,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         entries: classes.map((item) => {
           const sub = subclassFor(item);
           const label = `${item.name} ${item.system?.levels ?? 1}${sub ? ` - ${sub.name}` : ""}`;
-          return entryFor(item, label, shortSummary(sub) || shortSummary(item));
+          return entryFor(item, label, shortSummary(sub) || shortSummary(item), sub);
         }),
         multiclass: classes.length > 1,
         totalLevel,
@@ -860,6 +871,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       step.showHelp = showHelp && !!step.help;
       step.helpOpen = this._help[step.key] ?? helpDefault;
       step.importing = this._importing === step.key;
+      // Marks the step head, so the problem is visible before scrolling down.
+      step.hasSkipped = (step.entries ?? []).some((entry) => entry.skipped);
     }
 
     const report = checkCharacter(actor);
@@ -881,14 +894,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
       // and burying it among the other warnings buried the only actionable item.
-      skipped: itemsWithSkippedChoices(actor).map((problem) => ({
-        ...problem,
-        step: problem.type === "background" ? "background" : problem.type === "class" || problem.type === "subclass" ? "class" : "species",
-        // Two forms: "(pochodzenie)" after the verb, "dla pochodzenia" after
-        // the preposition. English repeats the same word for both.
-        kind: t(`check.kind.${problem.type}`),
-        kindOf: t(`check.kindOf.${problem.type}`)
-      })),
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
       players: game.users

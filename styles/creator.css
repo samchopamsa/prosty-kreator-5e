@@ -858,3 +858,13 @@
   margin-bottom: 6px;
 }
 .pk5e-skipped-item button { width: 100%; margin-top: 6px; font-size: 12px; }
+
+/* Exclamation instead of a tick: the step is filled in, but not correctly, and
+   a tick beside a problem reads as approval. */
+.pk5e-guide-alert {
+  margin-left: auto;
+  font-weight: 700;
+  color: rgba(220, 90, 90, 0.95);
+  font-size: 15px;
+  line-height: 1;
+}
