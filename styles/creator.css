@@ -813,7 +813,39 @@
   background: rgba(128, 128, 128, 0.1);
 }
 
-/* Tables in class descriptions overflow badly at this width. */
-.pk5e-panel-detail table { width: 100%; font-size: 11px; table-layout: fixed; }
-.pk5e-panel-detail td,
-.pk5e-panel-detail th { word-break: break-word; }
+/* Class progression tables have a column per spell level and will never fit
+   340px. Squeezing them (fixed layout, wrapped words) turns them into a grey
+   mush; letting them scroll sideways keeps them readable, so the table gets its
+   own horizontal scroll while the panel itself never scrolls sideways. */
+.pk5e-panel-detail { overflow-x: hidden; }
+
+.pk5e-panel-detail table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin: 6px 0;
+  /* Nudges the scrollbar into view on hover, so it is discoverable. */
+  scrollbar-width: thin;
+}
+.pk5e-panel-detail th,
+.pk5e-panel-detail td {
+  white-space: nowrap;
+  padding: 1px 5px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+}
+.pk5e-panel-detail th { font-weight: 600; }
+
+/* The first column is the level, and it is what you look for when scrolled
+   right, so it stays put. */
+.pk5e-panel-detail tbody td:first-child,
+.pk5e-panel-detail thead th:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-bg, #1b1b1d);
+}
+
+/* Long feature names in prose would otherwise widen the panel. */
+.pk5e-panel-detail p,
+.pk5e-panel-detail li { overflow-wrap: anywhere; }

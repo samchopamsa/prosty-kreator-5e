@@ -36,6 +36,16 @@ const TITLE_MATCH = /import\s+classes/i;
  */
 const BULK_THRESHOLD = 8;
 
+/**
+ * Highlights are collected for this long before deciding what to show.
+ *
+ * Clicking a subclass highlights its parent class as well. Whether both land in
+ * one batch of mutations or two is not something we control, so we gather for a
+ * moment and then choose - which also stops the panel flickering through the
+ * class on the way to the subclass.
+ */
+const SETTLE_MS = 60;
+
 function titleOf(app) {
   return app.querySelector(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
 }
@@ -84,6 +94,27 @@ export function watchImporter({ onSelect, onClose } = {}) {
   let app = null;
   let inner = null;
   let stopped = false;
+  let pending = [];
+  let timer = null;
+
+  /**
+   * Decides what the player actually asked to read.
+   *
+   * A subclass always wins over a class, because highlighting a subclass drags
+   * its parent along: the class is a side effect of the click, not the click.
+   */
+  const settle = () => {
+    timer = null;
+    const rows = pending;
+    pending = [];
+    if (!rows.length) return;
+
+    const subclasses = rows.filter((r) => r.type === "subclass");
+    const chosen = subclasses.length
+      ? subclasses[subclasses.length - 1]
+      : rows[rows.length - 1];
+    onSelect?.(chosen);
+  };
 
   const attach = (candidate) => {
     if (stopped || app === candidate) return;
@@ -104,8 +135,14 @@ export function watchImporter({ onSelect, onClose } = {}) {
 
       if (!picked.length || picked.length > BULK_THRESHOLD) return;
 
-      const row = readRow(picked[picked.length - 1]);
-      if (row) onSelect?.(row);
+      for (const el of picked) {
+        const row = readRow(el);
+        if (row) pending.push(row);
+      }
+      if (!pending.length) return;
+
+      clearTimeout(timer);
+      timer = setTimeout(settle, SETTLE_MS);
     });
 
     inner.observe(app, {
@@ -141,6 +178,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
 
   return () => {
     stopped = true;
+    clearTimeout(timer);
     inner?.disconnect();
     outer.disconnect();
   };

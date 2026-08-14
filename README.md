@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.32.0**
+- Wersja modułu: **1.32.1**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -178,6 +178,10 @@ macierzystą. Wszystkie cztery są w znacznikach 5etools: nazwa w `span.ve-col-9
 (pogrubiona dla klas), klasa macierzysta w `title="Class: …"`, kod źródła jako
 sufiks klasy CSS `ve-source__XPHB`. Zaznaczenie oznaczane jest klasą
 `list-multi-selected`.
+
+Kliknięcie podklasy zaznacza w importerze także jej klasę macierzystą, więc panel
+zbiera zaznaczenia przez chwilę i **zawsze wybiera podklasę** — klasa jest wtedy
+skutkiem ubocznym kliknięcia, nie jego celem.
 
 Dopasowanie do kompendium: **dokładna nazwa w obrębie tej samej klasy macierzystej**.
 Kod podręcznika rozstrzyga tylko remisy. Mierzone na 127 wpisach — trafiło wszystkie.
@@ -500,7 +504,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.32.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.32.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
