@@ -19,7 +19,7 @@ const STRINGS = {
   en: {
     "guide.title": "New Character",
     "guide.intro":
-      "Seven steps. Each one opens the same dialog the character sheet uses, so anything you have installed works exactly as usual. Those windows appear on top of this one - close them and come back here.",
+      "Seven steps, in order. Some of them hand you over to the importer, which opens as its own separate window on top of this panel - it is not part of the creator, and it may ask several questions of its own. Work through it, close it, and come back here: this panel keeps track of what has already reached the character sheet.",
     "guide.missing": "This character no longer exists.",
     "guide.ownership": "Ownership and filing",
     "guide.player": "Player",
@@ -39,6 +39,16 @@ const STRINGS = {
     "step.abilities": "Ability scores",
     "step.languages": "Languages",
     "step.portrait": "Portrait",
+
+    // Object form of the step names, for "Choose ...", "Set ...", "Add ...".
+    // English has no inflection, so these repeat the labels above; Polish does,
+    // and without them the buttons read like a menu heading rather than a task.
+    "stepAcc.species": "Species",
+    "stepAcc.background": "Background",
+    "stepAcc.class": "Class",
+    "stepAcc.abilities": "Ability scores",
+    "stepAcc.languages": "Languages",
+    "stepAcc.portrait": "Portrait",
 
     "guide.optional": "optional",
     "guide.whatIsThis": "What is this?",
@@ -177,7 +187,7 @@ const STRINGS = {
   pl: {
     "guide.title": "Nowa postać",
     "guide.intro":
-      "Siedem kroków. Każdy otwiera to samo okno, którego używa karta postaci, więc wszystko, co masz zainstalowane, działa jak zwykle. Te okna pojawiają się na wierzchu - zamknij je i wróć tutaj.",
+      "Siedem kroków, po kolei. Część z nich przekazuje cię do importera, który otwiera się jako osobne okno nad tym panelem - nie jest częścią kreatora i potrafi zadać kilka własnych pytań. Przejdź przez nie, zamknij je i wróć tutaj: panel pilnuje, co już trafiło na kartę postaci.",
     "guide.missing": "Ta postać już nie istnieje.",
     "guide.ownership": "Właściciel i folder",
     "guide.player": "Gracz",
@@ -185,10 +195,10 @@ const STRINGS = {
     "guide.nobody": "— jeszcze nikt —",
     "guide.folder": "Folder",
     "guide.noFolder": "— brak —",
-    "guide.setDefaultFolder": "Twórz tu nowe postacie",
-    "guide.unsetDefaultFolder": "Przestań tu tworzyć nowe postacie",
+    "guide.setDefaultFolder": "Od teraz twórz nowe postacie w tym folderze",
+    "guide.unsetDefaultFolder": "Przestań tu odkładać nowe postacie",
     "guide.defaultFolderIs": "Nowe postacie trafiają do \"{0}\".",
-    "guide.noDefaultFolder": "Nowe postacie nie są nigdzie katalogowane.",
+    "guide.noDefaultFolder": "Nowe postacie nie trafiają automatycznie do żadnego folderu.",
 
     "step.name": "Imię",
     "step.species": "Gatunek",
@@ -198,13 +208,20 @@ const STRINGS = {
     "step.languages": "Języki",
     "step.portrait": "Portret",
 
-    "guide.optional": "opcjonalne",
+    "stepAcc.species": "gatunek",
+    "stepAcc.background": "pochodzenie",
+    "stepAcc.class": "klasę",
+    "stepAcc.abilities": "atrybuty",
+    "stepAcc.languages": "języki",
+    "stepAcc.portrait": "portret",
+
+    "guide.optional": "opcjonalny",
     "guide.whatIsThis": "Co to jest?",
     "guide.importing":
       "Trwa import. Poczekaj, aż okno importu skończy pracę, i zamknij je - po drodze mogą pojawić się kolejne wybory.",
-    "guide.choose": "Wybierz: {0}",
-    "guide.set": "Ustaw: {0}",
-    "guide.addOptional": "Dodaj: {0} (opcjonalnie)",
+    "guide.choose": "Wybierz {0}",
+    "guide.set": "Ustaw {0}",
+    "guide.addOptional": "Dodaj {0} (opcjonalnie)",
     "guide.change": "Zmień",
     "guide.remove": "Usuń",
     "guide.referenceTitle": "Nie wiesz, którą klasę wybrać?",
@@ -220,32 +237,32 @@ const STRINGS = {
     "guide.postToChat": "Wyślij na czat",
     "guide.finalize": "Zakończ",
     "guide.finishFirst": "Najpierw dokończ pozostałe kroki",
-    "guide.multiclass": "Poziom postaci {0}, w {1} klasach.",
+    "guide.multiclass": "Poziom postaci: {0}, rozłożony na {1} klas(y).",
     "guide.languageCount": "Języki: {0}",
     "guide.languageCountOne": "1 język",
     "guide.portraitSet": "Portret ustawiony",
 
     "help.name":
-      "Na razie tylko nazwa. Możesz ją zmienić w każdej chwili i nic od niej nie zależy.",
+      "Wpisz cokolwiek - to tylko imię. Możesz je zmienić w dowolnym momencie i nic innego od niego nie zależy.",
     "help.species":
-      "Pochodzenie rodowe twojej postaci - krasnolud, elf, człowiek i tak dalej. Określa rozmiar i szybkość marszu, zwykle dodaje też coś wrodzonego: widzenie w ciemności, odporność, drobną zdolność raz na dzień. W zasadach z 2024 gatunek NIE zmienia atrybutów - te podnosi pochodzenie.",
+      "Rodowód twojej postaci - krasnolud, elf, człowiek i tak dalej. Określa rozmiar i szybkość marszu, zwykle dodaje też coś wrodzonego: widzenie w ciemności, odporność, drobną zdolność raz na dzień. W zasadach z 2024 gatunek NIE zmienia atrybutów - te podnosi pochodzenie.",
     "help.background":
       "Czym twoja postać zajmowała się przed przygodą: żołnierz, uczony, przestępca. Daje dwie biegłości w umiejętnościach, narzędzie, atut startowy oraz podwyższenia atrybutów - jeden o 2 i drugi o 1 albo trzy po 1. Wybierz takie, którego umiejętności pasują do postaci, jaką sobie wyobrażasz.",
     "help.class":
       "Twoja rola w drużynie i największa decyzja w całym procesie. Określa, ile wytrzymasz, czym umiesz walczyć i co potrafisz w starciu. Wojownik i Barbarzyńca najłatwiej wybaczają błędy przy pierwszej postaci; Czarodziej i Druid wymagają pilnowania największej liczby rzeczy. Importer pyta jednocześnie o podklasę i poziom, więc postać może zaczynać wyżej niż na pierwszym - na pierwszym poziomie podklasy jeszcze nie ma.",
     "help.abilities":
-      "Sześć liczb opisujących surowy talent. Siła do ciosów i dźwigania, Zręczność do celności i refleksu, Kondycja do wytrzymałości i punktów życia, Intelekt do wiedzy, Mądrość do spostrzegawczości i silnej woli, Charyzma do siły osobowości. W grze liczy się modyfikator obok wyniku: 10 daje +0, a każde dwa punkty w górę lub w dół przesuwają go o jeden. Najwyższą liczbę wpisz tam, gdzie twoja klasa korzysta najczęściej.",
+      "Sześć liczb opisujących surowy talent. Siła do ciosów i dźwigania, Zręczność do celności i refleksu, Kondycja do wytrzymałości i punktów życia, Inteligencja do wiedzy, Mądrość do spostrzegawczości i silnej woli, Charyzma do siły osobowości. W grze liczy się modyfikator obok wyniku: 10 daje +0, a każde dwa punkty w górę lub w dół przesuwają go o jeden. Najwyższy wynik wpisz w ten atrybut, z którego twoja klasa korzysta najczęściej.",
     "help.languages":
       "Wspólnym mówią wszyscy. Twoja postać zna jeszcze dwa języki - możesz je wylosować albo wybrać. Języki rzadko rozstrzygają walkę, ale otwierają drzwi, gdy drużyna spotka kogoś, kto nie mówi Wspólnym.",
     "help.portrait":
-      "Opcjonalne. Obrazek twojej postaci, widoczny na karcie i na żetonie.",
+      "Nieobowiązkowy. Obrazek twojej postaci, widoczny na karcie i na żetonie.",
 
     "blurb.species": "Określa szybkość, rozmiar i cechy wrodzone.",
     "blurb.background": "Daje biegłości, atut startowy i podwyższenia atrybutów.",
     "blurb.class": "Co twoja postać potrafi w walce i poza nią.",
-    "blurb.abilities": "Importery to pomijają, więc robimy to tutaj, na koniec.",
+    "blurb.abilities": "Importery pomijają ten krok, więc robimy go tutaj, na końcu.",
     "blurb.languages": "Wspólny plus dwa kolejne. Wylosuj je albo wybierz z tabeli.",
-    "blurb.portrait": "Opcjonalne. Obrazek widoczny na karcie i na żetonie.",
+    "blurb.portrait": "Nieobowiązkowy. Obrazek widoczny na karcie i na żetonie.",
 
     "flow.prompt":
       " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz Use Plutonium, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
@@ -262,11 +279,11 @@ const STRINGS = {
     "check.background": "Pochodzenie",
     "check.backgroundHint": "Daje biegłości i atut startowy.",
     "check.class": "Klasa na 1. poziomie lub wyższym",
-    "check.classHint": "Bez niej postać nie ma żadnych cech klasowych.",
+    "check.classHint": "Bez niej postać nie ma żadnych zdolności klasowych.",
     "check.hp": "Punkty życia powyżej zera",
-    "check.hpHint": "Zwykle znaczy, że przerwano okno awansu klasy.",
+    "check.hpHint": "Zwykle oznacza, że przerwano okno rozwoju przy dodawaniu klasy.",
     "check.speed": "Ustawiona szybkość",
-    "check.speedHint": "Pochodzi od gatunku; zero znaczy, że się nie zastosowała.",
+    "check.speedHint": "Pochodzi od gatunku; zero oznacza, że gatunek nigdy się nie zastosował.",
     "check.abilities": "Przypisane atrybuty",
     "check.abilitiesHint": "Importery zostawiają wszędzie dziesiątki. Użyj ostatniego kroku.",
     "check.language": "Przynajmniej jeden język",
@@ -290,7 +307,7 @@ const STRINGS = {
     "abilities.bonusMeasured": "Premie liczone względem bazy zapisanej ostatnim razem.",
     "abilities.bonusAdvancements":
       "Premie odczytane z podwyższeń zadeklarowanych w przedmiotach tej postaci; to, co jest na karcie, jest pomijane.",
-    "abilities.bonusNone": "Wartości zostaną wpisane dokładnie tak, jak je przydzielisz.",
+    "abilities.bonusNone": "Wartości zostaną wpisane dokładnie tak, jak je przydzielisz, bez doliczania czegokolwiek.",
     "abilities.methodStandard": "Zestaw standardowy",
     "abilities.methodPointBuy": "Zakup punktowy",
     "abilities.methodRoll": "Rzut kośćmi",
@@ -299,7 +316,7 @@ const STRINGS = {
     "abilities.pointsLeft": "Pozostało punktów",
     "abilities.of": "z",
     "abilities.colAbility": "Atrybut",
-    "abilities.colNow": "Teraz",
+    "abilities.colNow": "Obecnie",
     "abilities.colAssign": "Przydziel",
     "abilities.colBonus": "Premia",
     "abilities.colResult": "Wynik",
@@ -320,11 +337,11 @@ const STRINGS = {
     "lang.rolledSoFar": "dotychczasowe rzuty",
     "lang.clear": "wyczyść",
     "lang.pick": "Wybierz języki",
-    "lang.commonNote": "Wspólny znany jest zawsze. Wybrano poza nim:",
-    "lang.overLimit": "To więcej niż zwyczajowe dwa - poprosimy o potwierdzenie.",
+    "lang.commonNote": "Wspólny znasz zawsze. Poza nim wybrano:",
+    "lang.overLimit": "To więcej niż zwyczajowe dwa - zapytamy o potwierdzenie przed zapisem.",
     "lang.search": "Szukaj języków...",
     "lang.standard": "Języki standardowe",
-    "lang.expanded": "Rozszerzone",
+    "lang.expanded": "Języki rozszerzone",
     "lang.footer": "Zmieniane są wyłącznie języki. Reszta karty pozostaje nietknięta.",
     "lang.save": "Zapisz"
   }

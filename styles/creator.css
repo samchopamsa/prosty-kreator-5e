@@ -699,6 +699,15 @@
 .pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }
 
 .pk5e-reference-callout { margin-bottom: 4px; }
-.pk5e-reference-callout button { width: 100%; margin-top: 6px; font-size: 12px; }
+
+/* A text link, not a button. A second full-width button here looked like an
+   alternative way of choosing the class, which is exactly what it is not. */
+.pk5e-reference-link {
+  display: inline-block;
+  margin-top: 6px;
+  opacity: 1;
+  font-weight: 600;
+}
+.pk5e-reference-link:hover { opacity: 0.75; }
 
 .pk5e-lang-switch { display: flex; gap: 2px; flex: 0 0 auto; }

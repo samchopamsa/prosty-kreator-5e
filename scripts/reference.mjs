@@ -83,6 +83,22 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
   };
 
   /**
+   * Closes the reading window if it is open.
+   *
+   * Called once a class has actually landed on the character: at that point the
+   * window has done its job, and leaving it over the finished sheet only asks
+   * the player to tidy up after us.
+   */
+  static closeIfOpen() {
+    try {
+      const open = foundry.applications.instances?.get(this.DEFAULT_OPTIONS.id);
+      if (open) open.close();
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not close the reference window`, err);
+    }
+  }
+
+  /**
    * Builds the merged tree.
    *
    * Branch key is the top folder NAME, so identical folders in different

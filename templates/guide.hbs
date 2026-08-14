@@ -75,7 +75,8 @@
           <p>
             {{pkT "guide.referenceBody"}}
           </p>
-          <button type="button" data-action="openReference" data-kind="class">
+          <button type="button" class="pk5e-link pk5e-reference-link"
+                  data-action="openReference" data-kind="class">
             {{pkT "guide.referenceButton"}}
           </button>
         </div>
@@ -133,10 +134,10 @@
         {{#unless importing}}
           {{#unless done}}
             {{#if removable}}
-            <button type="button" data-action="addStep" data-step="{{key}}">{{pkT "guide.choose" label}}</button>
+            <button type="button" data-action="addStep" data-step="{{key}}">{{pkT "guide.choose" actionLabel}}</button>
             {{else}}
             <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">
-              {{#if optional}}{{pkT "guide.addOptional" label}}{{else}}{{pkT "guide.set" label}}{{/if}}
+              {{#if optional}}{{pkT "guide.addOptional" actionLabel}}{{else}}{{pkT "guide.set" actionLabel}}{{/if}}
             </button>
             {{/if}}
           {{/unless}}

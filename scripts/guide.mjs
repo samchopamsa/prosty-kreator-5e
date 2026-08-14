@@ -761,6 +761,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "species",
         number: 2,
         label: t("step.species"),
+        actionLabel: t("stepAcc.species"),
         icon: "fa-dna",
         help: t("help.species") + importFlowNote(),
         removable: true,
@@ -772,6 +773,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "background",
         number: 3,
         label: t("step.background"),
+        actionLabel: t("stepAcc.background"),
         icon: "fa-scroll",
         help: t("help.background") + importFlowNote(),
         removable: true,
@@ -783,6 +785,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "class",
         number: 4,
         label: t("step.class"),
+        actionLabel: t("stepAcc.class"),
         icon: "fa-shield-halved",
         reference: true,
         levelUp: classes.length > 0,
@@ -802,6 +805,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "abilities",
         number: 5,
         label: t("step.abilities"),
+        actionLabel: t("stepAcc.abilities"),
         icon: "fa-dice-d20",
         help: t("help.abilities"),
         removable: false,
@@ -819,6 +823,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "languages",
         number: 6,
         label: t("step.languages"),
+        actionLabel: t("stepAcc.languages"),
         icon: "fa-comments",
         help: t("help.languages"),
         removable: false,
@@ -833,6 +838,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         key: "portrait",
         number: 7,
         label: t("step.portrait"),
+        actionLabel: t("stepAcc.portrait"),
         icon: "fa-image",
         removable: false,
         optional: true,
@@ -979,14 +985,22 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * before the click completed, so the first click appeared to do nothing.
    */
   registerWatchers() {
-    const onItem = (doc) => {
+    const onItem = (doc, added = false) => {
       if (doc?.parent?.id !== this.actorId) return;
       // Items still arriving means the import is still running.
       if (this._importing) this._lastActivity = Date.now();
+
+      // The reading window exists to help with one decision. Once the class is
+      // on the sheet the decision is made, so it goes away by itself rather
+      // than sitting over the importer's remaining dialogs. Only on arrival:
+      // removing a class is a reason to go back to reading, not to stop.
+      if (added && ["class", "subclass"].includes(doc.type)) ClassReference.closeIfOpen();
+
       this.render();
     };
-    for (const hook of ["createItem", "deleteItem", "updateItem"]) {
-      this._hooks.push([hook, Hooks.on(hook, onItem)]);
+    this._hooks.push(["createItem", Hooks.on("createItem", (doc) => onItem(doc, true))]);
+    for (const hook of ["deleteItem", "updateItem"]) {
+      this._hooks.push([hook, Hooks.on(hook, (doc) => onItem(doc, false))]);
     }
 
     const onActor = (doc, changed = {}) => {
