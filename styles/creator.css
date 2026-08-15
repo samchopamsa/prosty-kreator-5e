@@ -1052,3 +1052,46 @@
 @media (prefers-reduced-motion: reduce) {
   .pk5e-sheet-button.is-unfinished { animation: none; }
 }
+
+/* ---------------------------------------------------------------------------
+   Level-up window
+   --------------------------------------------------------------------------- */
+
+.pk5e-levelup-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.pk5e-levelup-head img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border: 1px solid var(--pk5e-line);
+  border-radius: 3px;
+}
+.pk5e-levelup-head h3 { margin: 0; font-size: 15px; }
+
+.pk5e-levelup-go {
+  width: 100%;
+  margin-top: 10px;
+  padding: 5px 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pk5e-levelup-changes { margin-top: 12px; }
+.pk5e-levelup-changes h4 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--pk5e-line);
+  padding-bottom: 3px;
+}
+.pk5e-levelup-changes ul { margin: 0; padding-left: 16px; }
+
+/* The gains are the point of the window, so they are marked out from the rest
+   of the text rather than left as a plain list. */
+.pk5e-change { margin: 3px 0; font-size: 12px; }
+.pk5e-change.is-level,
+.pk5e-change.is-newClass { font-weight: 700; }
+.pk5e-change.is-hp { color: var(--pk5e-accent); }

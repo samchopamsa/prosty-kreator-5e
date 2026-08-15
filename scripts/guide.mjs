@@ -43,9 +43,23 @@ const AUTO_NAME = /^New Character for .+$/;
  * Written from the rules themselves rather than copied from anywhere.
  */
 
+/** The names the module gives a character before anyone has chosen one. */
+export function hasPlaceholderName(actor) {
+  const name = (actor?.name ?? "").trim();
+  // An empty name is not a chosen one either.
+  if (!name) return true;
+  return name === DEFAULT_NAME || AUTO_NAME.test(name);
+}
+
 export function missingSteps(actor) {
   if (!actor || actor.type !== "character") return [];
   const missing = [];
+
+  // A character always has a name, so this used to be treated as done from the
+  // start - and the count on the sheet button was one short of what the panel
+  // showed. "New Character" is a name nobody chose, and choosing one is a step.
+  if (hasPlaceholderName(actor)) missing.push("name");
+
   for (const [step, config] of Object.entries(STEP_CONFIG)) {
     const has = actor.items.some((i) => config.itemTypes.includes(i.type));
     if (!has) missing.push(step);
@@ -355,7 +369,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         // Every step is counted, optional ones included, because the intro
         // promises seven and the numbering shows seven. A tally that quietly
         // drops the portrait reads as a contradiction in the same window.
-        const done = steps.filter((step) => step.done).length + 1;
+        //
+        // The name counts as done once it is not the placeholder we gave it,
+        // which is the same rule the sheet button's count uses.
+        const named = hasPlaceholderName(actor) ? 0 : 1;
+        const done = steps.filter((step) => step.done).length + named;
         return t("guide.progress", done, steps.length + 1);
       })()
     };

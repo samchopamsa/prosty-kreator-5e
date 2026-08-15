@@ -333,7 +333,12 @@ export function experienceTable() {
  * character that is meant to start at level five. Experience is only ever raised,
  * never lowered, so nothing already earned is thrown away.
  */
-export async function grantExperienceFor(actor) {
+/**
+ * @param {Actor}       actor
+ * @param {number|null} wanted  Target level. When given, the player is not asked
+ *                              again - the level-up window has already chosen.
+ */
+export async function grantExperienceFor(actor, wanted = null) {
   const table = experienceTable();
   const currentXp = Number(actor.system?.details?.xp?.value ?? 0);
   const currentLevel = actor.items
@@ -357,7 +362,16 @@ export async function grantExperienceFor(actor) {
     return true;
   }
 
-  let target = null;
+  let target = Number(wanted) || null;
+  if (target) {
+    const needed = table[target - 1] ?? 0;
+    if (needed > currentXp) {
+      await actor.update({ "system.details.xp.value": needed });
+      ui.notifications.info(`Experience set to ${needed} for level ${target}.`);
+    }
+    return true;
+  }
+
   try {
     target = await DialogV2.prompt({
       window: { title: "Level up" },

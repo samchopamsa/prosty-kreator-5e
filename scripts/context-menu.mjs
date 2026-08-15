@@ -10,6 +10,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
+import { LevelUpGuide } from "./levelup.mjs";
 
 const HOOKS = ["getActorContextOptions", "getActorDirectoryEntryContext"];
 
@@ -40,6 +41,25 @@ function addEntry(options) {
         ui.notifications.info(`Still to do: ${missing.join(", ")}.`);
       }
       CreationGuide.open(actor.id);
+    }
+  });
+
+  // The mirror image: offered only once creation is finished, so the two never
+  // appear together and there is nothing to choose between.
+  options.push({
+    pk5e: true,
+    name: "Level up",
+    icon: '<i class="fa-solid fa-arrow-up-right-dots"></i>',
+    condition: (entry) => {
+      const actor = actorFromEntry(entry);
+      if (!actor || !actor.isOwner || actor.type !== "character") return false;
+      if (isIncomplete(actor)) return false;
+      if (!game.settings.get(MODULE_ID, "levelUpButton")) return false;
+      return Number(actor.system?.details?.level ?? 0) < 20;
+    },
+    callback: (entry) => {
+      const actor = actorFromEntry(entry);
+      if (actor) LevelUpGuide.open(actor.id);
     }
   });
 }

@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.46.0**
+- Wersja modułu: **1.47.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -19,6 +19,7 @@ mechanizm Advancement działają dokładnie tak jak zwykle.
 - [Siedem kroków panelu](#siedem-kroków-panelu)
 - [Panel opisów przy importerze](#panel-opisów-przy-importerze)
 - [Okno referencji klas i podklas](#okno-referencji-klas-i-podklas)
+- [Okno awansu](#okno-awansu)
 - [Kontrola gotowości postaci](#kontrola-gotowości-postaci)
 - [Języki interfejsu](#języki-interfejsu)
 - [Ustawienia](#ustawienia)
@@ -265,6 +266,44 @@ Oba wklej do makra typu **Script**, ustaw `PACK_ID` i uruchom. Pierwsze niczego 
 drugie prosi o potwierdzenie.
 
 ---
+
+## Okno awansu
+
+Osobne okno dla postaci, która już gra. Otwierane przyciskiem na karcie (obok
+przycisku kreatora, pojawia się dopiero gdy tworzenie jest ukończone) albo z menu
+prawego klawisza. Można je wyłączyć ustawieniem **Show the level-up button**.
+
+### Po co, skoro karta ma własny przycisk
+
+Trzy rzeczy, których sam przycisk nie daje:
+
+**Mówi, co się zmieniło.** Foundry milczy na ten temat — gracz przeklikuje kilka okien
+i ląduje na karcie różnej w sposób, którego nikt nie wypisał. Bierzemy odczyt przed
+i po, i pokazujemy różnicę: poziom, punkty życia, nowe cechy, komórki zaklęć, biegłości,
+atrybuty, języki. **Nie przewidujemy, co poziom powinien dać** — to wymagałoby
+modelowania zasad i myliłoby się przy każdym dodatku. Pokazujemy, co faktycznie zaszło.
+
+**Wyłapuje pominięte wybory.** Czujka okien Plutonium działa tylko przy otwartym oknie
+modułu — więc gracz awansujący normalnie nie był chroniony wcale. To zamyka tę lukę
+i jest chyba mocniejszym powodem istnienia tego okna niż sama wygoda.
+
+**Awansuje o kilka poziomów.** Importer robi po jednym; gracz wracający po dwóch
+sesjach przerwy chce trzech. Okno pokazuje „poziom 2 z 3", a zmiany narastają.
+
+### Kiedy odczytujemy kartę
+
+Po sygnale `Import Complete` (`import-end.mjs`). Przedmioty lądują na karcie w połowie
+łańcucha okien, więc odczyt wcześniej pokazałby pół poziomu. Zapasowo dwuminutowy limit,
+gdyby sygnał nie przyszedł — rezygnacja jest normalnym wynikiem, nie awarią.
+
+### Czego nie robimy
+
+**Nie wybieramy klasy.** Okno „Level Up" Plutonium wypisuje klasy postaci z przyciskiem
+przy każdej i obsługuje wieloklasowość. Robi to dobrze, a powielenie byłoby kolejną
+rzeczą do utrzymywania w zgodzie.
+
+**Nie zapowiadamy, co da poziom.** Plutonium spłaszcza część wyborów, więc zapowiedź
+byłaby zgrubna. Podsumowanie po fakcie jest dokładne.
 
 ## Kontrola gotowości postaci
 
@@ -567,6 +606,7 @@ characterCreator.complete(actorId)  // samo okno atrybutów
 characterCreator.languages(actorId) // samo okno języków
 characterCreator.reference()        // szerokie okno referencji
 characterCreator.importerPanel()    // wąski panel opisów
+characterCreator.levelUp(actorId)   // okno awansu
 ```
 
 Dodatkowo `characterCreator.CreationGuide` i `.CompleteCharacter` — klasy, gdyby trzeba było
@@ -630,6 +670,9 @@ prosty-kreator-5e/
 │   ├── browser-tweaks.mjs   zawężenie dymków w Compendium Browser
 │   ├── summary.mjs          karta postaci na czat
 │   ├── option-watch.mjs     czujka na pominięte wybory w oknach Plutonium
+│   ├── levelup.mjs          okno awansu
+│   ├── snapshot.mjs         odczyt stanu postaci i porównanie przed/po
+│   ├── import-end.mjs       oczekiwanie na sygnał `Import Complete`
 │   ├── migrate.mjs          numer schematu flag i migracje
 │   ├── debug.mjs            characterCreator.debug() — zrzut stanu wykrywania
 │   ├── trace.mjs            sam log diagnostyczny, bez zależności
@@ -815,7 +858,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.46.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.47.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

@@ -18,6 +18,7 @@ import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
+import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
 Hooks.once("init", () => {
@@ -231,6 +232,18 @@ Hooks.once("ready", () => {
     default: false
   });
 
+  game.settings.register(MODULE_ID, "levelUpButton", {
+    name: "Show the level-up button on the character sheet",
+    hint:
+      "Opens this module's level-up window: it works through the importer one level at a time, " +
+      "reports what the character gained, and notices choice dialogs closed too early. Turn off " +
+      "to leave levelling to the sheet's own controls.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   // The player's own choice. Hidden from the settings screen because it is set
   // from the panel footer, where they are actually looking at the colours.
   game.settings.register(MODULE_ID, "theme", {
@@ -247,6 +260,7 @@ Hooks.once("ready", () => {
     languages: (actorId) => new LanguagePicker({ actorId }).render(true),
     reference: () => new ClassReference().render(true),
     importerPanel: () => openImporterPanel(),
+    levelUp: (actorId) => openLevelUp(actorId),
     debug: (actorId) => debugActor(actorId),
     debugCompendiums: () => debugCompendiums(),
     setDebug: (on = true) => {
@@ -255,7 +269,8 @@ Hooks.once("ready", () => {
     },
     CreationGuide,
     CompleteCharacter,
-    ImporterPanel
+    ImporterPanel,
+    LevelUpGuide
   };
   const mod = game.modules.get(MODULE_ID);
   if (mod) mod.api = api;

@@ -46,6 +46,8 @@ const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems } =
 const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mjs");
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
+const { hasPlaceholderName } = await import("../scripts/guide.mjs");
+const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -436,6 +438,108 @@ group("guide: a failure while preparing the panel", () => {
       throw new ReferenceError("classes is not defined");
     }).panelFailed,
     true
+  );
+});
+
+// --- the name step -----------------------------------------------------------
+
+group("guide: when a character counts as named", () => {
+  // The count on the sheet button was one short of the panel: a character
+  // always has a name, so the step was treated as done from the start. But the
+  // name we gave it is not a name anyone chose.
+  check("the default name", hasPlaceholderName({ name: "New Character" }), true);
+  check("the per-player default", hasPlaceholderName({ name: "New Character for Kamil" }), true);
+  check("a chosen name", hasPlaceholderName({ name: "Barosław" }), false);
+  check("a name that merely starts the same", hasPlaceholderName({ name: "New Characters Guild" }), false);
+  check("an empty name is not a chosen one", hasPlaceholderName({ name: "  " }), true);
+  check("no actor at all", hasPlaceholderName(null), true);
+});
+
+// --- what a level-up changed -------------------------------------------------
+
+group("snapshot: reporting what actually changed", () => {
+  const actor = ({ level = 1, hp = 12, items = [], classes = {}, slots = {}, skills = [], abilities = {}, saves = [], languages = [] }) => ({
+    system: {
+      details: { level },
+      attributes: { hp: { max: hp } },
+      spells: Object.fromEntries(Object.entries(slots).map(([k, v]) => [k, { max: v }])),
+      skills: Object.fromEntries(skills.map((k) => [k, { value: 1 }])),
+      abilities: Object.fromEntries(
+        Object.entries(abilities).map(([k, v]) => [k, { value: v, proficient: saves.includes(k) ? 1 : 0 }])
+      ),
+      traits: { languages: { value: languages } }
+    },
+    items: [
+      ...items.map((n) => ({ type: n.startsWith("spell/") ? "spell" : "feat", name: n.replace("spell/", "") })),
+      ...Object.entries(classes).map(([name, levels]) => ({ type: "class", name, system: { levels } }))
+    ]
+  });
+
+  const labels = (before, after) =>
+    compareSnapshots(takeSnapshot(before), takeSnapshot(after)).map((c) => `${c.kind}:${c.label}`);
+
+  check(
+    "a plain level: the class and the hit points",
+    labels(
+      actor({ hp: 12, classes: { Barbarian: 1 } }),
+      actor({ hp: 19, classes: { Barbarian: 2 } })
+    ),
+    ["level:Barbarian", "hp:hp"]
+  );
+  check(
+    "a level that grants a feature",
+    labels(
+      actor({ hp: 12, classes: { Barbarian: 1 }, items: ["Rage"] }),
+      actor({ hp: 19, classes: { Barbarian: 2 }, items: ["Rage", "Reckless Attack"] })
+    ),
+    ["level:Barbarian", "hp:hp", "item:Reckless Attack"]
+  );
+  check(
+    "taking a second class is reported as new, not as a level change",
+    labels(
+      actor({ classes: { Barbarian: 3 } }),
+      actor({ classes: { Barbarian: 3, Cleric: 1 } })
+    ),
+    ["newClass:Cleric"]
+  );
+  check(
+    "new spell slots",
+    labels(
+      actor({ classes: { Cleric: 1 }, slots: { spell1: 2 } }),
+      actor({ classes: { Cleric: 2 }, slots: { spell1: 3 } })
+    ),
+    ["level:Cleric", "slots:spell1"]
+  );
+  check(
+    "an ability increase",
+    labels(
+      actor({ classes: { Fighter: 3 }, abilities: { str: 15 } }),
+      actor({ classes: { Fighter: 4 }, abilities: { str: 17 } })
+    ),
+    ["level:Fighter", "ability:str"]
+  );
+  check(
+    "nothing changed, nothing reported",
+    labels(actor({ classes: { Bard: 2 } }), actor({ classes: { Bard: 2 } })),
+    []
+  );
+  // The case a set-difference would hide: a second copy of something already
+  // held is still something gained.
+  check(
+    "a second copy of a feature already held",
+    labels(
+      actor({ classes: { Fighter: 1 }, items: ["Fighting Style"] }),
+      actor({ classes: { Fighter: 1 }, items: ["Fighting Style", "Fighting Style"] })
+    ),
+    ["item:Fighting Style"]
+  );
+  check(
+    "hit points going down are reported too",
+    compareSnapshots(
+      takeSnapshot(actor({ hp: 20, classes: { Bard: 3 } })),
+      takeSnapshot(actor({ hp: 14, classes: { Bard: 2 } }))
+    ).map((c) => c.detail),
+    ["-6"]
   );
 });
 

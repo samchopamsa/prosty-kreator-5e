@@ -17,6 +17,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
+import { LevelUpGuide } from "./levelup.mjs";
 
 /** Actors whose panel has already been offered in this browser session. */
 const OFFERED = new Set();
@@ -113,14 +114,29 @@ function inject(app, html) {
     button.appendChild(badge);
   }
 
+  const buttons = [button];
+
+  // A second button, for a character that is finished and playing. Kept apart
+  // from the first: "build this character" and "this character has earned a
+  // level" are different errands, and one button doing both would have to guess.
+  if (!incomplete && game.settings.get(MODULE_ID, "levelUpButton")) {
+    buttons.push(
+      make("fa-arrow-up-right-dots", "Level up", () => LevelUpGuide.open(actor.id))
+    );
+  }
+
   if (restButton) {
     // Sized like the rest buttons beside it - same square, same spacing - but
     // not styled like them. Copying the class list outright made it disappear
     // into the row, which is the opposite of what a new player needs.
-    button.className = restButton.className;
-    button.classList.add("pk5e-sheet-button");
-    if (incomplete) button.classList.add("is-unfinished");
-    restButton.insertAdjacentElement("afterend", button);
+    let previous = restButton;
+    for (const el of buttons) {
+      el.className = restButton.className;
+      el.classList.add("pk5e-sheet-button");
+      if (incomplete && el === button) el.classList.add("is-unfinished");
+      previous.insertAdjacentElement("afterend", el);
+      previous = el;
+    }
     return;
   }
 
@@ -131,9 +147,11 @@ function inject(app, html) {
   }
   if (!anchor) return;
 
-  button.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
-  if (incomplete) button.classList.add("is-unfinished");
-  anchor.prepend(button);
+  for (const el of buttons.reverse()) {
+    el.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
+    if (incomplete && el === button) el.classList.add("is-unfinished");
+    anchor.prepend(el);
+  }
 }
 
 /**

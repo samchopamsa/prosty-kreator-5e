@@ -1,0 +1,84 @@
+<div class="pk5e-root">
+  <div class="pk5e-body">
+    <div class="pk5e-pane">
+
+      {{#if missing}}
+        <p class="pk5e-empty">{{pkT "guide.missing"}}</p>
+      {{else}}
+
+      <header class="pk5e-levelup-head">
+        {{#if actorImg}}<img src="{{actorImg}}" alt="">{{/if}}
+        <div>
+          <h3>{{actorName}}</h3>
+          <p class="pk5e-note">
+            {{#each classes}}{{name}} {{levels}}{{#unless @last}}, {{/unless}}{{/each}}
+          </p>
+        </div>
+      </header>
+
+      {{#if atMax}}
+        <p class="pk5e-empty">{{pkT "levelup.atMax"}}</p>
+      {{else}}
+
+        {{#unless inProgress}}
+        <p class="pk5e-lead">{{pkT "levelup.lead"}}</p>
+
+        <label class="pk5e-label" for="pk5e-target">{{pkT "levelup.target"}}</label>
+        <select id="pk5e-target" data-action="setTarget">
+          {{#each targets}}
+          <option value="{{level}}" {{#if selected}}selected{{/if}}>
+            {{pkT "levelup.targetOption" level count}}
+          </option>
+          {{/each}}
+        </select>
+
+        <button type="button" class="pk5e-levelup-go" data-action="levelOnce" {{#if busy}}disabled{{/if}}>
+          {{#if busy}}{{pkT "levelup.working"}}{{else}}{{pkT "levelup.start"}}{{/if}}
+        </button>
+        {{/unless}}
+
+        {{#if inProgress}}
+          <p class="pk5e-lead">{{progress}}</p>
+          {{#if busy}}
+          <p class="pk5e-note">{{pkT "levelup.waiting"}}</p>
+          {{/if}}
+        {{/if}}
+
+        {{#if changes}}
+        <section class="pk5e-levelup-changes">
+          <h4>{{pkT "levelup.gained"}}</h4>
+          <ul>
+            {{#each changes}}
+            <li class="pk5e-change is-{{kind}}">{{text}}</li>
+            {{/each}}
+          </ul>
+        </section>
+        {{/if}}
+
+        {{#if skipped}}
+        <section class="pk5e-skipped">
+          {{#each skipped}}
+          <div class="pk5e-callout pk5e-skipped-item">
+            <strong>{{pkT "option.title"}}</strong>
+            <p>{{text}}</p>
+            <button type="button" class="pk5e-link" data-action="dismissOption"
+                    data-label="{{label}}" data-level="{{level}}">
+              {{pkT "option.dismiss"}}
+            </button>
+          </div>
+          {{/each}}
+        </section>
+        {{/if}}
+
+        {{#if done}}
+        <button type="button" class="pk5e-levelup-go" data-action="finish">
+          {{pkT "levelup.finish"}}
+        </button>
+        {{/if}}
+
+      {{/if}}
+      {{/if}}
+
+    </div>
+  </div>
+</div>
