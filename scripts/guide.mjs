@@ -200,7 +200,25 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     return CreationGuide.open(actor.id);
   }
 
-  async _prepareContext() {
+  /**
+   * Wrapped so that one bad reference cannot cost the player the whole panel.
+   *
+   * The guard used to sit around buildSteps() only, on the assumption that the
+   * steps were the risky part. Then a variable left behind by a file split
+   * threw two lines further down and the window came up empty - no steps, no
+   * checklist, no way back to the character. The narrower guard was worse than
+   * useless: it made the failure look handled.
+   */
+  async _prepareContext(...args) {
+    try {
+      return await this.buildContext(...args);
+    } catch (err) {
+      console.error(`${MODULE_ID} | The panel could not be prepared`, err);
+      return { missing: false, panelFailed: true, actorName: this.actor?.name ?? "" };
+    }
+  }
+
+  async buildContext() {
     const actor = this.actor;
     if (!actor) return { missing: true };
     // Guarded because everything else on the panel is still worth showing if
@@ -248,6 +266,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
+    // Read here as well as in steps.mjs: the delevel offer below needs a class
+    // to act on, and the split left this reference pointing at nothing.
+    const classes = actor.items.filter((i) => i.type === "class");
+
     const report = checkCharacter(actor);
     const ownership = actor.ownership ?? {};
 
@@ -273,7 +295,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
-      // and burying it among the other warnings buried the only actionable item.
       // Choices skipped inside Plutonium's dialogs. Kept apart from the
       // checklist because each one carries its own fix.
       skippedOptions: skippedOptions(actor).map((entry) => ({

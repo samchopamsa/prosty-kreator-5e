@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.45.0**
+- Wersja modułu: **1.45.1**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -664,7 +664,11 @@ wraz z zasadami, więc warto ją móc znaleźć: wyszła do `steps.mjs`.
 Zostało 125 linii. `_onRender` rozbite na `bindNameField`, `bindOwnership`
 i `bindDisclosures` — z 95 linii na 27.
 
-Budowanie kroków jest **osłonięte przechwytywaniem wyjątków**. Uszkodzony przedmiot
+**Całe** przygotowanie kontekstu jest osłonięte przechwytywaniem wyjątków, nie samo
+budowanie kroków. Pierwsza wersja osłaniała tylko `buildSteps()` — i przepuściła
+odwołanie do zmiennej, która przy podziale plików została po drugiej stronie, dwie
+linie dalej. Panel wstawał pusty, bez wyjaśnienia. Zbyt wąska osłona jest gorsza niż
+żadna, bo sprawia wrażenie, że awaria jest obsłużona. Uszkodzony przedmiot
 albo pole przesunięte przez aktualizację systemu zostawiłoby gracza z pustym oknem
 bez żadnego wyjaśnienia; teraz reszta panelu działa, a w jego miejscu pojawia się
 komunikat odsyłający MG do konsoli.
@@ -805,7 +809,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.45.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.45.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

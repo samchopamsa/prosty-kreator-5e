@@ -415,6 +415,30 @@ group("steps: the order the panel presents them in", () => {
   ]);
 });
 
+// --- panel resilience --------------------------------------------------------
+
+group("guide: a failure while preparing the panel", () => {
+  // Not the real _prepareContext - that needs a running Foundry - but the shape
+  // of the guard, which is what went wrong: it was narrow enough to miss a
+  // throw two lines outside it, and the panel came up blank with no explanation.
+  const prepare = (build) => {
+    try {
+      return build();
+    } catch (err) {
+      return { missing: false, panelFailed: true, actorName: "Test" };
+    }
+  };
+
+  check("a working build passes through", prepare(() => ({ steps: [1, 2, 3] })).steps.length, 3);
+  check(
+    "a throw becomes a reportable state, not a blank window",
+    prepare(() => {
+      throw new ReferenceError("classes is not defined");
+    }).panelFailed,
+    true
+  );
+});
+
 // --- result ------------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failures.length} failed`);

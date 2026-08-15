@@ -5,6 +5,11 @@
 
       {{#if missing}}
         <p class="pk5e-empty">{{pkT "guide.missing"}}</p>
+      {{else if panelFailed}}
+        <div class="pk5e-callout pk5e-skipped-item">
+          <strong>{{pkT "guide.panelFailed"}}</strong>
+          <p>{{pkT "guide.panelFailedHint"}}</p>
+        </div>
       {{else}}
 
       <details class="pk5e-disclaimer" {{#if disclaimerOpen}}open{{/if}}>
@@ -12,6 +17,7 @@
         <ul>
           <li>{{pkT "guide.disclaimerSource"}}</li>
           <li>{{pkT "guide.disclaimerComplete"}}</li>
+          <li><strong>{{pkT "guide.disclaimerWait"}}</strong></li>
           <li>{{pkT "guide.disclaimerRedo"}}</li>
         </ul>
       </details>

@@ -21,6 +21,7 @@ const STRINGS = {
     "guide.disclaimerTitle": "Before you start - how this creator works",
     "guide.disclaimerSource": "Species, background and class come from the importer, which is not part of this creator. Its windows open on top of this panel and ask their own questions.",
     "guide.disclaimerComplete": "Work through every one of those windows to the end. Closing one with Skip, Cancel or the X leaves that choice unmade, and the step will be incomplete.",
+    "guide.disclaimerWait": "Wait for the importer to finish. It is done when the \"Import Complete\" window appears - close that one, and only then carry on here.",
     "guide.disclaimerRedo": "A finished step cannot be edited afterwards. To change anything you remove it and start that step again.",
     "guide.intro":
       "Seven steps, in order. Some of them hand you over to the importer, which opens as its own separate window on top of this panel - it is not part of the creator, and it may ask several questions of its own. Work through it, close it, and come back here: this panel keeps track of what has already reached the character sheet.",
@@ -89,6 +90,8 @@ const STRINGS = {
     "theme.auto": "Foundry",
     "theme.light": "Light",
     "theme.dark": "Dark",
+    "guide.panelFailed": "The panel could not be prepared",
+    "guide.panelFailedHint": "Something on this character could not be read, so the panel cannot be drawn. The character itself is untouched - open its sheet as usual. Ask your GM to check the console (F12); the reason is logged there.",
     "guide.stepsFailed": "The steps could not be drawn",
     "guide.stepsFailedHint": "Something on this character could not be read. The rest of the panel still works. Ask your GM to check the console (F12) - the reason is logged there.",
     "guide.postToChat": "Post to chat",
@@ -243,6 +246,7 @@ const STRINGS = {
     "guide.disclaimerTitle": "Zanim zaczniesz - sprawdź, jak działa kreator postaci",
     "guide.disclaimerSource": "Gatunek, pochodzenie i klasa pochodzą z importera, który nie jest częścią kreatora. Jego okna otwierają się nad tym panelem i zadają własne pytania.",
     "guide.disclaimerComplete": "Przejdź każde z tych okien do końca. Zamknięcie przyciskiem Skip, Cancel albo krzyżykiem zostawia wybór niedokonany, a krok będzie niepełny.",
+    "guide.disclaimerWait": "Zaczekaj, aż import się zakończy. Kończy go okno \"Import Complete\" - zamknij je i dopiero wtedy wracaj tutaj.",
     "guide.disclaimerRedo": "Ukończonego kroku nie da się później edytować. Żeby cokolwiek zmienić, usuwasz go i rozpoczynasz od nowa.",
     "guide.intro":
       "Siedem kroków, po kolei. Część z nich przekazuje cię do importera, który otwiera się jako osobne okno nad tym panelem - nie jest częścią kreatora i potrafi zadać kilka własnych pytań. Przejdź przez nie, zamknij je i wróć tutaj: panel pilnuje, co już trafiło na kartę postaci.",
@@ -308,6 +312,8 @@ const STRINGS = {
     "theme.auto": "Foundry",
     "theme.light": "Jasny",
     "theme.dark": "Ciemny",
+    "guide.panelFailed": "Nie udało się przygotować panelu",
+    "guide.panelFailedHint": "Czegoś na tej postaci nie dało się odczytać, więc panel nie może się narysować. Sama postać jest nienaruszona - otwórz jej kartę normalnie. Poproś MG o sprawdzenie konsoli (F12), powód jest tam zapisany.",
     "guide.stepsFailed": "Nie udało się narysować kroków",
     "guide.stepsFailedHint": "Czegoś na tej postaci nie dało się odczytać. Reszta panelu działa. Poproś MG o sprawdzenie konsoli (F12) - powód jest tam zapisany.",
     "guide.postToChat": "Wyślij na czat",

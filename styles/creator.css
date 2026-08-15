@@ -29,6 +29,44 @@
  * red warning disappears into it, and sunken areas have to darken rather than
  * lighten to read as recessed.
  */
+/*
+ * Background and text are set outright, not left to cascade.
+ *
+ * Adding Foundry's theme classes turned the text to light-theme colours while
+ * the window kept its dark background - dark grey on near-black, unreadable.
+ * Foundry defines those variables against its own containers, and our window is
+ * not one of them, so the two halves arrived from different places. Stating
+ * both here means the panel is legible whatever the surrounding page is doing.
+ */
+.pk5e-creator.theme-light .window-content,
+.pk5e-creator.theme-light .window-header {
+  background: #f4f2ed;
+  color: #191813;
+}
+.pk5e-creator.theme-light input,
+.pk5e-creator.theme-light select,
+.pk5e-creator.theme-light textarea,
+.pk5e-creator.theme-light button {
+  background: rgba(0, 0, 0, 0.04);
+  color: #191813;
+  border-color: rgba(0, 0, 0, 0.25);
+}
+.pk5e-creator.theme-light .pk5e-link { color: #7a3b00; }
+
+.pk5e-creator.theme-dark .window-content,
+.pk5e-creator.theme-dark .window-header {
+  background: #1b1b1d;
+  color: #dcdcdc;
+}
+.pk5e-creator.theme-dark input,
+.pk5e-creator.theme-dark select,
+.pk5e-creator.theme-dark textarea,
+.pk5e-creator.theme-dark button {
+  background: rgba(255, 255, 255, 0.06);
+  color: #dcdcdc;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .pk5e-creator.theme-light {
   --pk5e-warning: #a02c2c;
   --pk5e-warning-line: rgba(160, 44, 44, 0.75);
