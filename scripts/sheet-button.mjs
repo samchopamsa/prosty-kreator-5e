@@ -141,6 +141,13 @@ function inject(app, html) {
     const plutonium = root.querySelector(
       ".imp-cls__btn-sheet-level-up, [class*='btn-sheet-level-up']"
     );
+
+    // Hidden here as well as by the stylesheet. The body class arrives when the
+    // setting is read at startup, but a sheet rendered before that - or one
+    // Plutonium adds its button to afterwards - kept showing it.
+    if (plutonium && game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")) {
+      plutonium.style.display = "none";
+    }
     if (plutonium?.parentElement) {
       let previous = plutonium;
       for (const el of buttons) {

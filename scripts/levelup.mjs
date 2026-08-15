@@ -30,8 +30,8 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
-import { t } from "./i18n.mjs";
-import { applyTheme, preserveScroll } from "./ui.mjs";
+import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
+import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
 import { takeSnapshot, compareSnapshots } from "./snapshot.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
@@ -75,6 +75,8 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._busy = false;
     /** Everything gained so far, accumulated across levels. */
     this._changes = [];
+    /** Levels that finished without anything visibly changing. */
+    this._emptyLevels = 0;
     this._stopOptionWatch = null;
   }
 
@@ -86,6 +88,8 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     actions: {
       levelOnce: LevelUpGuide.onLevelOnce,
       dismissOption: LevelUpGuide.onDismissOption,
+      setLanguage: LevelUpGuide.onSetLanguage,
+      setTheme: LevelUpGuide.onSetTheme,
       finish: LevelUpGuide.onFinish
     }
   };
@@ -132,6 +136,19 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     for (let n = level + 1; n <= 20; n += 1) targets.push({ level: n, count: n - level });
 
     return {
+      // The same two switches the creation panel carries. Both are per-user
+      // preferences about how a window reads, and this is a window someone will
+      // sit with for a while.
+      languages: Object.entries(LANGUAGE_CHOICES).map(([code, label]) => ({
+        code,
+        label,
+        selected: code === currentLanguage()
+      })),
+      themes: THEMES.map((code) => ({
+        code,
+        label: t(`theme.${code}`),
+        selected: code === currentTheme()
+      })),
       actorName: actor.name,
       actorImg: actor.img ?? "",
       level,
@@ -155,7 +172,10 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
             ? t("option.partialSelect", entry.label)
             : t("option.skipped", entry.label)
       })),
-      done: this._total > 0 && this._remaining === 0
+      done: this._total > 0 && this._remaining === 0,
+      // Shown after the run rather than during it: mid-run it looks like a
+      // failure, when the level may simply have been slow to register.
+      emptyLevels: this._emptyLevels
     };
   }
 
@@ -238,10 +258,13 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       this._changes.push(...changes);
 
       if (!changes.length) {
-        // Nothing moved: the import was cancelled, or the dialogs were closed
-        // without going through. Saying so beats an empty list.
-        ui.notifications.warn(t("levelup.nothingChanged"));
-        return false;
+        // Nothing moved. Either the import was cancelled, or the character was
+        // read before Plutonium had finished with it. Reported, but the run is
+        // not abandoned: the level may simply have been slow, and stopping
+        // would leave a multi-level run half done with no way to tell.
+        trace("no changes detected for this level");
+        this._emptyLevels += 1;
+        return true;
       }
       return true;
     } catch (err) {
@@ -265,6 +288,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._total = target - level;
     this._remaining = this._total;
     this._changes = [];
+    this._emptyLevels = 0;
 
     // One level at a time, because that is how the importer works. The window
     // shows which one it is on, so a run of three does not look like a hang.
@@ -273,8 +297,22 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!ok) break;
       this._remaining -= 1;
       this.render();
-      if (this._remaining > 0) await wait(400);
+      // A gap between levels: Foundry's toast from the last one has to clear,
+      // and the sheet has to settle, before the next press means anything.
+      if (this._remaining > 0) await wait(1200);
     }
+
+    if (this._emptyLevels) ui.notifications.warn(t("levelup.nothingChanged"));
+  }
+
+  static async onSetLanguage(event, target) {
+    await game.settings.set(MODULE_ID, "language", target.dataset.lang);
+    this.render();
+  }
+
+  static async onSetTheme(event, target) {
+    await game.settings.set(MODULE_ID, "theme", target.dataset.theme);
+    this.render();
   }
 
   static async onDismissOption(event, target) {

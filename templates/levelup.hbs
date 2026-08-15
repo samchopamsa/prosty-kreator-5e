@@ -81,4 +81,19 @@
 
     </div>
   </div>
+
+  <footer class="pk5e-footer">
+    <span class="pk5e-lang-switch">
+      {{#each languages}}
+      <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"
+              data-action="setLanguage" data-lang="{{code}}">{{label}}</button>
+      {{/each}}
+    </span>
+    <span class="pk5e-lang-switch">
+      {{#each themes}}
+      <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"
+              data-action="setTheme" data-theme="{{code}}">{{label}}</button>
+      {{/each}}
+    </span>
+  </footer>
 </div>

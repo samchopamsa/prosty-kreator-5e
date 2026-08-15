@@ -38,6 +38,18 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
   return new Promise((resolve) => {
     let settled = false;
 
+    // Anything already on screen belongs to whatever happened before this call.
+    //
+    // Foundry's toasts linger for several seconds, so levelling twice in a row
+    // meant the second wait matched the first level's "Level up complete!" and
+    // returned at once - we then read the character before Plutonium had
+    // touched it, found nothing changed, and stopped. Two levels worked; three
+    // did not, which is exactly the shape a stale signal gives.
+    const alreadyThere = new Set([
+      ...document.querySelectorAll("#notifications .notification"),
+      ...document.querySelectorAll(".ve-app")
+    ]);
+
     const finish = (result) => {
       if (settled) return;
       settled = true;
@@ -49,6 +61,7 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
 
     const look = () => {
       for (const app of document.querySelectorAll(".ve-app")) {
+        if (alreadyThere.has(app)) continue;
         const title = app.querySelector(".window-title")?.textContent ?? "";
         if (!COMPLETE_TITLE.test(title)) continue;
         finish({ completed: true, cancelled: CANCELLED.test(app.textContent ?? "") });
@@ -59,6 +72,7 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
       // ui.notifications, which keeps entries around after they have gone and
       // would match a message from earlier in the session.
       for (const note of document.querySelectorAll("#notifications .notification")) {
+        if (alreadyThere.has(note)) continue;
         if (!COMPLETE_TOAST.test(note.textContent ?? "")) continue;
         finish({ completed: true, cancelled: false });
         return true;

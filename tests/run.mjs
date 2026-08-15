@@ -543,6 +543,30 @@ group("snapshot: reporting what actually changed", () => {
   );
 });
 
+// --- waiting for the importer ------------------------------------------------
+
+group("import-end: only signals raised after the wait began", () => {
+  // The shape of the bug that made a three-level run stop after two: Foundry's
+  // toast stays up for several seconds, so the second wait matched the FIRST
+  // level's "Level up complete!" and returned before anything had happened.
+  const accepts = (existing, present) => {
+    const already = new Set(existing);
+    return present.filter((n) => !already.has(n) && /level[- ]?up complete/i.test(n.text));
+  };
+
+  const first = { text: "Level up complete!" };
+  const second = { text: "Level up complete!" };
+
+  check("a fresh signal is accepted", accepts([], [first]).length, 1);
+  check("a signal left over from the previous level is not", accepts([first], [first]).length, 0);
+  check(
+    "the next level's own signal still counts",
+    accepts([first], [first, second]).length,
+    1
+  );
+  check("an unrelated toast is ignored", accepts([], [{ text: "Rest complete" }]).length, 0);
+});
+
 // --- result ------------------------------------------------------------------
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
