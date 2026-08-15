@@ -31,9 +31,9 @@ export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * describing something the player never sees.
  */
 export function importFlowNote() {
-  const mode = game.settings.get(MODULE_ID, "autoAdvance");
-  if (mode === "plutonium" || plutoniumAnswersItself()) return t("flow.plutonium");
-  if (mode === "compendium") return t("flow.compendium");
+  const setting = game.settings.get(MODULE_ID, "autoAdvance");
+  const clickingThrough = setting === "everyone" || (setting === "players" && !game.user?.isGM);
+  if (clickingThrough || plutoniumAnswersItself()) return t("flow.plutonium");
   return t("flow.prompt");
 }
 
@@ -50,7 +50,16 @@ export function text(settingKey, translationKey) {
 }
 
 /** What each step adds, and how to find its button and its item. */
+/**
+ * Keyed in panel order, because missingSteps() reports in the order it walks
+ * this object and "what is still missing" reads oddly out of sequence.
+ */
 export const STEP_CONFIG = {
+  class: {
+    itemTypes: ["class"],
+    buttonTypes: ["class"],
+    labels: ["add class"]
+  },
   species: {
     itemTypes: ["race", "species"],
     buttonTypes: ["race", "species"],
@@ -60,11 +69,6 @@ export const STEP_CONFIG = {
     itemTypes: ["background"],
     buttonTypes: ["background"],
     labels: ["add background"]
-  },
-  class: {
-    itemTypes: ["class"],
-    buttonTypes: ["class"],
-    labels: ["add class"]
   }
 };
 
@@ -183,13 +187,26 @@ export function plutoniumAnswersItself() {
   }
 }
 
+/**
+ * Does this user want the importer's opening screens clicked through?
+ *
+ * This was five settings - a mode and a source-screen toggle for players, the
+ * same pair again for the GM, and a switch for the Keep Window Open checkbox.
+ * Five, for something whose own help text told you to configure Plutonium
+ * instead. Now one, with a choice of who it applies to; the Keep Window Open
+ * handling is simply part of what clicking through means.
+ */
+function autoAdvanceApplies() {
+  const setting = game.settings.get(MODULE_ID, "autoAdvance");
+  if (!setting || setting === "off") return false;
+  if (setting === "everyone") return true;
+  return !game.user?.isGM;
+}
+
 export async function autoAdvance() {
-  const isGM = game.user?.isGM;
-  const mode = game.settings.get(MODULE_ID, isGM ? "autoAdvanceGm" : "autoAdvance");
-  const skipSources = game.settings.get(
-    MODULE_ID,
-    isGM ? "skipSourceScreenGm" : "skipSourceScreen"
-  );
+  if (!autoAdvanceApplies()) return;
+  const mode = "plutonium";
+  const skipSources = true;
 
   // Step one: the "Use Plutonium / Use Compendium Browser" choice.
   //
@@ -215,12 +232,10 @@ export async function autoAdvance() {
   // Keep Window Open lives ONLY on the screen we are about to skip, so a player
   // who had it ticked would never get another chance to untick it. We therefore
   // untick it here, doing exactly what they would have done.
-  if (game.settings.get(MODULE_ID, "uncheckKeepOpen")) {
-    const keepOpen = findKeepOpenCheckbox();
-    if (keepOpen?.checked) {
-      keepOpen.click();
-      console.log(`${MODULE_ID} | Unticked "Keep Window Open" before opening the importer.`);
-    }
+  const keepOpen = findKeepOpenCheckbox();
+  if (keepOpen?.checked) {
+    keepOpen.click();
+    console.log(`${MODULE_ID} | Unticked "Keep Window Open" before opening the importer.`);
   }
 
   opener.click();

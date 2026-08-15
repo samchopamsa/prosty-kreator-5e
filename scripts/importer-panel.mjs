@@ -18,7 +18,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
-import { preserveScroll } from "./ui.mjs";
+import { preserveScroll, applyTheme } from "./ui.mjs";
 import {
   loadClassIndex,
   groupByClass,
@@ -170,6 +170,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    applyTheme(this);
     preserveScroll(this, [".pk5e-panel-list", ".pk5e-panel-detail"]);
 
     const search = this.element.querySelector("[data-panel-search]");

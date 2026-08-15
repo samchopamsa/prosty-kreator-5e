@@ -17,7 +17,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
-import { preserveScroll } from "./ui.mjs";
+import { preserveScroll, applyTheme } from "./ui.mjs";
 import { referencePackIds, ReferenceConfig, referenceIsConfigured } from "./reference-config.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -243,6 +243,7 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    applyTheme(this);
     preserveScroll(this, [".pk5e-options", ".pk5e-detail-col"]);
 
     // <details> toggles itself natively, so without this the panel would forget

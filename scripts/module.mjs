@@ -59,59 +59,32 @@ Hooks.once("init", () => {
     });
   }
 
-  game.settings.register(MODULE_ID, "autoAdvanceGm", {
-    name: "Click through the import dialogs automatically (GM)",
-    hint: "Same as below, but for you. Also better handled by Plutonium's own 'Use Importer when Using ADD ... Button on Actor' setting.",
-    scope: "world",
-    config: true,
-    type: String,
-    default: "off",
-    choices: {
-      off: "Off - you click through",
-      plutonium: "Always use Plutonium",
-      compendium: "Always use the Compendium Browser"
-    }
-  });
 
+
+
+
+
+  // Was five settings: a mode and a source-screen toggle for players, the same
+  // pair for the GM, and a switch for the Keep Window Open checkbox. Their own
+  // help text pointed at Plutonium's "Use Importer when Using ADD ... Button"
+  // as the better answer, which it is - so what remains is the fallback for
+  // tables that have not set it.
   game.settings.register(MODULE_ID, "autoAdvance", {
-    name: "Click through the import dialogs automatically (players)",
-    hint: "Answers the 'Use Plutonium / Use Compendium Browser' question for the player. Better done in Plutonium itself: set 'Use Importer when Using ADD ... Button on Actor' to Always in its Config Editor, and the question stops being asked at all. This setting is then unnecessary and is skipped automatically.",
+    name: "Click through the importer's opening screens",
+    hint:
+      "The importer asks which tool to use and which books to read before it shows anything. " +
+      "This answers both, so a step goes straight to the list. Better still, set Plutonium's " +
+      "'Use Importer when Using ADD ... Button on Actor' to Always - then it never asks and " +
+      "this is unnecessary.",
     scope: "world",
     config: true,
     type: String,
-    default: "off",
     choices: {
-      off: "Off - the player clicks through",
-      plutonium: "Always use Plutonium",
-      compendium: "Always use the Compendium Browser"
-    }
-  });
-
-  game.settings.register(MODULE_ID, "skipSourceScreen", {
-    name: "Skip the data source screen (players)",
-    hint: "Presses 'Open Importer' for the player, using whatever sources are already ticked. Set those up first in Plutonium's World Data Source Selector, or they will land on an empty list. Works whether or not the setting above is on.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
-
-  game.settings.register(MODULE_ID, "skipSourceScreenGm", {
-    name: "Skip the data source screen (GM)",
-    hint: "Same, for you. Leave off if you want to choose sources when importing.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
-
-  game.settings.register(MODULE_ID, "uncheckKeepOpen", {
-    name: "Untick 'Keep Window Open' while clicking through",
-    hint: "Only applies when the data source screen is being skipped. That checkbox sits on the screen being skipped, so without this a player who had it ticked could never reach it again.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true
+      off: "Leave the screens alone",
+      players: "Click through for players only",
+      everyone: "Click through for everyone"
+    },
+    default: "off"
   });
 
   game.settings.register(MODULE_ID, "openReferenceWithClass", {
@@ -150,14 +123,6 @@ Hooks.once("init", () => {
     }
   });
 
-  game.settings.register(MODULE_ID, "showImportingNotice", {
-    name: "Show an 'importing' notice while the importer works",
-    hint: "Holds the step in an unfinished state until the import windows close. Off by default: detecting that reliably means watching another package's windows, and it tends to either clear too early or linger long after the work is done.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
 
   game.settings.register(MODULE_ID, "showStepHelp", {
     name: "Show 'What is this?' explanations",
@@ -230,14 +195,6 @@ Hooks.once("init", () => {
     default: true
   });
 
-  game.settings.register(MODULE_ID, "sidebarComplete", {
-    name: "Also show 'Complete Character' in the sidebar",
-    hint: "Fallback if the sheet buttons do not appear on your sheet version.",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
 
   game.settings.register(MODULE_ID, "narrowBrowserTooltips", {
     name: "Narrow tooltips in the Compendium Browser",
@@ -272,6 +229,15 @@ Hooks.once("ready", () => {
     config: false,
     type: Boolean,
     default: false
+  });
+
+  // The player's own choice. Hidden from the settings screen because it is set
+  // from the panel footer, where they are actually looking at the colours.
+  game.settings.register(MODULE_ID, "theme", {
+    scope: "client",
+    config: false,
+    type: String,
+    default: "auto"
   });
 
   const api = {
@@ -319,8 +285,11 @@ Hooks.on("renderActorDirectory", (app, html) => {
   // actors - the button would only ever produce a permission error.
   const showGuide =
     game.settings.get(MODULE_ID, "guideButton") && canCreateActors();
-  const showComplete = game.settings.get(MODULE_ID, "sidebarComplete");
-  if (!showGuide && !showComplete) return;
+  // "Complete Character" used to sit here too, behind its own setting, as a way
+  // in for worlds where the sheet buttons did not appear. That is what
+  // characterCreator.complete(actorId) is for, and it does not cost a line on
+  // everyone's settings screen.
+  if (!showGuide) return;
 
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root || root.querySelector(".pk5e-launch")) return;
@@ -339,10 +308,5 @@ Hooks.on("renderActorDirectory", (app, html) => {
     target.appendChild(button);
   };
 
-  if (showGuide) add("fa-hat-wizard", "New Character", () => CreationGuide.start());
-  if (showComplete) {
-    add("fa-wand-magic-sparkles", "Complete Character", () =>
-      new CompleteCharacter({}).render(true)
-    );
-  }
+  add("fa-hat-wizard", "New Character", () => CreationGuide.start());
 });

@@ -86,6 +86,11 @@ const STRINGS = {
     "guide.recheck": "Recheck",
     "guide.allGood": "Everything checks out.",
     "guide.progress": "{0} of {1} steps done",
+    "theme.auto": "Foundry",
+    "theme.light": "Light",
+    "theme.dark": "Dark",
+    "guide.stepsFailed": "The steps could not be drawn",
+    "guide.stepsFailedHint": "Something on this character could not be read. The rest of the panel still works. Ask your GM to check the console (F12) - the reason is logged there.",
     "guide.postToChat": "Post to chat",
     "guide.finalize": "Finalize",
     "guide.finishFirst": "Finish the remaining steps first",
@@ -121,8 +126,6 @@ const STRINGS = {
     "flow.prompt":
       " After you press the button, a small window asks where to take the entry from. Choose Use Plutonium, then press Open Importer in the window that follows - only then do you see the list to pick from.",
     "flow.plutonium": " After you press the button, the list of options opens by itself.",
-    "flow.compendium":
-      " After you press the button, the compendium browser opens by itself.",
 
     "method.standard": "Standard array",
     "method.pointbuy": "Point buy",
@@ -302,6 +305,11 @@ const STRINGS = {
     "guide.recheck": "Sprawdź ponownie",
     "guide.allGood": "Wszystko się zgadza.",
     "guide.progress": "Ukończono {0} z {1} kroków",
+    "theme.auto": "Foundry",
+    "theme.light": "Jasny",
+    "theme.dark": "Ciemny",
+    "guide.stepsFailed": "Nie udało się narysować kroków",
+    "guide.stepsFailedHint": "Czegoś na tej postaci nie dało się odczytać. Reszta panelu działa. Poproś MG o sprawdzenie konsoli (F12) - powód jest tam zapisany.",
     "guide.postToChat": "Wyślij na czat",
     "guide.finalize": "Zakończ",
     "guide.finishFirst": "Najpierw dokończ pozostałe kroki",
@@ -335,7 +343,6 @@ const STRINGS = {
     "flow.prompt":
       " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz Use Plutonium, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
     "flow.plutonium": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
-    "flow.compendium": " Po naciśnięciu przycisku przeglądarka kompendiów otworzy się sama.",
 
     "method.standard": "Zestaw standardowy",
     "method.pointbuy": "Zakup punktowy",

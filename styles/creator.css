@@ -1,5 +1,42 @@
 /* Prosty Kreator Postaci (D&D 5e) */
 
+/*
+ * One palette, named once.
+ *
+ * These values used to be written straight into the rules below - the orange
+ * accent twelve times over, the greys in five different opacities - which made
+ * adding a light theme a hunt through the file. Named here, a theme becomes a
+ * block that redefines them.
+ *
+ * Anything Foundry already provides is taken from Foundry, with our value only
+ * as a fallback: the panel should follow the interface it sits in.
+ */
+.pk5e-creator {
+  --pk5e-accent: var(--color-shadow-primary, #ff6400);
+  --pk5e-line: rgba(128, 128, 128, 0.28);
+  --pk5e-line-strong: rgba(128, 128, 128, 0.45);
+  --pk5e-hover: rgba(128, 128, 128, 0.15);
+  --pk5e-selected: rgba(128, 128, 128, 0.3);
+  --pk5e-sunken: rgba(0, 0, 0, 0.15);
+  --pk5e-sunken-soft: rgba(0, 0, 0, 0.06);
+  --pk5e-warning: rgba(230, 130, 130, 0.95);
+  --pk5e-warning-line: rgba(220, 90, 90, 0.8);
+  --pk5e-surface: var(--color-bg, #1b1b1d);
+}
+
+/*
+ * Light theme: only the values that stop working on a pale background. A soft
+ * red warning disappears into it, and sunken areas have to darken rather than
+ * lighten to read as recessed.
+ */
+.pk5e-creator.theme-light {
+  --pk5e-warning: #a02c2c;
+  --pk5e-warning-line: rgba(160, 44, 44, 0.75);
+  --pk5e-sunken: rgba(0, 0, 0, 0.08);
+  --pk5e-sunken-soft: rgba(0, 0, 0, 0.035);
+  --pk5e-surface: var(--color-bg, #f4f2ed);
+}
+
 .pk5e-launch {
   width: 100%;
   margin-top: 4px;
@@ -53,7 +90,7 @@
   line-height: 1.4;
 }
 .pk5e-label { font-weight: 600; font-size: 13px; }
-.pk5e-details { border-top: 1px solid rgba(0, 0, 0, 0.15); padding-top: 8px; }
+.pk5e-details { border-top: 1px solid var(--pk5e-sunken); padding-top: 8px; }
 .pk5e-details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
 .pk5e-packs {
   display: flex;
@@ -72,7 +109,7 @@
   font-size: 12px;
   border-radius: 3px;
 }
-.pk5e-pack:hover { background: rgba(0, 0, 0, 0.06); }
+.pk5e-pack:hover { background: var(--pk5e-sunken-soft); }
 .pk5e-pack-origin { opacity: 0.6; font-size: 11px; white-space: nowrap; }
 /* --- listy wyboru --- */
 .pk5e-split {
@@ -108,9 +145,9 @@
   font-size: 13px;
 }
 .pk5e-callout {
-  border-left: 3px solid var(--color-shadow-primary, #ff6400);
+  border-left: 3px solid var(--pk5e-accent);
   padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--pk5e-sunken-soft);
   border-radius: 0 4px 4px 0;
   font-size: 13px;
 }
@@ -122,7 +159,7 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-top: 1px solid rgba(0, 0, 0, 0.15);
+  border-top: 1px solid var(--pk5e-sunken);
 }
 .pk5e-footer button { flex: 0 0 auto; width: auto; padding: 4px 14px; }
 .pk5e-footer .pk5e-hint { flex: 1 1 auto; font-size: 11px; opacity: 0.7; line-height: 1.3; }
@@ -156,7 +193,7 @@
 /* ------------------------------------------------------------------ */
 
 .pk5e-equip-source {
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--pk5e-sunken);
   border-radius: 4px;
   padding: 8px 10px;
   display: flex;
@@ -190,7 +227,7 @@
 .pk5e-lang-heading {
   margin: 8px 0 2px;
   padding-bottom: 2px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--pk5e-sunken);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.5px;
@@ -200,15 +237,15 @@
 .pk5e-lang-group:first-child .pk5e-lang-heading { margin-top: 0; }
 /* v0.6 - guided creation panel */
 .pk5e-guide-step {
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-left: 3px solid rgba(128, 128, 128, 0.4);
+  border: 1px solid var(--pk5e-sunken);
+  border-left: 3px solid var(--pk5e-line-strong);
   border-radius: 4px;
   padding: 6px 8px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-.pk5e-guide-step.is-done { border-left-color: var(--color-shadow-primary, #ff6400); }
+.pk5e-guide-step.is-done { border-left-color: var(--pk5e-accent); }
 .pk5e-guide-head { display: flex; align-items: center; gap: 6px; }
 .pk5e-guide-num {
   display: inline-flex;
@@ -223,7 +260,7 @@
   opacity: 0.7;
 }
 .pk5e-guide-label { font-weight: 600; font-size: 13px; flex: 1 1 auto; }
-.pk5e-guide-tick { color: var(--color-shadow-primary, #ff6400); font-weight: 700; }
+.pk5e-guide-tick { color: var(--pk5e-accent); font-weight: 700; }
 .pk5e-guide-result { margin: 0; font-size: 13px; }
 .pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 12px; padding: 3px 8px; }
 /* Once chosen, the entry gets room: a large picture beside the name and the
@@ -241,7 +278,7 @@
   object-fit: cover;
   border: none;
   border-radius: 4px;
-  background: rgba(0, 0, 0, 0.15);
+  background: var(--pk5e-sunken);
 }
 .pk5e-chosen-body {
   display: flex;
@@ -255,12 +292,12 @@
   font-weight: 700;
   line-height: 1.25;
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  border-bottom: 1px solid var(--pk5e-line);
 }
 .pk5e-guide-actions { display: flex; gap: 12px; }
 /* v1.0 - readiness report */
 .pk5e-report {
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--pk5e-sunken);
   border-left: 3px solid #b34747;
   border-radius: 4px;
   padding: 6px 8px;
@@ -296,7 +333,7 @@
   flex: 1 1 0;
   padding: 2px 0;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--pk5e-sunken-soft);
   font-size: 11px;
 }
 .pk5e-card-abbr { font-weight: 700; opacity: 0.6; font-size: 9px; }
@@ -314,7 +351,7 @@
   border-radius: 3px;
 }
 
-.pk5e-pack:hover { background: rgba(0, 0, 0, 0.06); }
+.pk5e-pack:hover { background: var(--pk5e-sunken-soft); }
 .pk5e-pack-name { min-width: 0; }
 .pk5e-pack-origin { opacity: 0.6; font-size: 11px; white-space: nowrap; }
 
@@ -361,7 +398,7 @@
 
 .pk5e-lang-table tr.is-rolled {
   background: rgba(255, 100, 0, 0.15);
-  outline: 1px solid var(--color-shadow-primary, #ff6400);
+  outline: 1px solid var(--pk5e-accent);
 }
 
 /* "What is this?" explanations */
@@ -382,8 +419,8 @@
   margin: 4px 0 0;
   padding: 6px 8px;
   line-height: 1.45;
-  border-left: 2px solid rgba(128, 128, 128, 0.4);
-  background: rgba(0, 0, 0, 0.05);
+  border-left: 2px solid var(--pk5e-line-strong);
+  background: var(--pk5e-sunken-soft);
   border-radius: 0 3px 3px 0;
 }
 
@@ -406,7 +443,7 @@
 
 .pk5e-guide-step.is-done .pk5e-guide-icon {
   opacity: 1;
-  color: var(--color-shadow-primary, #ff6400);
+  color: var(--pk5e-accent);
 }
 
 /* ------------------------------------------------------------------ */
@@ -418,7 +455,7 @@
 .pk5e-guide-step {
   border: none;
   border-left: none;
-  border-top: 1px solid rgba(128, 128, 128, 0.28);
+  border-top: 1px solid var(--pk5e-selected);
   border-radius: 0;
   padding: 12px 2px 2px;
   gap: 6px;
@@ -444,8 +481,8 @@
 
 .pk5e-guide-step.is-done .pk5e-guide-num {
   opacity: 1;
-  border-color: var(--color-shadow-primary, #ff6400);
-  color: var(--color-shadow-primary, #ff6400);
+  border-color: var(--pk5e-accent);
+  color: var(--pk5e-accent);
 }
 
 .pk5e-guide-icon { font-size: 13px; width: 18px; }
@@ -487,7 +524,7 @@
   overflow-y: auto;
   margin-top: 6px;
   padding-right: 4px;
-  border-top: 1px solid rgba(128, 128, 128, 0.25);
+  border-top: 1px solid var(--pk5e-line);
 }
 
 .pk5e-importing {
@@ -495,7 +532,7 @@
   padding: 6px 8px;
   font-size: 12px;
   line-height: 1.4;
-  border-left: 2px solid var(--color-shadow-primary, #ff6400);
+  border-left: 2px solid var(--pk5e-accent);
   background: rgba(255, 100, 0, 0.08);
   border-radius: 0 3px 3px 0;
 }
@@ -541,7 +578,7 @@
 .pk5e-chip.is-active {
   opacity: 1;
   font-weight: 600;
-  border-color: var(--color-shadow-primary, #ff6400);
+  border-color: var(--pk5e-accent);
 }
 
 .pk5e-options {
@@ -571,7 +608,7 @@
 .pk5e-option:hover { background: rgba(0, 0, 0, 0.07); }
 
 .pk5e-option.is-selected {
-  border-color: var(--color-shadow-primary, #ff6400);
+  border-color: var(--pk5e-accent);
   background: rgba(255, 100, 0, 0.1);
   font-weight: 600;
 }
@@ -594,7 +631,7 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding-left: 10px;
-  border-left: 1px solid rgba(128, 128, 128, 0.25);
+  border-left: 1px solid var(--pk5e-line);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -632,7 +669,7 @@
 .pk5e-branch details[open] > .pk5e-branch-head::before { transform: rotate(90deg); }
 .pk5e-branch-name { font-weight: 700; flex: 1 1 auto; }
 .pk5e-branch-count { font-size: 10px; opacity: 0.5; }
-.pk5e-branch-head:hover { background: rgba(0, 0, 0, 0.06); }
+.pk5e-branch-head:hover { background: var(--pk5e-sunken-soft); }
 
 .pk5e-subbranch { padding-left: 10px; border-left: 1px solid rgba(128, 128, 128, 0.2); }
 .pk5e-subbranch .pk5e-lang-heading { margin: 6px 0 2px; }
@@ -677,8 +714,8 @@
    done rather than vanishing and shifting everything below. */
 .pk5e-guide-empty-art.is-done {
   border-style: solid;
-  border-color: var(--color-shadow-primary, #ff6400);
-  color: var(--color-shadow-primary, #ff6400);
+  border-color: var(--pk5e-accent);
+  color: var(--pk5e-accent);
   opacity: 0.75;
 }
 
@@ -692,7 +729,7 @@
 }
 
 .pk5e-entry + .pk5e-entry {
-  border-top: 1px dashed rgba(128, 128, 128, 0.28);
+  border-top: 1px dashed var(--pk5e-selected);
   padding-top: 8px;
 }
 
@@ -758,7 +795,7 @@
   flex: 0 1 auto;
   max-height: 45%;
   overflow-y: auto;
-  border: 1px solid rgba(128, 128, 128, 0.35);
+  border: 1px solid var(--pk5e-line);
   border-radius: 3px;
   padding: 4px;
 }
@@ -775,7 +812,7 @@
   padding: 2px 4px;
   background: none;
   border: none;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.25);
+  border-bottom: 1px solid var(--pk5e-line);
   cursor: pointer;
 }
 /* A class with no entry of its own is a heading, not a target. */
@@ -793,9 +830,9 @@
 }
 
 .pk5e-panel-class:hover:not(.is-plain),
-.pk5e-panel-sub:hover { background: rgba(128, 128, 128, 0.15); }
+.pk5e-panel-sub:hover { background: var(--pk5e-hover); }
 .pk5e-panel-class.is-selected,
-.pk5e-panel-sub.is-selected { background: rgba(128, 128, 128, 0.28); }
+.pk5e-panel-sub.is-selected { background: var(--pk5e-selected); }
 
 .pk5e-panel-detail {
   flex: 1 1 auto;
@@ -806,7 +843,7 @@
 }
 
 .pk5e-panel-head {
-  border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+  border-bottom: 1px solid var(--pk5e-line);
   margin-bottom: 6px;
   padding-bottom: 3px;
 }
@@ -817,8 +854,8 @@
   margin: 0 0 6px;
   padding: 5px 7px;
   font-size: 11px;
-  border-left: 3px solid rgba(224, 164, 88, 0.8);
-  background: rgba(128, 128, 128, 0.1);
+  border-left: 3px solid var(--pk5e-accent);
+  background: var(--pk5e-hover);
 }
 
 /* Class progression tables have a column per spell level and will never fit
@@ -841,7 +878,7 @@
 .pk5e-panel-detail td {
   white-space: nowrap;
   padding: 1px 5px;
-  border: 1px solid rgba(128, 128, 128, 0.25);
+  border: 1px solid var(--pk5e-line);
 }
 .pk5e-panel-detail th { font-weight: 600; }
 
@@ -851,7 +888,7 @@
 .pk5e-panel-detail thead th:first-child {
   position: sticky;
   left: 0;
-  background: var(--color-bg, #1b1b1d);
+  background: var(--pk5e-surface);
 }
 
 /* Long feature names in prose would otherwise widen the panel. */
@@ -862,7 +899,7 @@
    checklist rather than inside it. */
 .pk5e-skipped { margin-bottom: 8px; }
 .pk5e-skipped-item {
-  border-left: 3px solid rgba(220, 90, 90, 0.85);
+  border-left: 3px solid var(--pk5e-warning-line);
   margin-bottom: 6px;
 }
 .pk5e-skipped-item button { width: 100%; margin-top: 6px; font-size: 12px; }
@@ -872,7 +909,7 @@
 .pk5e-guide-alert {
   margin-left: auto;
   font-weight: 700;
-  color: rgba(220, 90, 90, 0.95);
+  color: var(--pk5e-warning);
   font-size: 15px;
   line-height: 1;
 }
@@ -889,14 +926,13 @@
    silently go wrong - but bordered rather than filled, so it reads as a notice
    at the top of the panel and not as an error about the character in hand. */
 .pk5e-disclaimer {
-  border: 1px solid rgba(220, 90, 90, 0.6);
+  border: 1px solid var(--pk5e-warning-line);
   border-left-width: 3px;
   border-radius: 0 4px 4px 0;
   padding: 8px 10px;
   margin-bottom: 10px;
   font-size: 12px;
   line-height: 1.45;
-  color: rgba(230, 130, 130, 0.95);
 }
 .pk5e-disclaimer > summary {
   cursor: pointer;
@@ -916,3 +952,7 @@
 .pk5e-disclaimer ul { margin: 0; padding-left: 16px; }
 .pk5e-disclaimer li { margin: 2px 0; }
 
+
+/* Theme switch sits beside the language switch and looks the same: both are
+   per-user preferences about how the panel appears, not settings for the table. */
+.pk5e-lang-switch + .pk5e-lang-switch { margin-left: 8px; }

@@ -45,6 +45,7 @@ const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems } =
   await import("../scripts/validate.mjs");
 const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mjs");
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
+const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -398,6 +399,20 @@ group("migrate: flag schema", () => {
   check("migrating twice is the same as migrating once",
     planMigration(planMigration({ abilities: {} })),
     null);
+});
+
+// --- step order --------------------------------------------------------------
+
+group("steps: the order the panel presents them in", () => {
+  // Class first, following D&D Beyond. The numbers in the panel are worked out
+  // from position, so this list is the only place the order is stated - except
+  // here, where it is stated again on purpose, so that reordering by accident
+  // is caught.
+  check("the item steps run class, species, background", Object.keys(STEP_CONFIG), [
+    "class",
+    "species",
+    "background"
+  ]);
 });
 
 // --- result ------------------------------------------------------------------

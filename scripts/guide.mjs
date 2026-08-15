@@ -19,10 +19,11 @@ import { LanguagePicker, languageLabels } from "./languages.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
-import { preserveScroll } from "./ui.mjs";
+import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter, itemsWithSkippedChoices } from "./validate.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
+import { buildSteps } from "./steps.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 import { importFlowNote, text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, wait } from "./sheet-actions.mjs";
@@ -32,13 +33,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 /** Name given to a freshly created character, and the pattern we may replace. */
 const DEFAULT_NAME = "New Character";
 
-/** Readable names for the ability score methods stored on the actor. */
-const METHOD_KEYS = {
-  standard: "method.standard",
-  pointbuy: "method.pointbuy",
-  roll: "method.roll",
-  manual: "method.manual"
-};
 const AUTO_NAME = /^New Character for .+$/;
 
 /** Wording the GM can override in the module settings. */
@@ -48,56 +42,6 @@ const AUTO_NAME = /^New Character for .+$/;
  * Plain-language explanations for someone who has never built a character.
  * Written from the rules themselves rather than copied from anywhere.
  */
-/**
- * A short summary taken from whatever was imported.
- *
- * Works on paragraphs rather than the flattened text. Captions, headings, trait
- * tables and artist credits are not paragraphs of prose, so filtering at that
- * level removes them without guessing. Foundry enricher syntax (@UUID[...],
- * [[/r ...]], &Reference[...]) is stripped too - it is markup, not writing.
- */
-function shortSummary(item) {
-  const raw = item?.system?.description?.value ?? "";
-  if (!raw) return "";
-
-  const stripped = raw
-    .replace(/<(script|style|table|figure|figcaption)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<h[1-6][^>]*>[\s\S]*?<\/h[1-6]>/gi, " ");
-
-  const clean = (html) =>
-    html
-      .replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
-      .replace(/&\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
-      .replace(/\[\[[^\]]*\]\]/g, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/g, " ")
-      .replace(/&amp;/g, "&")
-      .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
-      .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
-      .replace(/&mdash;/g, "-")
-      .replace(/\s+/g, " ")
-      .trim();
-
-  const paragraphs = Array.from(stripped.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)).map((m) =>
-    clean(m[1])
-  );
-  const candidates = paragraphs.length ? paragraphs : [clean(stripped)];
-
-  const boilerplate = /free rules|creative commons|re-distributed|^source\b/i;
-
-  for (const paragraph of candidates) {
-    if (paragraph.length < 60 || boilerplate.test(paragraph)) continue;
-
-    const sentences = paragraph.split(/(?<=[.!?])\s+/);
-    let text = sentences[0]?.trim() ?? "";
-    // One sentence is often too terse; take a second if there is room.
-    if (text.length < 110 && sentences[1]) text = `${text} ${sentences[1].trim()}`;
-    if (text.length < 40) continue;
-
-    return text.length > 260 ? `${text.slice(0, 257)}...` : text;
-  }
-  return "";
-}
 
 export function missingSteps(actor) {
   if (!actor || actor.type !== "character") return [];
@@ -169,6 +113,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       levelUp: CreationGuide.onLevelUp,
       openReference: CreationGuide.onOpenReference,
       setLanguage: CreationGuide.onSetLanguage,
+      setTheme: CreationGuide.onSetTheme,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
@@ -258,176 +203,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext() {
     const actor = this.actor;
     if (!actor) return { missing: true };
-
-    const species = actor.items.find((i) => i.type === "race" || i.type === "species");
-    const background = actor.items.find((i) => i.type === "background");
-    // Every class, not just the first: a multiclassed character would otherwise
-    // silently lose half its build on this step.
-    const classes = actor.items.filter((i) => i.type === "class");
-    const subclasses = actor.items.filter((i) => i.type === "subclass");
-
-    const subclassFor = (item) =>
-      subclasses.find(
-        (sub) =>
-          !item.system?.identifier ||
-          sub.system?.classIdentifier === item.system.identifier
-      );
-
-    const cls = classes[0] ?? null;
-    const subclass = cls ? subclassFor(cls) : null;
-
-    const classLine = classes
-      .map((item) => {
-        const sub = subclassFor(item);
-        return `${item.name} ${item.system?.levels ?? 1}${sub ? ` - ${sub.name}` : ""}`;
-      })
-      .join(" · ");
-
-    const totalLevel = classes.reduce((sum, item) => sum + (item.system?.levels ?? 0), 0);
-    const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
-    const abilitiesDone = !!savedAbilities;
-    const abilityMethod = METHOD_KEYS[savedAbilities?.method]
-      ? t(METHOD_KEYS[savedAbilities.method])
-      : "";
-
-    const portrait = actor.img ?? "";
-    const hasPortrait =
-      !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
-
-    const known = actor.system?.traits?.languages?.value;
-    const languageKeys = known ? Array.from(known) : [];
-    const languageCount = languageKeys.length;
-
-    // Headline counts, detail below the line - same shape as the other steps.
-    let languageHeadline = "";
-    let languageSummary = "";
-    if (languageCount) {
-      const MAX_SHOWN = 10;
-      const labels = languageLabels(languageKeys);
-      const shown = labels.slice(0, MAX_SHOWN).join(", ");
-      const rest = labels.length > MAX_SHOWN ? " (...)" : "";
-      languageHeadline =
-        languageCount === 1 ? t("guide.languageCountOne") : t("guide.languageCount", languageCount);
-      languageSummary = `${shown}${rest}`;
+    // Guarded because everything else on the panel is still worth showing if
+    // this fails. A damaged item, or a field the system moved in an update,
+    // would otherwise leave the player looking at an empty window with no idea
+    // why - and no way back to the character.
+    let steps = [];
+    let stepsFailed = false;
+    try {
+      steps = buildSteps(actor);
+    } catch (err) {
+      stepsFailed = true;
+      console.error(`${MODULE_ID} | Could not build the steps for ${actor.name}`, err);
     }
-
-    // Which items were added with their choice dialogs skipped. Looked up once
-    // per render and attached to the entry itself: collected at the bottom of
-    // the panel the warning sat a long way from the thing it was about, and
-    // with two classes there was no telling which one it meant.
-    const skippedIds = new Set(itemsWithSkippedChoices(actor).map((problem) => problem.id));
-
-    const entryFor = (item, label, summary, alsoCheck = null) => ({
-      itemId: item.id,
-      // Above level 1 a single level can be stepped back, which is far less
-      // destructive than removing the class. Offered on the entry itself rather
-      // than only alongside a detected problem: a player who realises they
-      // misclicked should not have to wait for the module to notice.
-      canDelevel: item.type === "class" && Number(item.system?.levels ?? 1) > 1,
-      level: Number(item.system?.levels ?? 1),
-      name: label ?? item.name,
-      img: item.img ?? "",
-      summary: summary ?? shortSummary(item),
-      // A subclass is shown inside its class's entry, so its skipped choices
-      // have to be reported there - removing the class takes it with it anyway.
-      skipped: skippedIds.has(item.id) || (alsoCheck ? skippedIds.has(alsoCheck.id) : false),
-      kind: t(`check.kind.${item.type}`),
-      kindOf: t(`check.kindOf.${item.type}`)
-    });
-
-    const steps = [
-      {
-        key: "species",
-        number: 2,
-        label: t("step.species"),
-        actionLabel: t("stepAcc.species"),
-        icon: "fa-dna",
-        help: t("help.species") + importFlowNote(),
-        removable: true,
-        done: !!species,
-        entries: species ? [entryFor(species)] : [],
-        blurb: text("textSpecies", "blurb.species")
-      },
-      {
-        key: "background",
-        number: 3,
-        label: t("step.background"),
-        actionLabel: t("stepAcc.background"),
-        icon: "fa-scroll",
-        help: t("help.background") + importFlowNote(),
-        removable: true,
-        done: !!background,
-        entries: background ? [entryFor(background)] : [],
-        blurb: text("textBackground", "blurb.background")
-      },
-      {
-        key: "class",
-        number: 4,
-        label: t("step.class"),
-        actionLabel: t("stepAcc.class"),
-        icon: "fa-shield-halved",
-        reference: true,
-        levelUp: classes.length > 0,
-        help: t("help.class") + importFlowNote(),
-        removable: true,
-        done: classes.length > 0,
-        entries: classes.map((item) => {
-          const sub = subclassFor(item);
-          const label = `${item.name} ${item.system?.levels ?? 1}${sub ? ` - ${sub.name}` : ""}`;
-          return entryFor(item, label, shortSummary(sub) || shortSummary(item), sub);
-        }),
-        multiclass: classes.length > 1,
-        totalLevel,
-        blurb: text("textClass", "blurb.class")
-      },
-      {
-        key: "abilities",
-        number: 5,
-        label: t("step.abilities"),
-        actionLabel: t("stepAcc.abilities"),
-        icon: "fa-dice-d20",
-        help: t("help.abilities"),
-        removable: false,
-        done: abilitiesDone,
-        result: abilitiesDone
-          ? Object.entries(actor.system?.abilities ?? {})
-              .map(([, v]) => v.value)
-              .join(" / ")
-          : "",
-        summary: abilityMethod,
-        img: "",
-        blurb: text("textAbilities", "blurb.abilities")
-      },
-      {
-        key: "languages",
-        number: 6,
-        label: t("step.languages"),
-        actionLabel: t("stepAcc.languages"),
-        icon: "fa-comments",
-        help: t("help.languages"),
-        removable: false,
-        action: "languages",
-        done: !!actor.getFlag(MODULE_ID, "languages"),
-        result: languageHeadline,
-        summary: languageSummary,
-        img: "",
-        blurb: text("textLanguages", "blurb.languages")
-      },
-      {
-        key: "portrait",
-        number: 7,
-        label: t("step.portrait"),
-        actionLabel: t("stepAcc.portrait"),
-        icon: "fa-image",
-        removable: false,
-        optional: true,
-        action: "setPortrait",
-        done: hasPortrait,
-        result: hasPortrait ? t("guide.portraitSet") : "",
-        img: hasPortrait ? actor.img : "",
-        blurb: text("textPortrait", "blurb.portrait")
-      }
-    ];
 
     const showHelp = game.settings.get(MODULE_ID, "showStepHelp");
     // Always collapsed to start with, so the steps stay scannable. The chevron
@@ -477,7 +264,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         label,
         selected: code === currentLanguage()
       })),
+      themes: THEMES.map((code) => ({
+        code,
+        label: t(`theme.${code}`),
+        selected: code === currentTheme()
+      })),
       disclaimerOpen: this._disclaimerOpen,
+      stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
       // and burying it among the other warnings buried the only actionable item.
@@ -534,8 +327,36 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    applyTheme(this);
     preserveScroll(this, [".pk5e-pane"]);
 
+    this.bindNameField();
+    this.bindOwnership();
+    this.bindDisclosures();
+
+    if (!this._hooks.length) this.registerWatchers();
+
+    // Plutonium's own dialogs leave no trace in the data, so they have to be
+    // watched live. Only while this panel is open, which is the whole scope the
+    // creator claims responsibility for.
+    if (!this._stopOptionWatch) {
+      this._stopOptionWatch = watchOptionDialogs(
+        this.actor,
+        () => this.render(),
+        ({ cancelled }) => {
+          // "Import Complete" is the importer saying it is done. Until it
+          // appears the step stays marked as in progress, which also covers the
+          // case that prompted this: a dialog buried under another window.
+          this._importing = null;
+          this._importCancelled = cancelled;
+          this.render();
+        }
+      );
+    }
+  }
+
+  /** The name field, saved on blur and on Enter so it sticks either way. */
+  bindNameField() {
     const input = this.element.querySelector("[data-field='name']");
     if (input) {
       const save = async (ev) => {
@@ -553,7 +374,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       });
     }
+  }
 
+  /** Who owns the character and which folder it sits in. */
+  bindOwnership() {
     this.element.querySelector("select[data-owner]")?.addEventListener("change", async (ev) => {
       const chosen = ev.currentTarget.value;
       const { OWNER, NONE } = CONST.DOCUMENT_OWNERSHIP_LEVELS;
@@ -592,40 +416,27 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         ui.notifications.error(`Could not move the character: ${err.message}`);
       }
     });
+  }
 
+  /**
+   * Remembers which collapsible sections the player left open.
+   *
+   * ApplicationV2 rebuilds the element on every redraw, and the panel redraws
+   * on every completed step, so without this everything springs back open
+   * underneath whoever is reading it.
+   */
+  bindDisclosures() {
     this.element.querySelectorAll("details[data-help]").forEach((node) => {
       node.addEventListener("toggle", () => {
         this._help[node.dataset.help] = node.open;
       });
     });
 
-    // The notice at the top needs the same treatment: it was folding itself
-    // back open on every redraw, which is every time a step is completed.
     const disclaimer = this.element.querySelector(".pk5e-disclaimer");
     if (disclaimer) {
       disclaimer.addEventListener("toggle", () => {
         this._disclaimerOpen = disclaimer.open;
       });
-    }
-
-    if (!this._hooks.length) this.registerWatchers();
-
-    // Plutonium's own dialogs leave no trace in the data, so they have to be
-    // watched live. Only while this panel is open, which is the whole scope the
-    // creator claims responsibility for.
-    if (!this._stopOptionWatch) {
-      this._stopOptionWatch = watchOptionDialogs(
-        this.actor,
-        () => this.render(),
-        ({ cancelled }) => {
-          // "Import Complete" is the importer saying it is done. Until it
-          // appears the step stays marked as in progress, which also covers the
-          // case that prompted this: a dialog buried under another window.
-          this._importing = null;
-          this._importCancelled = cancelled;
-          this.render();
-        }
-      );
     }
   }
 
@@ -767,7 +578,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // spell - and every threshold that stopped it clearing too early made it
     // linger long after the work was done. The importer's own "Import Complete"
     // window settles it, so the notice now ends when the importer says so.
-    if (!game.settings.get(MODULE_ID, "showImportingNotice")) return;
+    // No longer optional. It was off by default because the old detection - wait
+    // for a quiet spell, then give up - either cleared too early or hung around
+    // long after the work was done. "Import Complete" ends it exactly when the
+    // importer says so, and a notice that is right is worth showing.
 
     this._importing = step;
     this._importCancelled = false;
@@ -788,6 +602,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   /** Lets the player set the portrait without hunting for it on the sheet. */
   /** Opens the reading window for classes and subclasses. */
   /** Per-user language switch; does not touch anyone else's view. */
+  /** Per-user colour scheme; like the language switch, it changes nobody else's view. */
+  static async onSetTheme(event, target) {
+    try {
+      await game.settings.set(MODULE_ID, "theme", target.dataset.theme);
+      this.render();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not change the panel theme`, err);
+    }
+  }
+
   static async onSetLanguage(event, target) {
     try {
       await game.settings.set(MODULE_ID, "language", target.dataset.lang);

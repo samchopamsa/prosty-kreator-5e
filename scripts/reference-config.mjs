@@ -9,7 +9,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
-import { preserveScroll } from "./ui.mjs";
+import { preserveScroll, applyTheme } from "./ui.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -101,6 +101,7 @@ export class ReferenceConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onRender() {
+    applyTheme(this);
     preserveScroll(this, [".pk5e-pane", ".pk5e-packs"]);
 
     this.element.querySelectorAll("[data-pack]").forEach((box) => {

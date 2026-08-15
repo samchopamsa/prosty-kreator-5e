@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.41.2**
+- Wersja modułu: **1.45.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -48,8 +48,14 @@ zasadami — także po ich aktualizacjach. Moduł dokłada dwie rzeczy, których
 | kontrola gotowości + karta postaci na czat | zaklęcia i sztuczki |
 | tłumaczenie ekranów gracza (PL/EN) | wszystko z kompendiów |
 
-Kolejność jest celowa: gatunek → pochodzenie → klasa. Pochodzenie podnosi atrybuty, więc
-gdy przychodzi rzut na punkty życia, modyfikator Kondycji jest już poprawny.
+Kolejność idzie za D&D Beyond: **klasa → gatunek → pochodzenie**. Klasa jest decyzją,
+wokół której buduje się resztę postaci, i tą, o której nowy gracz zwykle ma już zdanie.
+
+Wcześniej klasa była trzecia, z uzasadnieniem, że pochodzenie podnosi atrybuty, więc
+Kondycja powinna być gotowa przed rzutem na punkty życia. To uzasadnienie nie było
+trafne: wpis rozwoju zapisuje `{"1":"max"}`, czyli sposób, a nie liczbę, więc punkty
+życia wyliczane są na bieżąco i uwzględniają Kondycję niezależnie od tego, kiedy się
+zmieniła. Atrybuty i tak przydzielane są w kroku piątym, po wszystkich trzech.
 
 Okna importera pojawiają się **na wierzchu** panelu. Gracz je zamyka i wraca do panelu —
 moduł nie próbuje wykrywać, kiedy cudze okno się zamknęło, tylko obserwuje, co wylądowało
@@ -115,9 +121,9 @@ przerysowaniami. Każda postać ma własne okno panelu, więc dwa jednocześnie 
 | # | Krok | Co się dzieje |
 | --- | --- | --- |
 | 1 | **Nazwa** | Pole tekstowe. Do tego sekcja „Ownership and filing”: przypisanie gracza i folder. |
-| 2 | **Gatunek** | Naciska „Add Species” na karcie. |
-| 3 | **Pochodzenie** | Naciska „Add Background”. |
-| 4 | **Klasa** | Naciska „Add Class”. Obok przycisk do okna referencji i „Add a level or another class”. |
+| 2 | **Klasa** | Naciska „Add Class”. Obok odnośnik do kompendium klas i „Add a level or another class”. |
+| 3 | **Gatunek** | Naciska „Add Species” na karcie. |
+| 4 | **Pochodzenie** | Naciska „Add Background”. |
 | 5 | **Atrybuty** | Własne okno: standardowy zestaw / point buy / rzut 4k6 / ręcznie. |
 | 6 | **Języki** | Własne okno: tabela Standard Languages, rzut 1k12 albo wybór. |
 | 7 | **Portret** | Opcjonalny. Wybór obrazka. |
@@ -428,6 +434,21 @@ Obecnie druga forma brzmi „Języki: {0}”, co działa dla każdej liczby.
 
 ---
 
+## Motyw kolorystyczny
+
+Przełącznik w stopce panelu, obok wyboru języka: **Foundry / Jasny / Ciemny**.
+Ustawienie jest **per gracz** — nie zmienia widoku nikomu innemu — i domyślnie idzie
+za Foundry, więc kreator nie wygląda obco w cudzym interfejsie.
+
+Powód, dla którego to nie jest ustawienie MG: osoba grająca przy stole nie zawsze
+jest tą, która konfigurowała Foundry, a w panel patrzy się przez dwadzieścia minut.
+
+Wybór dotyczy **wszystkich okien modułu** — panelu, atrybutów, języków, obu okien
+z opisami. Realizowany przez dodanie klas `themed theme-light` / `theme-dark`, czyli
+tych samych, których używa Foundry, więc kolory pochodzą ze zmiennych systemu i będą
+nadal działać, gdy te się zmienią. Wariant „Foundry" nie dodaje niczego i po prostu
+dziedziczy.
+
 ## Ustawienia
 
 **Ustawienia → Ustawienia Modułów → Prosty Kreator Postaci**
@@ -447,15 +468,16 @@ Puste = tekst wbudowany. Pozwala przepisać opisy pod własną kampanię bez rus
 
 | Ustawienie | Zakres | Domyślnie | Opis |
 | --- | --- | --- | --- |
-| Click through the import dialogs automatically (GM) | świat | Off | Odpowiada za MG na pytanie „Plutonium czy Compendium Browser” |
-| Click through the import dialogs automatically (players) | świat | Off | To samo dla graczy |
-| Skip the data source screen (players) | świat | Nie | Naciska „Open Importer” z już zaznaczonymi źródłami |
-| Skip the data source screen (GM) | świat | Nie | To samo dla MG |
-| Untick „Keep Window Open” while clicking through | świat | Tak | Ten checkbox siedzi na pomijanym ekranie — bez tego gracz, który go zaznaczył, nigdy by go już nie odznaczył |
+| Click through the importer's opening screens | świat | Leave the screens alone | Odpowiada za pytanie „którym narzędziem" i ekran wyboru źródeł. Do wyboru: nie ruszać, tylko dla graczy, dla wszystkich |
 
-Lepszym rozwiązaniem niż dwa pierwsze ustawienia jest ustawienie w samym Plutonium
-**„Use Importer when Using ADD … Button on Actor”** na *Always* — wtedy pytanie w ogóle
-nie pada, a moduł te ustawienia sam pomija.
+Wcześniej było to **pięć** ustawień — tryb i pomijanie ekranu źródeł osobno dla graczy
+i dla MG, plus przełącznik odznaczania „Keep Window Open". Pięć pozycji na coś, czego
+własna podpowiedź odsyłała do ustawienia w Plutonium. Odznaczanie „Keep Window Open"
+jest teraz częścią tego, co znaczy „przeklikać ekrany", a nie osobną decyzją.
+
+Lepszym rozwiązaniem pozostaje ustawienie w samym Plutonium
+**„Use Importer when Using ADD … Button on Actor"** na *Always* — wtedy pytanie
+w ogóle nie pada.
 
 ### Zachowanie panelu
 
@@ -464,7 +486,6 @@ nie pada, a moduł te ustawienia sam pomija.
 | Show class descriptions beside the importer | świat | Tak | Steruje panelem opisów; szerokie okno referencji działa niezależnie |
 | How existing ability score increases are recognised | świat | advancements | Patrz [Atrybuty](#atrybuty-krok-5) |
 | How levelling works at your table | świat | milestone | Milestone / Experience |
-| Show an „importing” notice while the importer works | świat | Nie | Domyślnie wyłączone — wykrywanie cudzych okien albo gaśnie za wcześnie, albo wisi za długo |
 | Show „What is this?” explanations | świat | Tak | Wyjaśnienia dla początkujących |
 
 ### Referencja
@@ -481,11 +502,33 @@ nie pada, a moduł te ustawienia sam pomija.
 | Show „New Character” in the Actors sidebar | świat | Tak | |
 | Show buttons on the character sheet | świat | Tak | Przycisk w nagłówku karty |
 | Open the panel automatically for players | świat | Tak | Raz, przy pierwszym otwarciu niedokończonej postaci |
-| Also show „Complete Character” in the sidebar | świat | Nie | Awaryjnie, gdy przyciski na karcie się nie pojawiają |
 | Narrow tooltips in the Compendium Browser | klient | Tak | Podgląd tylko przy nazwie/ikonie, żeby dymek nie zasłaniał checkboxa |
 | Players may start a new character | świat | Tak | |
 
-### Ustawienia niewidoczne w interfejsie
+Powiadomienie „trwa import" nie ma już przełącznika — pokazuje się zawsze. Było
+wyłączone domyślnie, bo dawne wykrywanie gasło za wcześnie albo wisiało długo po
+wszystkim; teraz kończy je okno `Import Complete` importera, więc jest wiarygodne.
+
+Przycisk **„Complete Character"** w panelu Aktorów też odszedł. Był drogą awaryjną na
+wypadek, gdyby przyciski na karcie się nie pojawiły — od tego jest
+`characterCreator.complete(actorId)`, które nie kosztuje pozycji na ekranie ustawień.
+
+### Motyw kolorystyczny
+
+Przełącznik w stopce panelu, obok wyboru języka: **Foundry / Jasny / Ciemny**.
+Ustawienie jest **per gracz** — nie zmienia widoku nikomu innemu — i domyślnie idzie
+za Foundry, więc kreator nie wygląda obco w cudzym interfejsie.
+
+Powód, dla którego to nie jest ustawienie MG: osoba grająca przy stole nie zawsze
+jest tą, która konfigurowała Foundry, a w panel patrzy się przez dwadzieścia minut.
+
+Wybór dotyczy **wszystkich okien modułu** — panelu, atrybutów, języków, obu okien
+z opisami. Realizowany przez dodanie klas `themed theme-light` / `theme-dark`, czyli
+tych samych, których używa Foundry, więc kolory pochodzą ze zmiennych systemu i będą
+nadal działać, gdy te się zmienią. Wariant „Foundry" nie dodaje niczego i po prostu
+dziedziczy.
+
+## Ustawienia niewidoczne w interfejsie
 
 `language` (klient — wybór gracza), `referencePacks` (świat — lista kompendiów),
 `defaultActorFolder` (świat — folder ustawiany z poziomu panelu, bo tam lista folderów
@@ -561,6 +604,7 @@ prosty-kreator-5e/
 ├── module.json
 ├── README.md
 ├── check.sh                 komplet kontroli, `./check.sh`
+├── .gitignore
 ├── tests/
 │   └── run.mjs              testy reguł, `node tests/run.mjs`
 ├── scripts/
@@ -568,6 +612,7 @@ prosty-kreator-5e/
 │   ├── module.mjs           punkt wejścia: ustawienia, API, przyciski w drzewie aktorów
 │   ├── i18n.mjs             tłumaczenia PL/EN ekranów gracza + helper {{pkT}}
 │   ├── guide.mjs            panel siedmiu kroków — okno, stan, akcje
+│   ├── steps.mjs            definicje siedmiu kroków i ich bieżący stan
 │   ├── sheet-actions.mjs    obsługa karty postaci: klikanie przycisków,
 │   │                        czekanie na okna, usuwanie przez Advancement
 │   ├── complete.mjs         okno atrybutów
@@ -608,6 +653,28 @@ i wykonuje czynność. Dzięki temu panel da się czytać bez brnięcia przez ob
 a najbardziej kruchy fragment modułu leży w jednym miejscu.
 
 Zachowanie bez zmian: to przeniesienie kodu, nie przepisanie.
+
+### Podział _prepareContext
+
+`_prepareContext` w `guide.mjs` miało 282 linie — czterokrotnie więcej niż kolejna
+funkcja w module — i trzymało definicje kroków obok stanu okna, właściciela, folderu,
+przełącznika języka i raportu gotowości. Definicje kroków to część, która zmienia się
+wraz z zasadami, więc warto ją móc znaleźć: wyszła do `steps.mjs`.
+
+Zostało 125 linii. `_onRender` rozbite na `bindNameField`, `bindOwnership`
+i `bindDisclosures` — z 95 linii na 27.
+
+Budowanie kroków jest **osłonięte przechwytywaniem wyjątków**. Uszkodzony przedmiot
+albo pole przesunięte przez aktualizację systemu zostawiłoby gracza z pustym oknem
+bez żadnego wyjaśnienia; teraz reszta panelu działa, a w jego miejscu pojawia się
+komunikat odsyłający MG do konsoli.
+
+### Kolejność kroków
+
+Numery w panelu liczone są **z pozycji w tablicy**, a nie wpisane przy każdym kroku.
+Zmiana kolejności to przestawienie elementów listy i nic więcej. `STEP_CONFIG`
+w `sheet-actions.mjs` trzyma tę samą kolejność, bo `missingSteps()` raportuje w tej
+kolejności, w jakiej po nim przechodzi.
 
 ### Uwagi implementacyjne warte zapamiętania
 
@@ -668,8 +735,13 @@ gdy go nie ma, ten krok jest pomijany, a nie zgłaszany jako błąd. Żeby go w�
 ## Testy
 
 ```bash
-node tests/run.mjs
+node tests/run.mjs          # reguły
+node tests/steps-smoke.mjs  # czy panel w ogóle da się zbudować
 ```
+
+Test dymny uruchamia `buildSteps()` na podstawionej postaci. Kontrola składni nic nie
+mówi o nazwie, która przy podziale plików została po drugiej stronie — przy pierwszym
+uruchomieniu wyłapał trzy takie. Oba testy wchodzą w skład `./check.sh`.
 
 Bez zależności i bez budowania — sprawdza reguły, które powstały z oglądania
 prawdziwych danych: dopasowanie wpisów do kompendium, wykrywanie pominiętych
@@ -733,7 +805,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.41.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.45.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

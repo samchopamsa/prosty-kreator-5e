@@ -37,18 +37,48 @@ fi
 # happens to be available. A missing compiler is not a failure.
 
 step "templates"
+
+# Handlebars is not a dependency of the module, so a real compile only happens
+# where it is installed. Everywhere else we still check the thing that actually
+# breaks when editing a template by hand: block helpers left unclosed.
 if node -e 'require("handlebars")' 2>/dev/null; then
   node -e '
     const H = require("handlebars"), fs = require("fs");
     let bad = 0;
     for (const f of fs.readdirSync("templates")) {
-      try { H.precompile(fs.readFileSync("templates/" + f, "utf8")); console.log("  ok   " + f); }
+      try { H.precompile(fs.readFileSync("templates/" + f, "utf8")); console.log("  ok   " + f + " (compiled)"); }
       catch (e) { console.log("  FAIL " + f + ": " + e.message); bad = 1; }
     }
     process.exit(bad);
   ' || fail=1
 else
-  echo "  --   handlebars not installed, skipped (npm i handlebars to enable)"
+  node -e '
+    const fs = require("fs");
+    let bad = 0;
+    for (const f of fs.readdirSync("templates")) {
+      const src = fs.readFileSync("templates/" + f, "utf8");
+      const stack = [];
+      // {{#if}} {{#each}} {{#unless}} ... and their closers. {{else}} is not a
+      // block of its own and must sit inside one.
+      for (const m of src.matchAll(/\{\{([#/])(\w+)/g)) {
+        if (m[1] === "#") stack.push(m[2]);
+        else {
+          const open = stack.pop();
+          if (open !== m[2]) {
+            console.log("  FAIL " + f + ": {{/" + m[2] + "}} closes {{#" + (open ?? "nothing") + "}}");
+            bad = 1;
+          }
+        }
+      }
+      if (stack.length) {
+        console.log("  FAIL " + f + ": unclosed {{#" + stack.join("}}, {{#") + "}}");
+        bad = 1;
+      } else if (!bad) {
+        console.log("  ok   " + f + " (blocks balanced)");
+      }
+    }
+    process.exit(bad);
+  ' || fail=1
 fi
 
 # --- 3. translations -------------------------------------------------------
@@ -142,6 +172,14 @@ node -e '
 # --- 6. tests --------------------------------------------------------------
 
 step "tests"
+node tests/steps-smoke.mjs > /tmp/pk5e-smoke.log 2>&1
+if [ $? -eq 0 ]; then
+  ok "steps build and run"
+else
+  cat /tmp/pk5e-smoke.log | sed 's/^/  /'
+  fail=1
+fi
+
 node tests/run.mjs > /tmp/pk5e-tests.log 2>&1
 if [ $? -eq 0 ]; then
   tail -n 1 /tmp/pk5e-tests.log | sed 's/^/  ok   /'

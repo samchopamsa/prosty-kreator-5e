@@ -69,6 +69,13 @@
         {{/if}}
       </div>
 
+      {{#if stepsFailed}}
+      <div class="pk5e-callout pk5e-skipped-item">
+        <strong>{{pkT "guide.stepsFailed"}}</strong>
+        <p>{{pkT "guide.stepsFailedHint"}}</p>
+      </div>
+      {{/if}}
+
       {{#each steps}}
       <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
         <div class="pk5e-guide-head">
@@ -240,6 +247,12 @@
       {{#each languages}}
       <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"
               data-action="setLanguage" data-lang="{{code}}">{{label}}</button>
+      {{/each}}
+    </span>
+    <span class="pk5e-lang-switch">
+      {{#each themes}}
+      <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"
+              data-action="setTheme" data-theme="{{code}}">{{label}}</button>
       {{/each}}
     </span>
     <button type="button" data-action="postSummary">{{pkT "guide.postToChat"}}</button>
