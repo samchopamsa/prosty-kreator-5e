@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.41.0**
+- Wersja modułu: **1.41.2**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -567,7 +567,9 @@ prosty-kreator-5e/
 │   ├── constants.mjs        identyfikator modułu, osobno żeby nic nie importowało się nawzajem
 │   ├── module.mjs           punkt wejścia: ustawienia, API, przyciski w drzewie aktorów
 │   ├── i18n.mjs             tłumaczenia PL/EN ekranów gracza + helper {{pkT}}
-│   ├── guide.mjs            panel siedmiu kroków (największy plik)
+│   ├── guide.mjs            panel siedmiu kroków — okno, stan, akcje
+│   ├── sheet-actions.mjs    obsługa karty postaci: klikanie przycisków,
+│   │                        czekanie na okna, usuwanie przez Advancement
 │   ├── complete.mjs         okno atrybutów
 │   ├── languages.mjs        okno języków
 │   ├── reference.mjs        okno referencji klas i podklas
@@ -592,6 +594,20 @@ prosty-kreator-5e/
     ├── reference.hbs
     └── reference-config.hbs
 ```
+
+### Podział guide.mjs
+
+`guide.mjs` urósł do 1476 linii i robił trzy rzeczy naraz: układał panel, trzymał
+stan okna i **operował kartą postaci** — czekał na przyciski, klikał je, obchodził
+okna importera. Ta trzecia część jest z zupełnie innej materii niż reszta: zależna
+od czasu, oparta na cudzych znacznikach, i najbardziej narażona na zmiany w dnd5e
+albo Plutonium.
+
+Wydzielona do `sheet-actions.mjs` (443 linie). Nie wie nic o panelu — dostaje aktora
+i wykonuje czynność. Dzięki temu panel da się czytać bez brnięcia przez obsługę DOM,
+a najbardziej kruchy fragment modułu leży w jednym miejscu.
+
+Zachowanie bez zmian: to przeniesienie kodu, nie przepisanie.
 
 ### Uwagi implementacyjne warte zapamiętania
 
@@ -717,7 +733,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.41.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.41.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
