@@ -916,17 +916,3 @@
 .pk5e-disclaimer ul { margin: 0; padding-left: 16px; }
 .pk5e-disclaimer li { margin: 2px 0; }
 
-/* Levelling up is a real action, not an aside - it was a plain underlined link
-   among other links and read as one. Bordered rather than filled: it is the
-   main thing to do on a finished class step, but the character is complete
-   without it, so it should not shout like "Choose Class" does on an empty one. */
-.pk5e-levelup {
-  display: block;
-  width: 100%;
-  margin-top: 8px;
-  padding: 4px 8px;
-  font-size: 12px;
-  font-weight: 600;
-  background: none;
-  cursor: pointer;
-}
