@@ -599,6 +599,15 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     });
 
+    // The notice at the top needs the same treatment: it was folding itself
+    // back open on every redraw, which is every time a step is completed.
+    const disclaimer = this.element.querySelector(".pk5e-disclaimer");
+    if (disclaimer) {
+      disclaimer.addEventListener("toggle", () => {
+        this._disclaimerOpen = disclaimer.open;
+      });
+    }
+
     if (!this._hooks.length) this.registerWatchers();
 
     // Plutonium's own dialogs leave no trace in the data, so they have to be
