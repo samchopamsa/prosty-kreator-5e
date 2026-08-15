@@ -18,6 +18,7 @@ import { MODULE_ID } from "./constants.mjs";
 const STRINGS = {
   en: {
     "guide.title": "New Character",
+    "guide.windowTitle": "Character Creation Wizard",
     "guide.disclaimerTitle": "Before you start - how this creator works",
     "guide.disclaimerSource": "Species, background and class come from the importer, which is not part of this creator. Its windows open on top of this panel and ask their own questions.",
     "guide.disclaimerComplete": "Work through every one of those windows to the end. Closing one with Skip, Cancel or the X leaves that choice unmade, and the step will be incomplete.",
@@ -243,6 +244,7 @@ const STRINGS = {
 
   pl: {
     "guide.title": "Nowa postać",
+    "guide.windowTitle": "Kreator postaci",
     "guide.disclaimerTitle": "Zanim zaczniesz - sprawdź, jak działa kreator postaci",
     "guide.disclaimerSource": "Gatunek, pochodzenie i klasa pochodzą z importera, który nie jest częścią kreatora. Jego okna otwierają się nad tym panelem i zadają własne pytania.",
     "guide.disclaimerComplete": "Przejdź każde z tych okien do końca. Zamknięcie przyciskiem Skip, Cancel albo krzyżykiem zostawia wybór niedokonany, a krok będzie niepełny.",

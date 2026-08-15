@@ -121,6 +121,20 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   };
 
+  /**
+   * Names the window after what it is, with the character after it.
+   *
+   * It was showing the character's name alone, which on a fresh character is
+   * "New Character" - indistinguishable from the sheet behind it, and blank
+   * once the player types something short. With two panels open there was no
+   * telling them apart either.
+   */
+  get title() {
+    const name = this.actor?.name ?? "";
+    const base = t("guide.windowTitle");
+    return name ? `${base} - ${name}` : base;
+  }
+
   static PARTS = {
     main: { template: `modules/${MODULE_ID}/templates/guide.hbs` }
   };
@@ -666,6 +680,17 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       if (actor.sheet.rendered) {
         await actor.sheet.render();
         await wait(500);
+      }
+    }
+
+    // Same reading panel as the class step: adding a second class is exactly the
+    // moment a player wants to know what the classes do, and it was only
+    // offered the first time round.
+    if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
+      try {
+        openImporterPanel();
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
       }
     }
 

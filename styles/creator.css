@@ -994,3 +994,61 @@
 /* Theme switch sits beside the language switch and looks the same: both are
    per-user preferences about how the panel appears, not settings for the table. */
 .pk5e-lang-switch + .pk5e-lang-switch { margin-left: 8px; }
+
+/* ---------------------------------------------------------------------------
+   The button on the character sheet
+   ---------------------------------------------------------------------------
+   Not scoped to .pk5e-creator: this one lives on someone else's sheet, among
+   their buttons, so it carries its own values.
+
+   It used to copy the rest buttons' styling exactly and sat quietly among them.
+   Players were finding Plutonium's Level Up button instead - which flashes gold
+   for attention - and going through that. So this one is marked out: a standing
+   accent, and while the character is unfinished, a slow pulse and a count. */
+
+.pk5e-sheet-button {
+  position: relative;
+  border: 1px solid var(--color-shadow-primary, #ff6400) !important;
+  box-shadow: 0 0 4px rgba(255, 100, 0, 0.35);
+}
+.pk5e-sheet-button:hover {
+  box-shadow: 0 0 8px rgba(255, 100, 0, 0.6);
+}
+.pk5e-sheet-button i { color: var(--color-shadow-primary, #ff6400); }
+
+/* How many steps are still outstanding. Sits on the corner like an unread
+   count, which is a shape people already know how to read. */
+.pk5e-sheet-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: #c0392b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Only while there is something to do, and slow enough to notice rather than
+   nag. A permanent animation on a sheet someone stares at all session is a
+   different kind of rude. */
+.pk5e-sheet-button.is-unfinished {
+  animation: pk5e-attention 2.4s ease-in-out infinite;
+}
+
+@keyframes pk5e-attention {
+  0%, 100% { box-shadow: 0 0 4px rgba(255, 100, 0, 0.35); }
+  50%      { box-shadow: 0 0 10px rgba(255, 100, 0, 0.85); }
+}
+
+/* Anyone who has asked their system for less movement gets the accent without
+   the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .pk5e-sheet-button.is-unfinished { animation: none; }
+}

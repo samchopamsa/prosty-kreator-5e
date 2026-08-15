@@ -100,19 +100,27 @@ function inject(app, html) {
   let label = "Character creation panel";
   if (incomplete) label = outstanding >= 4 ? "Start creation" : "Resume creation";
 
-  const buttons = [
-    make("fa-hat-wizard", label, () => CreationGuide.open(actor.id))
-  ];
+  const button = make("fa-hat-wizard", label, () => CreationGuide.open(actor.id));
+
+  // A count of what is still outstanding, the way unread messages are counted.
+  // Plutonium's own Level Up button flashes gold for attention, and players
+  // were following it instead of this one; a number says something that a
+  // flashing button cannot, and says it without competing animation.
+  if (outstanding > 0) {
+    const badge = document.createElement("span");
+    badge.className = "pk5e-sheet-badge";
+    badge.textContent = String(outstanding);
+    button.appendChild(badge);
+  }
 
   if (restButton) {
-    // Match the neighbouring rest buttons exactly, then mark them as ours.
-    let previous = restButton;
-    for (const el of buttons) {
-      el.className = restButton.className;
-      el.classList.add("pk5e-sheet-button");
-      previous.insertAdjacentElement("afterend", el);
-      previous = el;
-    }
+    // Sized like the rest buttons beside it - same square, same spacing - but
+    // not styled like them. Copying the class list outright made it disappear
+    // into the row, which is the opposite of what a new player needs.
+    button.className = restButton.className;
+    button.classList.add("pk5e-sheet-button");
+    if (incomplete) button.classList.add("is-unfinished");
+    restButton.insertAdjacentElement("afterend", button);
     return;
   }
 
@@ -123,10 +131,9 @@ function inject(app, html) {
   }
   if (!anchor) return;
 
-  for (const el of buttons.reverse()) {
-    el.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
-    anchor.prepend(el);
-  }
+  button.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
+  if (incomplete) button.classList.add("is-unfinished");
+  anchor.prepend(button);
 }
 
 /**

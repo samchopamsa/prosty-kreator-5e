@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.45.1**
+- Wersja modułu: **1.46.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -100,7 +100,13 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Przycisk na karcie postaci** (obok przycisków odpoczynku) — „Start creation" / „Resume creation"
+- **Przycisk na karcie postaci** (obok przycisków odpoczynku) — „Start creation" / „Resume creation".
+  Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
+  i nosi licznik pozostałych kroków. Powód: przycisk **Level Up** Plutonium miga na
+  złoto i gracze szli za nim zamiast za naszym. Licznik mówi coś, czego migający
+  przycisk powiedzieć nie może, i mówi to bez konkurowania animacją. Puls zatrzymuje
+  się, gdy nie ma nic do zrobienia, i nie działa wcale przy systemowym ustawieniu
+  ograniczenia ruchu
 - **Prawy klik na postaci w drzewie aktorów → „Start / resume creation"** (tylko gdy coś zostało do zrobienia)
 - **Automatycznie** — przy pierwszym otwarciu niedokończonej postaci przez gracza (można wyłączyć)
 
@@ -809,7 +815,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.45.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.46.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
