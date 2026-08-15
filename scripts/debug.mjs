@@ -27,17 +27,7 @@ export { isDebug, trace };
 
 function resolveActor(actorId) {
   if (actorId) return game.actors.get(actorId) ?? game.actors.getName(actorId);
-
-  const selected = canvas?.tokens?.controlled?.[0]?.actor;
-  if (selected) return selected;
-
-  // The character whose panel is open is almost always the one being asked
-  // about - that is why the console was opened in the first place.
-  for (const app of foundry.applications.instances?.values() ?? []) {
-    if (app?.constructor?.name === "CreationGuide" && app.actor) return app.actor;
-  }
-
-  return game.user?.character ?? null;
+  return canvas?.tokens?.controlled?.[0]?.actor ?? game.user?.character ?? null;
 }
 
 /**
@@ -46,10 +36,7 @@ function resolveActor(actorId) {
 export async function debugActor(actorId = null) {
   const actor = resolveActor(actorId);
   if (!actor) {
-    console.warn(
-      `${MODULE_ID} | No character found. Open a creator panel, select a token, ` +
-        "or pass a name: characterCreator.debug(\"Barosław\")"
-    );
+    console.warn(`${MODULE_ID} | No character found. Pass an id or name, or select a token.`);
     return null;
   }
 
