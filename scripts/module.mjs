@@ -244,6 +244,26 @@ Hooks.once("ready", () => {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "hidePlutoniumLevelUp", {
+    name: "Hide Plutonium's own level-up button",
+    hint:
+      "Plutonium's button flashes for attention and players follow it instead of this module's, " +
+      "which then cannot report what changed. This hides it with styling only - it stays on the " +
+      "sheet where this module can still press it, which is how the level-up window works. Do " +
+      "not remove it in Plutonium's own settings: then there is nothing left to press.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false,
+    onChange: () => {
+      for (const app of Object.values(ui.windows ?? {})) app.render?.(false);
+      document.body.classList.toggle(
+        "pk5e-hide-plutonium-levelup",
+        game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")
+      );
+    }
+  });
+
   // The player's own choice. Hidden from the settings screen because it is set
   // from the panel footer, where they are actually looking at the colours.
   game.settings.register(MODULE_ID, "theme", {
@@ -252,6 +272,11 @@ Hooks.once("ready", () => {
     type: String,
     default: "auto"
   });
+
+  document.body.classList.toggle(
+    "pk5e-hide-plutonium-levelup",
+    game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")
+  );
 
   const api = {
     guide: () => CreationGuide.start(),

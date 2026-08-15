@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.47.0**
+- Wersja modułu: **1.47.2**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -295,6 +295,38 @@ sesjach przerwy chce trzech. Okno pokazuje „poziom 2 z 3", a zmiany narastają
 Po sygnale `Import Complete` (`import-end.mjs`). Przedmioty lądują na karcie w połowie
 łańcucha okien, więc odczyt wcześniej pokazałby pół poziomu. Zapasowo dwuminutowy limit,
 gdyby sygnał nie przyszedł — rezygnacja jest normalnym wynikiem, nie awarią.
+
+### Przycisk Plutonium
+
+Moduł awansuje postać, **naciskając przycisk Plutonium** — nie ma innej drogi, bo to
+Plutonium prowadzi cały łańcuch okien. Wyłączenie tego przycisku w ustawieniach
+Plutonium usuwa go z dokumentu i nie ma czego nacisnąć.
+
+Dlatego ustawienie **Hide Plutonium's own level-up button** ukrywa go **stylem**,
+nie usuwa. Element zostaje na karcie, gracz go nie widzi, a moduł nadal może go użyć.
+
+### Kiedy uznajemy awans za zakończony
+
+Awans, inaczej niż pozostałe importy, **nie kończy się oknem `Import Complete`** —
+kończy się powiadomieniem „Level up complete!". `import-end.mjs` czeka więc na jedno
+albo drugie. Powiadomienia czytane są z żywego elementu, nie z `ui.notifications`,
+bo tamto trzyma wpisy po ich zniknięciu i dopasowałoby komunikat sprzed godziny.
+
+### Przycisk Plutonium
+
+Moduł awansuje postać, **naciskając przycisk Plutonium** — innej drogi nie ma, bo to
+Plutonium prowadzi cały łańcuch okien. Wyłączenie tego przycisku w ustawieniach
+Plutonium usuwa go z dokumentu i nie zostaje nic do naciśnięcia.
+
+Dlatego ustawienie **Hide Plutonium's own level-up button** ukrywa go **stylem**,
+a nie usuwa. Element zostaje na karcie, gracz go nie widzi, moduł nadal może go użyć.
+
+### Kiedy uznajemy awans za zakończony
+
+Awans, inaczej niż pozostałe importy, **nie kończy się oknem `Import Complete`** —
+kończy się powiadomieniem „Level up complete!". `import-end.mjs` czeka więc na jedno
+albo drugie. Powiadomienia czytane są z żywego elementu, nie z `ui.notifications`,
+bo tamto trzyma wpisy po ich zniknięciu i dopasowałoby komunikat sprzed godziny.
 
 ### Czego nie robimy
 
@@ -858,7 +890,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.47.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.47.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

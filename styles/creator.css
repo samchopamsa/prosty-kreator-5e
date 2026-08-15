@@ -1095,3 +1095,21 @@
 .pk5e-change.is-level,
 .pk5e-change.is-newClass { font-weight: 700; }
 .pk5e-change.is-hp { color: var(--pk5e-accent); }
+
+/* Plutonium's own level-up button, hidden by setting.
+   Hidden, not removed: this module levels a character by pressing that very
+   button, so it has to stay in the page. Turning it off in Plutonium's own
+   settings takes it out of the document and leaves nothing to press. */
+body.pk5e-hide-plutonium-levelup .imp-cls__btn-sheet-level-up,
+body.pk5e-hide-plutonium-levelup [class*="btn-sheet-level-up"] {
+  display: none !important;
+}
+
+/* Our own row under the rest buttons, for sheets where Plutonium has not put a
+   button there for us to follow. Same spacing as the row above it. */
+.pk5e-sheet-row {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex: 0 0 100%;
+}

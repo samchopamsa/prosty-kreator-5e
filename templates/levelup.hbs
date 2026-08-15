@@ -24,7 +24,7 @@
         <p class="pk5e-lead">{{pkT "levelup.lead"}}</p>
 
         <label class="pk5e-label" for="pk5e-target">{{pkT "levelup.target"}}</label>
-        <select id="pk5e-target" data-action="setTarget">
+        <select id="pk5e-target" data-target-level>
           {{#each targets}}
           <option value="{{level}}" {{#if selected}}selected{{/if}}>
             {{pkT "levelup.targetOption" level count}}

@@ -85,7 +85,6 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     window: { icon: "fa-solid fa-arrow-up-right-dots", resizable: true },
     actions: {
       levelOnce: LevelUpGuide.onLevelOnce,
-      setTarget: LevelUpGuide.onSetTarget,
       dismissOption: LevelUpGuide.onDismissOption,
       finish: LevelUpGuide.onFinish
     }
@@ -164,6 +163,20 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     applyTheme(this);
     preserveScroll(this, [".pk5e-pane"]);
 
+    // Bound by hand rather than through an action. As an action every click on
+    // the select counted as one, and the redraw that followed closed the list
+    // before anything could be picked from it - the value could only be changed
+    // with the arrow keys.
+    const target = this.element.querySelector("[data-target-level]");
+    if (target) {
+      target.value = String(this._target ?? "");
+      target.addEventListener("change", (ev) => {
+        // Stored, not rendered: nothing else on screen depends on it until the
+        // button is pressed.
+        this._target = Number(ev.currentTarget.value) || null;
+      });
+    }
+
     // Same watcher the creation panel uses. Without a window of ours open,
     // nothing was checking whether the player finished the dialogs.
     if (!this._stopOptionWatch && this.actor) {
@@ -239,11 +252,6 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       this._busy = false;
       this.render();
     }
-  }
-
-  static async onSetTarget(event, target) {
-    this._target = Number(target.value ?? target.dataset.level) || null;
-    this.render();
   }
 
   static async onLevelOnce() {

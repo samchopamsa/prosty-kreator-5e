@@ -126,17 +126,36 @@ function inject(app, html) {
   }
 
   if (restButton) {
-    // Sized like the rest buttons beside it - same square, same spacing - but
-    // not styled like them. Copying the class list outright made it disappear
-    // into the row, which is the opposite of what a new player needs.
-    let previous = restButton;
+    // Sized like the rest buttons - same square, same spacing - but not styled
+    // like them. Copying the class list outright made it disappear into the
+    // row, which is the opposite of what a new player needs.
     for (const el of buttons) {
       el.className = restButton.className;
       el.classList.add("pk5e-sheet-button");
       if (incomplete && el === button) el.classList.add("is-unfinished");
-      previous.insertAdjacentElement("afterend", el);
-      previous = el;
     }
+
+    // Plutonium's own button sits on a row below the rest buttons, where there
+    // is room. Following it keeps us out of the header strip: adding to the end
+    // of that pushed our buttons over the inspiration marker beside it.
+    const plutonium = root.querySelector(
+      ".imp-cls__btn-sheet-level-up, [class*='btn-sheet-level-up']"
+    );
+    if (plutonium?.parentElement) {
+      let previous = plutonium;
+      for (const el of buttons) {
+        previous.insertAdjacentElement("afterend", el);
+        previous = el;
+      }
+      return;
+    }
+
+    // Nothing to follow: make that second row ourselves, directly beneath the
+    // rest buttons rather than alongside them.
+    const row = document.createElement("div");
+    row.className = "pk5e-sheet-row";
+    for (const el of buttons) row.appendChild(el);
+    (restButton.parentElement ?? restButton).insertAdjacentElement("afterend", row);
     return;
   }
 

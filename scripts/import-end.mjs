@@ -21,6 +21,13 @@ const COMPLETE_TITLE = /^import complete/i;
 const CANCELLED = /was cancelled/i;
 
 /**
+ * Levelling up does not put up an "Import Complete" window at all - it finishes
+ * with a toast reading "Level up complete!". Two different endings for what is,
+ * from here, the same wait, so both are watched for.
+ */
+const COMPLETE_TOAST = /level[- ]?up complete/i;
+
+/**
  * Resolves when the "Import Complete" window appears, or when the wait runs out.
  *
  * @param   {object} options
@@ -45,6 +52,15 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
         const title = app.querySelector(".window-title")?.textContent ?? "";
         if (!COMPLETE_TITLE.test(title)) continue;
         finish({ completed: true, cancelled: CANCELLED.test(app.textContent ?? "") });
+        return true;
+      }
+
+      // Foundry's own toasts. Read from the live element rather than from
+      // ui.notifications, which keeps entries around after they have gone and
+      // would match a message from earlier in the session.
+      for (const note of document.querySelectorAll("#notifications .notification")) {
+        if (!COMPLETE_TOAST.test(note.textContent ?? "")) continue;
+        finish({ completed: true, cancelled: false });
         return true;
       }
       return false;
