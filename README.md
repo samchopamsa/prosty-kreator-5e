@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.38.0**
+- Wersja modułu: **1.41.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -357,6 +357,13 @@ Nowe okno to nowy wiersz w tablicy, nie kolejny warunek w kodzie.
 | `Feats` / `Select a Feat (…)` | lista rozwijana musi mieć wybraną wartość; pusta kategoria wygląda tak samo jak niedokonany wybór i też jest zgłaszana |
 | `Import Complete` | tekst „was cancelled" = import przepadł, zapisy z tej sesji kasujemy |
 
+Osobna, ważna zasada: **wpis powstaje dopiero, gdy okno faktycznie się zamknie**.
+Plutonium część rzeczy pilnuje samo — przy podniesieniu atrybutów z nierozdzielonymi
+punktami odmawia zatwierdzenia i zostawia okno otwarte. Zamiast utrzymywać listę
+„te okna bronią się same", która i tak by się zestarzała i różni między wersjami,
+sprawdzamy po kliknięciu, czy okno zniknęło. Nadal otwarte znaczy, że Plutonium
+odrzuciło zatwierdzenie i nie ma o czym meldować.
+
 Okno `Import Complete` służy też za **jedyny pewny sygnał zakończenia importu**.
 Wcześniej powiadomienie „trwa import" gasło po okresie ciszy, co albo kończyło się
 za wcześnie, albo wisiało długo po wszystkim. Teraz kończy je importer. To pokrywa
@@ -520,6 +527,17 @@ sięgnąć głębiej.
 
 ## Co moduł zapisuje na aktorze
 
+Flagi mają **numer schematu** (`schema`) i mechanizm migracji w `migrate.mjs`.
+Dziś nie ma czego migrować — wpis `0 → 1` tylko wyznacza początek liczenia — ale
+gdy któraś flaga zmieni kształt, postacie zrobione wcześniej byłyby czytane błędnie,
+i to po cichu: ostrzeżenie, które się nie pojawi, bonus policzony dwa razy. Migracja
+uruchamia się raz, przy otwarciu panelu, wyłącznie dla postaci, na których moduł
+faktycznie coś zapisał.
+
+Dopisanie migracji: funkcja do `MIGRATIONS` (pozycja 0 prowadzi ze schematu 0 do 1)
+i podniesienie `SCHEMA`. Nie wolno przenumerowywać ani usuwać wpisów — czyjaś postać
+wciąż stoi na tej wersji i potrzebuje każdego kroku po drodze.
+
 Flagi w przestrzeni `prosty-kreator-5e`:
 
 | Flaga | Znaczenie |
@@ -527,6 +545,7 @@ Flagi w przestrzeni `prosty-kreator-5e`:
 | `abilities` | Przypisane atrybuty bazowe i metoda. Zapobiega podwójnemu liczeniu bonusów przy ponownym uruchomieniu. |
 | `languages` | Krok języków został domknięty. |
 | `guideDismissed` | Gracz zamknął panel — automatyczne otwieranie już nie wraca. |
+| `schema` | Numer schematu flag, do migracji. |
 | `disclaimerSeen` | Ostrzeżenie na górze było już raz pokazane rozwinięte. |
 | `skippedOptions` | Wybory pominięte w oknach Plutonium. Czyszczone przy usunięciu przedmiotu i linkiem „już to poprawiłem". |
 
@@ -541,11 +560,16 @@ Brak flagi `abilities` lub `languages` oznacza dla modułu „krok niezrobiony�
 prosty-kreator-5e/
 ├── module.json
 ├── README.md
+├── check.sh                 komplet kontroli, `./check.sh`
+├── tests/
+│   └── run.mjs              testy reguł, `node tests/run.mjs`
 ├── scripts/
 │   ├── constants.mjs        identyfikator modułu, osobno żeby nic nie importowało się nawzajem
 │   ├── module.mjs           punkt wejścia: ustawienia, API, przyciski w drzewie aktorów
 │   ├── i18n.mjs             tłumaczenia PL/EN ekranów gracza + helper {{pkT}}
-│   ├── guide.mjs            panel siedmiu kroków (największy plik)
+│   ├── guide.mjs            panel siedmiu kroków — okno, stan, akcje
+│   ├── sheet-actions.mjs    obsługa karty postaci: klikanie przycisków,
+│   │                        czekanie na okna, usuwanie przez Advancement
 │   ├── complete.mjs         okno atrybutów
 │   ├── languages.mjs        okno języków
 │   ├── reference.mjs        okno referencji klas i podklas
@@ -555,6 +579,9 @@ prosty-kreator-5e/
 │   ├── browser-tweaks.mjs   zawężenie dymków w Compendium Browser
 │   ├── summary.mjs          karta postaci na czat
 │   ├── option-watch.mjs     czujka na pominięte wybory w oknach Plutonium
+│   ├── migrate.mjs          numer schematu flag i migracje
+│   ├── debug.mjs            characterCreator.debug() — zrzut stanu wykrywania
+│   ├── trace.mjs            sam log diagnostyczny, bez zależności
 │   ├── validate.mjs         kontrola gotowości
 │   └── ui.mjs               pamiętanie pozycji przewijania
 ├── styles/
@@ -568,12 +595,29 @@ prosty-kreator-5e/
     └── reference-config.hbs
 ```
 
+### Podział guide.mjs
+
+`guide.mjs` urósł do 1476 linii i robił trzy rzeczy naraz: układał panel, trzymał
+stan okna i **operował kartą postaci** — czekał na przyciski, klikał je, obchodził
+okna importera. Ta trzecia część jest z zupełnie innej materii niż reszta: zależna
+od czasu, oparta na cudzych znacznikach, i najbardziej narażona na zmiany w dnd5e
+albo Plutonium.
+
+Wydzielona do `sheet-actions.mjs` (443 linie). Nie wie nic o panelu — dostaje aktora
+i wykonuje czynność. Dzięki temu panel da się czytać bez brnięcia przez obsługę DOM,
+a najbardziej kruchy fragment modułu leży w jednym miejscu.
+
+Zachowanie bez zmian: to przeniesienie kodu, nie przepisanie.
+
 ### Uwagi implementacyjne warte zapamiętania
 
 - **Foundry v14 zamraża `this.options` po `super()`** — wymiary okna trzeba policzyć
   *przed* wywołaniem `super()` i przekazać w argumencie.
 - **`this.state` jest zarezerwowane** w ApplicationV2 — stan panelu musi mieć inną nazwę.
 - Szablon części ApplicationV2 musi mieć **dokładnie jeden korzeń HTML**.
+- `trace.mjs` istnieje osobno od `debug.mjs`, bo `debug.mjs` czyta z czujek, a czujki
+  chcą logować — to cykl. Moduły ES go zniosą dzięki wynoszeniu deklaracji funkcji,
+  ale cykl działający tylko z tego powodu jest pułapką dla następnej osoby.
 - Nazwa klasy karty dnd5e zmieniała się między wersjami, więc `sheet-button.mjs` nasłuchuje
   na kilku nazwach hooka naraz. Sprawdzenie nazwy w swoim świecie:
   `game.actors.contents[0].sheet.constructor.name`
@@ -584,6 +628,61 @@ prosty-kreator-5e/
 
 ---
 
+## Diagnostyka
+
+Zamiast pisania makra za każdym razem, gdy trzeba ustalić, dlaczego ostrzeżenie
+się pojawiło albo nie:
+
+```js
+characterCreator.debug()              // zaznaczony żeton albo Twoja postać
+characterCreator.debug("Barosław")    // po nazwie lub identyfikatorze
+characterCreator.debugCompendiums()   // co widzą okna z opisami
+characterCreator.setDebug(true)       // dopisuj ślad także na bieżąco
+```
+
+`debug()` wypisuje flagi wraz z numerem schematu, przedmioty według typu, komórki
+zaklęć kontra zaklęcia na karcie, wykryte pominięcia obu rodzajów, wymagania
+wieloklasowości, niezaliczone punkty listy kontrolnej oraz **tabelę wpisów
+Advancement** — bo to ona kończy się czytana, gdy odpowiedź zaskakuje.
+
+`setDebug(true)` włącza ślad w czujkach: każde okno Plutonium wypisze, którą regułą
+zostało rozpoznane i który przycisk nacisnięto. Ustawienie jest ukryte (zakres
+klienta), bo to narzędzie do dochodzenia, a nie pokrętło dla stołu.
+
+## Kontrola przed wysłaniem
+
+```bash
+./check.sh
+```
+
+Jedno polecenie zamiast sześciu kontroli robionych z pamięci: składnia wszystkich
+plików, poprawność `module.json`, kompilacja szablonów, parytet tłumaczeń, cykle
+i nierozwiązane importy, zgodność numeru wersji między `module.json` a README,
+oraz testy. Kod wyjścia różny od zera przy niepowodzeniu, więc nadaje się przed
+`git push`.
+
+Kompilacja szablonów wymaga `handlebars`, który **nie jest** zależnością modułu —
+gdy go nie ma, ten krok jest pomijany, a nie zgłaszany jako błąd. Żeby go włączyć:
+`npm i handlebars`.
+
+## Testy
+
+```bash
+node tests/run.mjs
+```
+
+Bez zależności i bez budowania — sprawdza reguły, które powstały z oglądania
+prawdziwych danych: dopasowanie wpisów do kompendium, wykrywanie pominiętych
+wyborów, wymagania wieloklasowości i odczyt okien Plutonium. Foundry jest
+podstawione w minimalnym zakresie potrzebnym do zaimportowania plików.
+
+Każdy przypadek, który kiedyś wyszedł źle, ma tu swój test — najważniejszy to
+„Twilight Domain" kontra „Light Domain", bo jedna nazwa zawiera drugą, oraz
+`ScaleValue`, który jest pusty u **każdej** postaci i przy naiwnej regule dawałby
+trzy fałszywe alarmy na każdym poprawnym klesze.
+
+Kod wyjścia różny od zera przy niepowodzeniu, więc nadaje się do automatyzacji.
+
 ## Znane ograniczenia
 
 - **Wieloklasowość** — panel ostrzega, gdy wymagania atrybutów nie są spełnione, ale nie
@@ -592,6 +691,13 @@ prosty-kreator-5e/
   zobaczysz je dwa razy; etykieta kompendium jest widoczna.
 - **Awanse powyżej poziomu 1** są przekazywane systemowi i Plutonium — moduł tylko naciska przycisk.
 - Referencja czyta **tylko kompendia**, nie dane pobierane przez Plutonium w locie.
+- Oba nasłuchy są opakowane w przechwytywanie wyjątków, bo działają wewnątrz cudzej
+  obsługi zdarzeń — nasza awaria nie może zabrać ze sobą okna importera.
+- Przy dwóch otwartych panelach czujka rozpoznaje, **której postaci dotyczy import**,
+  po tytule okna kreatora Plutonium (`Importing to Actor "…"`). Bez tego oba panele
+  zapisałyby ten sam werdykt na obu postaciach. Gdy nazwy nie da się odczytać, wpis
+  powstaje mimo to — ostrzeżenie na niewłaściwej postaci da się odrzucić, a milczenie
+  na właściwej jest gorsze.
 - Panel opisów sięga do znaczników cudzego pakietu. Gdy 5etools je zmieni, panel
   przestanie cokolwiek znajdować — kreator działa dalej bez zmian. **MG dostanie wtedy
   ostrzeżenie w konsoli** (F12) z listą selektorów, których panel szukał; gracz nic nie widzi.
@@ -627,7 +733,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.38.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.41.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

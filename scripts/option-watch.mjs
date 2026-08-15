@@ -38,6 +38,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { trace } from "./trace.mjs";
 
 /**
  * One entry per kind of dialog Plutonium can put up.
@@ -52,7 +53,7 @@ import { MODULE_ID } from "./constants.mjs";
  *   complete   given the dialog, was the choice actually finished
  *   describe   what to call it in the warning
  */
-const DIALOGS = [
+export const DIALOGS = [
   {
     id: "choice",
     // "Choose Option: Fighting Style (Level 1)"
@@ -158,7 +159,41 @@ function labelFor(title, app, fallback) {
   return heading || fallback;
 }
 
+/**
+ * How long to wait before deciding a dialog really closed.
+ *
+ * Long enough for Plutonium to have rejected the click and kept the window up,
+ * short enough that the panel is not visibly behind.
+ */
+const CLOSE_GRACE_MS = 400;
+
 const COMPLETE_TITLE = /^import complete/i;
+
+/**
+ * Plutonium names the character in its wizard title:
+ *   Import Wizard: Importing to Actor "Barosław"
+ *
+ * Needed because two open panels mean two listeners on the document, and both
+ * would see the same dialog and write the same verdict onto both characters.
+ * When the name cannot be found we fall through and record anyway - a warning
+ * on the wrong character is bad, but so is silence on the right one, and the
+ * player can dismiss what does not apply.
+ */
+const ACTOR_IN_TITLE = /importing to actor\s+["\u201c]([^"\u201d]+)["\u201d]/i;
+
+/** Exported so the title parsing can be tested without a browser. */
+export function actorNameFromTitle(title) {
+  const found = String(title ?? "").match(ACTOR_IN_TITLE);
+  return found ? found[1].trim() : null;
+}
+
+function importTargetName() {
+  for (const app of document.querySelectorAll(".ve-app")) {
+    const name = actorNameFromTitle(app.querySelector(".window-title")?.textContent);
+    if (name) return name;
+  }
+  return null;
+}
 const CANCELLED = /was cancelled/i;
 
 export const SKIPPED_FLAG = "skippedOptions";
@@ -181,6 +216,8 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
   // import can still be cancelled at the very end, and then none of it counts.
   let pending = [];
   let stopped = false;
+  // Held so they can be cancelled: the panel may close inside the grace period.
+  const timers = new Set();
 
   const record = (entry) => {
     // One entry per choice: reopening the same dialog replaces the old verdict
@@ -220,6 +257,11 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
     const app = event.target.closest?.(".ve-app");
     if (!app) return;
 
+    // With more than one panel open, only the one whose character is being
+    // imported into should react.
+    const target = importTargetName();
+    if (target && target !== actor.name) return;
+
     const button = event.target.closest("button, .ve-btn");
     if (!button) return;
 
@@ -239,7 +281,11 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
     }
 
     const dialog = DIALOGS.find((entry) => entry.match(title, app));
-    if (!dialog) return;
+    if (!dialog) {
+      trace("dialog ignored:", title || "(untitled)", "button:", text);
+      return;
+    }
+    trace("dialog:", dialog.id, "|", title || "(untitled)", "| button:", text);
 
     const { label, level } = dialog.describe(title, app);
 
@@ -251,17 +297,47 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
     // Confirmed - but a dialog can be confirmed with the choice half made, so
     // each kind is asked whether it considers itself finished.
     const verdict = dialog.complete(app);
-    if (verdict === true) clear(label, level);
-    else record({ label, level, reason: "partial", ...verdict });
+    if (verdict === true) {
+      clear(label, level);
+      return;
+    }
+
+    // Plutonium guards some of these itself: press Confirm on an ability score
+    // increase with points left and it refuses, leaving the window open. Rather
+    // than keeping a list of which dialogs do that - which would go stale, and
+    // differs between versions - we simply look at whether the window actually
+    // closed. Still open means the refusal happened and there is nothing to
+    // report; the player is being made to finish it right now.
+    const timer = setTimeout(() => {
+      timers.delete(timer);
+      if (stopped) return;
+      if (document.body.contains(app)) return;
+      record({ label, level, reason: "partial", ...verdict });
+      commit();
+    }, CLOSE_GRACE_MS);
+    timers.add(timer);
   };
 
   // Capture phase: Plutonium's own handler closes the dialog, and by the time a
   // bubbled event arrived the window would be gone along with its title.
-  document.addEventListener("click", onClick, true);
+  // Wrapped, because this runs inside someone else's click handling: an
+  // exception here would take their dialog down with it. A broken watcher is a
+  // line in the console; a broken importer is a player who cannot play.
+  const guarded = (event) => {
+    try {
+      onClick(event);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Option watcher failed on a click`, err);
+    }
+  };
+
+  document.addEventListener("click", guarded, true);
 
   return () => {
     stopped = true;
-    document.removeEventListener("click", onClick, true);
+    for (const timer of timers) clearTimeout(timer);
+    timers.clear();
+    document.removeEventListener("click", guarded, true);
   };
 }
 
