@@ -17,6 +17,7 @@ import { registerContextMenu } from "./context-menu.mjs";
 import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
+import { debugActor, debugCompendiums } from "./debug.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
 Hooks.once("init", () => {
@@ -263,6 +264,16 @@ registerBrowserTweaks();
 registerContextMenu();
 
 Hooks.once("ready", () => {
+  // Hidden: this is for working out why something did or did not happen, not a
+  // knob for the table. Turned on from the console via setDebug().
+  game.settings.register(MODULE_ID, "debug", {
+    name: "Log diagnostics to the console",
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
   const api = {
     guide: () => CreationGuide.start(),
     resume: (actorId) => CreationGuide.open(actorId),
@@ -270,6 +281,12 @@ Hooks.once("ready", () => {
     languages: (actorId) => new LanguagePicker({ actorId }).render(true),
     reference: () => new ClassReference().render(true),
     importerPanel: () => openImporterPanel(),
+    debug: (actorId) => debugActor(actorId),
+    debugCompendiums: () => debugCompendiums(),
+    setDebug: (on = true) => {
+      game.settings.set(MODULE_ID, "debug", !!on);
+      return `${MODULE_ID} | diagnostics ${on ? "on" : "off"}`;
+    },
     CreationGuide,
     CompleteCharacter,
     ImporterPanel

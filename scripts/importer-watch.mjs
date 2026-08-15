@@ -26,6 +26,7 @@
  */
 
 import { MODULE_ID } from "./constants.mjs";
+import { trace } from "./trace.mjs";
 
 /** Only this importer. The source picker and the importer chooser share ve-app. */
 const TITLE_MATCH = /import\s+classes/i;
@@ -129,6 +130,18 @@ export function readRow(row) {
  * @param {Function} handlers.onClose   Called when the importer disappears.
  * @returns {Function} Call to stop watching.
  */
+/** Keeps our failures out of whoever's code we are running inside. */
+function guard(fn) {
+  return (...args) => {
+    try {
+      return fn(...args);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Importer watcher failed`, err);
+      return undefined;
+    }
+  };
+}
+
 export function watchImporter({ onSelect, onClose } = {}) {
   let app = null;
   let inner = null;
@@ -153,6 +166,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
     const chosen = subclasses.length
       ? subclasses[subclasses.length - 1]
       : rows[rows.length - 1];
+    trace("importer selection:", chosen);
     onSelect?.(chosen);
   };
 
@@ -172,7 +186,9 @@ export function watchImporter({ onSelect, onClose } = {}) {
       });
     }
 
-    inner = new MutationObserver((mutations) => {
+    // Mutation callbacks run inside the browser's own processing; an exception
+    // escaping here is noise at best and lost updates at worst.
+    inner = new MutationObserver(guard((mutations) => {
       const picked = [];
 
       for (const m of mutations) {
@@ -195,7 +211,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
 
       clearTimeout(timer);
       timer = setTimeout(settle, SETTLE_MS);
-    });
+    }));
 
     inner.observe(app, {
       attributes: true,
@@ -207,7 +223,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
 
   // The importer usually opens a moment after we do, so we watch for it
   // arriving as well as checking whether it is already there.
-  const outer = new MutationObserver(() => {
+  const outer = new MutationObserver(guard(() => {
     if (stopped) return;
 
     if (app && !document.body.contains(app)) {
@@ -221,7 +237,7 @@ export function watchImporter({ onSelect, onClose } = {}) {
       const found = findImporter();
       if (found) attach(found);
     }
-  });
+  }));
 
   outer.observe(document.body, { childList: true, subtree: true });
 

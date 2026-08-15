@@ -22,6 +22,8 @@ import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll } from "./ui.mjs";
 import { checkCharacter, itemsWithSkippedChoices } from "./validate.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
+import { migrateActor } from "./migrate.mjs";
+import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -887,6 +889,13 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // that. Worked out once per window rather than per render: setting the flag
     // updates the actor, which redraws, and the notice would collapse under the
     // reader mid-sentence.
+    // Once per window, before anything reads the flags: a character made by an
+    // older version may still be carrying the old shape of them.
+    if (!this._migrated) {
+      this._migrated = true;
+      migrateActor(actor);
+    }
+
     if (this._disclaimerOpen === undefined) {
       this._disclaimerOpen = !actor.getFlag(MODULE_ID, "disclaimerSeen");
       if (this._disclaimerOpen) {

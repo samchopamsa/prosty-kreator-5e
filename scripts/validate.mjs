@@ -84,7 +84,7 @@ export function multiclassProblems(actor) {
 const CHOICE_TYPES = ["Trait", "AbilityScoreImprovement", "Size", "ItemChoice"];
 
 /** True when a choice was offered and nothing came back. */
-function choiceWasSkipped(advancement) {
+export function choiceWasSkipped(advancement) {
   const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
   if (!CHOICE_TYPES.includes(type)) return false;
 
