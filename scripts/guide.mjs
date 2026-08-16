@@ -44,11 +44,37 @@ const AUTO_NAME = /^New Character for .+$/;
  */
 
 /** The names the module gives a character before anyone has chosen one. */
+/**
+ * Foundry adds " (2)", " (3)" and so on when a name is already taken, and those
+ * copies are no more named than the original.
+ */
+function withoutCopyNumber(name) {
+  return name.replace(/\s*\(\d+\)\s*$/, "").trim();
+}
+
 export function hasPlaceholderName(actor) {
-  const name = (actor?.name ?? "").trim();
+  const raw = (actor?.name ?? "").trim();
   // An empty name is not a chosen one either.
-  if (!name) return true;
-  return name === DEFAULT_NAME || AUTO_NAME.test(name);
+  if (!raw) return true;
+
+  const name = withoutCopyNumber(raw);
+  if (name === DEFAULT_NAME || AUTO_NAME.test(name)) return true;
+
+  // Characters made outside this module carry Foundry's own default instead -
+  // "Player Character" in dnd5e, translated in other languages. Asked for
+  // rather than listed, so it stays right in a Polish or German world.
+  try {
+    const fallback = CONFIG.Actor?.documentClass?.defaultName?.({ type: "character" });
+    if (fallback && withoutCopyNumber(String(fallback)) === name) return true;
+  } catch (err) {
+    // Called before the document classes are ready; not worth reporting.
+  }
+
+  // The label dnd5e gives the type, which is what that default is built from.
+  const typeLabel = game.i18n?.localize?.("TYPES.Actor.character");
+  if (typeLabel && typeLabel !== "TYPES.Actor.character" && typeLabel === name) return true;
+
+  return false;
 }
 
 export function missingSteps(actor) {

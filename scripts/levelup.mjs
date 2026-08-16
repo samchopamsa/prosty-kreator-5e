@@ -161,9 +161,12 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       total: this._total,
       inProgress: this._total > 0,
       progress: this._total > 0 ? t("levelup.progress", this._total - this._remaining, this._total) : "",
-      changes: this._changes.map((change) => ({
-        ...change,
-        text: describeChange(change)
+      changes: this._changes.map((group) => ({
+        title: group.title,
+        entries: group.changes.map((change) => ({
+          ...change,
+          text: describeChange(change)
+        }))
       })),
       skipped: skippedOptions(actor).map((entry) => ({
         ...entry,
@@ -255,7 +258,16 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       const after = takeSnapshot(actor);
       const changes = compareSnapshots(before, after);
       trace("level-up changes:", changes);
-      this._changes.push(...changes);
+
+      if (changes.length) {
+        // One group per level, headed by whatever that level actually was.
+        // Run together, a three-level gain was one long list in which the
+        // second level's hit points sat next to the first level's features.
+        this._changes.push({
+          title: groupTitle(changes, after),
+          changes
+        });
+      }
 
       if (!changes.length) {
         // Nothing moved. Either the import was cancelled, or the character was
@@ -327,6 +339,19 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.close();
     this.actor?.sheet?.render(true);
   }
+}
+
+/**
+ * A heading for one level's worth of gains.
+ *
+ * Taken from the level change itself where there is one - "Barbarian: level 2
+ * to 3" says more than "Level 2" - and falling back to the character's total
+ * level otherwise.
+ */
+function groupTitle(changes, after) {
+  const levelled = changes.find((c) => c.kind === "level" || c.kind === "newClass");
+  if (levelled) return describeChange(levelled);
+  return t("levelup.groupLevel", after?.level ?? "?");
 }
 
 /** Turns one change into a line a player can read. */

@@ -46,12 +46,17 @@
 
         {{#if changes}}
         <section class="pk5e-levelup-changes">
-          <h4>{{pkT "levelup.gained"}}</h4>
-          <ul>
-            {{#each changes}}
-            <li class="pk5e-change is-{{kind}}">{{text}}</li>
-            {{/each}}
-          </ul>
+          <h3 class="pk5e-gained-title">{{pkT "levelup.gained"}}</h3>
+          {{#each changes}}
+          <div class="pk5e-gained-group">
+            <h4>{{title}}</h4>
+            <ul>
+              {{#each entries}}
+              <li class="pk5e-change is-{{kind}}">{{text}}</li>
+              {{/each}}
+            </ul>
+          </div>
+          {{/each}}
         </section>
         {{/if}}
 

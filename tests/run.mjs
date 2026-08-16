@@ -37,7 +37,7 @@ globalThis.game = {
   i18n: { localize: (key) => key }
 };
 globalThis.Hooks = { on: () => 0, off: () => {} };
-globalThis.CONFIG = { DND5E: { abilities: {} } };
+globalThis.CONFIG = { DND5E: { abilities: {} }, Actor: { documentClass: { defaultName: () => "Player Character" } } };
 globalThis.ui = { notifications: { warn: () => {}, info: () => {}, error: () => {} } };
 
 const { matchImporterEntry, groupByClass, normalise } = await import("../scripts/compendium.mjs");
@@ -452,6 +452,13 @@ group("guide: when a character counts as named", () => {
   check("a chosen name", hasPlaceholderName({ name: "Barosław" }), false);
   check("a name that merely starts the same", hasPlaceholderName({ name: "New Characters Guild" }), false);
   check("an empty name is not a chosen one", hasPlaceholderName({ name: "  " }), true);
+  // Foundry's own default, and its copies. A character made with "Create Actor"
+  // rather than through this module carries one of these, and the count on the
+  // sheet button was a step short because of it.
+  check("Foundry's default for the type", hasPlaceholderName({ name: "Player Character" }), true);
+  check("a numbered copy of it", hasPlaceholderName({ name: "Player Character (2)" }), true);
+  check("a numbered copy of ours", hasPlaceholderName({ name: "New Character (3)" }), true);
+  check("a chosen name that ends in a number", hasPlaceholderName({ name: "Kaz (2)" }), false);
   check("no actor at all", hasPlaceholderName(null), true);
 });
 

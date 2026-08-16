@@ -18,6 +18,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
 import { LevelUpGuide } from "./levelup.mjs";
+import { LEVEL_UP_SELECTORS } from "./sheet-actions.mjs";
 
 /** Actors whose panel has already been offered in this browser session. */
 const OFFERED = new Set();
@@ -138,8 +139,11 @@ function inject(app, html) {
     // Plutonium's own button sits on a row below the rest buttons, where there
     // is room. Following it keeps us out of the header strip: adding to the end
     // of that pushed our buttons over the inspiration marker beside it.
-    const plutonium = root.querySelector(
-      ".imp-cls__btn-sheet-level-up, [class*='btn-sheet-level-up']"
+    // Same selectors used to press it. The narrower pair missed whichever
+    // variant this Plutonium build actually renders, so the button stayed
+    // visible even with the setting on.
+    const plutonium = LEVEL_UP_SELECTORS.map((sel) => root.querySelector(sel)).find(
+      (el) => el && !el.classList.contains("pk5e-sheet-button")
     );
 
     // Hidden here as well as by the stylesheet. The body class arrives when the

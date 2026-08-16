@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.47.3**
+- Wersja modułu: **1.47.4**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -890,7 +890,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.47.3**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.47.4**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

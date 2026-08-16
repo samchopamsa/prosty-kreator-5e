@@ -1080,12 +1080,37 @@
   font-weight: 600;
 }
 
-.pk5e-levelup-changes { margin-top: 12px; }
-.pk5e-levelup-changes h4 {
+.pk5e-levelup-changes { margin-top: 14px; }
+
+/* The point of the window, so it is given a heading that reads as one. The
+   sheet's own small-caps display face is decorative and at this size it was
+   barely legible. */
+.pk5e-gained-title {
+  margin: 0 0 8px;
+  font-family: inherit;
+  font-variant: normal;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--pk5e-accent);
+  padding-bottom: 4px;
+}
+
+/* One block per level. Run together, three levels of gains were a single list
+   in which the second level's hit points sat beside the first level's features. */
+.pk5e-gained-group {
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 2px solid var(--pk5e-line-strong);
+}
+.pk5e-gained-group:last-child { margin-bottom: 0; }
+.pk5e-gained-group h4 {
   margin: 0 0 4px;
-  font-size: 12px;
-  border-bottom: 1px solid var(--pk5e-line);
-  padding-bottom: 3px;
+  font-family: inherit;
+  font-variant: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pk5e-accent);
 }
 .pk5e-levelup-changes ul { margin: 0; padding-left: 16px; }
 
@@ -1101,7 +1126,8 @@
    button, so it has to stay in the page. Turning it off in Plutonium's own
    settings takes it out of the document and leaves nothing to press. */
 body.pk5e-hide-plutonium-levelup .imp-cls__btn-sheet-level-up,
-body.pk5e-hide-plutonium-levelup [class*="btn-sheet-level-up"] {
+body.pk5e-hide-plutonium-levelup [class*="btn-sheet-level-up"],
+body.pk5e-hide-plutonium-levelup [class*="level-up"]:not(.pk5e-sheet-button) {
   display: none !important;
 }
 
