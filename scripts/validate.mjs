@@ -94,15 +94,21 @@ export function choiceWasSkipped(advancement, secondaryClass = false) {
   const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
   if (!CHOICE_TYPES.includes(type)) return false;
 
-  // Multiclassing grants a reduced set: no skill proficiencies from the second
-  // class, for instance. Those entries are left empty on purpose, and reading
-  // that as a skipped choice produced a warning that could never be cleared -
-  // the player would remove and re-add the class, and it would come back.
+  // Multiclassing grants a reduced set - no skill proficiencies from the second
+  // class, a shorter list of armour - and the entries for what it does not
+  // grant are left empty on purpose. Read as skipped choices they produced a
+  // warning nothing could clear: remove the class, add it again, work through
+  // every dialog, and it came straight back.
   //
-  // The entry says so itself: dnd5e marks the ones that only apply to a first
-  // class, so no list of exceptions is needed here.
-  const restriction = advancement?.configuration?.classRestriction ?? "";
-  if (secondaryClass && restriction === "primary") return false;
+  // The obvious fix was configuration.classRestriction, which dnd5e uses to
+  // mark entries that only apply to a first class. On a real character it is
+  // undefined on every entry, so it decided nothing. What is actually there is
+  // flags.plutonium.isPrimaryClass, and it only says which class came first.
+  //
+  // So every Trait on a secondary class goes unchecked. Blunt, and it means a
+  // genuinely skipped proficiency choice on a multiclass goes unreported - but
+  // a warning that cannot be cleared is worse than a warning that never comes.
+  if (secondaryClass && type === "Trait") return false;
 
   const value = advancement.value?.toObject?.() ?? advancement.value ?? {};
 

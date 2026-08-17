@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.48.2**
+- Wersja modułu: **1.48.3**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,7 +101,10 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Przycisk na karcie postaci** (w tym samym wierszu co przycisk Plutonium, przed nim) oraz pozycja
+- **Jeden przycisk na karcie postaci**, w rzędzie przycisków odpoczynku: kreator, dopóki
+  postać jest niedokończona, potem awans. Dwa naraz dawały pięć przycisków w tym rzędzie
+  i zawijały go, przez co pasek doświadczenia spadał na atrybuty. Obie pozycje są zawsze
+  dostępne w **menu trzykropka**, gdzie lista może być dowolnej długości oraz pozycja
   w **menu trzykropka** karty — druga droga, bo przycisk zależy od znalezienia miejsca
   w cudzych znacznikach, a menu to lista: nie ma z czym kolidować — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
@@ -415,9 +418,14 @@ oskarżałoby gracza o pominięcie czegoś, o co dopiero zostanie zapytany.
 **Wieloklasowość jest brana pod uwagę.** Druga klasa daje mniej niż pierwsza — nie
 przyznaje na przykład biegłości w umiejętnościach — więc te wpisy są puste zgodnie
 z zasadami, a nie przez pomyłkę. Czytane jako pominięcie dawały ostrzeżenie, którego
-nie dało się usunąć: gracz kasował klasę, dodawał ponownie i wracało. Rozstrzygają to
-same dane — `configuration.classRestriction` na wpisie i `flags.plutonium.isPrimaryClass`
-na klasie — więc nie ma potrzeby wypisywania wyjątków w kodzie.
+nie dało się usunąć: gracz kasował klasę, dodawał ponownie i wracało. Rozstrzyga to `flags.plutonium.isPrimaryClass`: na klasie wziętej jako druga **żaden wpis
+typu `Trait` nie jest sprawdzany**. Narzędzie tępe — faktycznie pominięty wybór biegłości
+przy wieloklasowości przejdzie niezauważony — ale ostrzeżenie, którego nie da się usunąć,
+jest gorsze niż ostrzeżenie, które nie przychodzi.
+
+Naturalnym kandydatem było `configuration.classRestriction`, którym dnd5e oznacza wpisy
+przysługujące tylko pierwszej klasie. Na prawdziwej postaci jest **puste na każdym wpisie**,
+więc nie rozstrzygało niczego. Sprawdzone na Klerze i Druidzie z żywego świata.
 
 To także **ostrzeżenie, nie błąd** — nie blokuje finalizacji. Gracz mógł zostawić
 wybór świadomie, a przy wieloklasowości okno bywa spóźnione.
@@ -908,7 +916,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.48.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.48.3**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

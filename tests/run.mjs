@@ -168,25 +168,25 @@ group("validate: advancement choices left unmade", () => {
   // Multiclassing grants less than a first class does - no skill proficiencies
   // from the second - so those entries are empty by the rules, not by mistake.
   // Read as skipped, they produced a warning the player could not clear.
+  // Taken from a real multiclassed Druid, whose Skills entry is {} and whose
+  // Armor Training is {"chosen":[]} - both correct, because a second class
+  // grants neither. classRestriction, which would have said so, is undefined on
+  // every entry of a real character.
   check(
-    "a primary-only trait, empty on a multiclass, is not a skipped choice",
-    choiceWasSkipped(
-      { type: "Trait", value: { chosen: [] }, configuration: { classRestriction: "primary" } },
-      true
-    ),
+    "an empty trait on a second class is by the rules, not a skipped choice",
+    choiceWasSkipped({ type: "Trait", value: {} }, true),
     false
   );
   check(
     "the same entry on a first class is still checked",
-    choiceWasSkipped(
-      { type: "Trait", value: { chosen: [] }, configuration: { classRestriction: "primary" } },
-      false
-    ),
+    choiceWasSkipped({ type: "Trait", value: { chosen: [] } }, false),
     true
   );
+  // Size and ability increases are not granted by class at all, so an empty one
+  // on a second class still means something went unanswered.
   check(
-    "an unrestricted trait is checked on a multiclass too",
-    choiceWasSkipped({ type: "Trait", value: { chosen: [] } }, true),
+    "an ability increase is still checked on a second class",
+    choiceWasSkipped({ type: "AbilityScoreImprovement", value: { type: "asi" } }, true),
     true
   );
   check("an unknown advancement type stays silent",

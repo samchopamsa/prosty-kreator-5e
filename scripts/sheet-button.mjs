@@ -115,22 +115,22 @@ function inject(app, html) {
     button.appendChild(badge);
   }
 
-  const buttons = [button];
-
-  // A second button, for a character that is playing. Kept apart from the
-  // first: "build this character" and "this character has earned a level" are
-  // different errands, and one button doing both would have to guess.
+  // One button, not two.
   //
-  // Shown for anything with a class, rather than only for a character the
-  // module considers finished. A character can be entirely playable while still
-  // carrying the name it was created with, and hiding the way to level it up
-  // over that was not a trade anyone asked for.
+  // Two of them - creation and level-up - made five in that row alongside the
+  // rest buttons and Plutonium's, and the row wrapped: the experience bar
+  // dropped onto the ability scores. Rather than fight someone else's layout
+  // for the width, the sheet gets whichever of the two the character actually
+  // needs. Both remain in the three-dot menu, where a list can be any length.
   const hasClass = actor.items.some((i) => i.type === "class");
-  if (hasClass && game.settings.get(MODULE_ID, "levelUpButton")) {
-    buttons.push(
-      make("fa-arrow-up-right-dots", "Level up", () => LevelUpGuide.open(actor.id))
-    );
-  }
+  const wantsLevelUp =
+    !incomplete && hasClass && game.settings.get(MODULE_ID, "levelUpButton");
+
+  const buttons = [
+    wantsLevelUp
+      ? make("fa-arrow-up-right-dots", "Level up", () => LevelUpGuide.open(actor.id))
+      : button
+  ];
 
   if (restButton) {
     // Sized like the rest buttons - same square, same spacing - but not styled
