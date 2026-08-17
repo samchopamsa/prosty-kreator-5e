@@ -15,18 +15,19 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
-import { LanguagePicker, languageLabels } from "./languages.mjs";
+import { LanguagePicker } from "./languages.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
-import { checkCharacter, itemsWithSkippedChoices } from "./validate.mjs";
+import { checkCharacter } from "./validate.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
+import { watchImportEnd } from "./import-end.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
-import { importFlowNote, text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, wait } from "./sheet-actions.mjs";
+import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, wait } from "./sheet-actions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -653,29 +654,28 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const pressed = await this.addFor(step);
     if (!pressed) return;
 
-    // This used to be guesswork - watch for activity, give up after a quiet
-    // spell - and every threshold that stopped it clearing too early made it
-    // linger long after the work was done. The importer's own "Import Complete"
-    // window settles it, so the notice now ends when the importer says so.
-    // No longer optional. It was off by default because the old detection - wait
-    // for a quiet spell, then give up - either cleared too early or hung around
-    // long after the work was done. "Import Complete" ends it exactly when the
-    // importer says so, and a notice that is right is worth showing.
-
+    // Marks the step as running until the importer says otherwise. This also
+    // holds back the skipped-choice check: Plutonium puts its dialogs up a
+    // moment after the item lands, so checking straight away accuses the player
+    // of skipping something they are about to be asked.
+    //
+    // Ending it used to be guesswork - watch for activity, give up after a
+    // quiet spell - and every threshold that stopped it clearing too early made
+    // it linger long after the work was done. The importer's own "Import
+    // Complete" window settles it.
     this._importing = step;
     this._importCancelled = false;
     this._lastActivity = Date.now();
     this.render();
 
-    // Still a fallback: if the player closes the panel and reopens it mid-import
-    // the watcher missed the completion, and the notice must not stick forever.
-    watchImport(
-      () => this._lastActivity,
-      () => {
-        this._importing = null;
-        this.render();
-      }
-    );
+    try {
+      await watchImportEnd({ timeout: 120000 });
+    } finally {
+      this._importing = null;
+      // The sheet settles a moment after the importer reports itself finished.
+      await wait(600);
+      this.render();
+    }
   }
 
   /** Lets the player set the portrait without hunting for it on the sheet. */
@@ -738,7 +738,23 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    await pressLevelUp(actor);
+    // Marked as importing for the same reason the other steps are: Plutonium
+    // puts its choice dialogs up a moment after the class lands, and without
+    // this the panel announced a skipped choice while the dialog asking for it
+    // was still on its way. Adding a second class went through here, not
+    // through onAddStep, so it was missing that protection entirely.
+    this._importing = "class";
+    this.render();
+
+    try {
+      await pressLevelUp(actor);
+      await watchImportEnd({ timeout: 120000 });
+    } finally {
+      this._importing = null;
+      // The sheet settles a moment after the importer reports itself finished.
+      await wait(600);
+      this.render();
+    }
   }
 
   static async onSetDefaultFolder() {

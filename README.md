@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.48.0**
+- Wersja modułu: **1.48.1**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,7 +101,9 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Przycisk na karcie postaci** (pod nazwą postaci) — „Start creation" / „Resume creation".
+- **Przycisk na karcie postaci** (w wierszu pod przyciskami odpoczynku) oraz pozycja
+  w **menu trzykropka** karty — druga droga, bo przycisk zależy od znalezienia miejsca
+  w cudzych znacznikach, a menu to lista: nie ma z czym kolidować — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
   i nosi licznik pozostałych kroków. Powód: przycisk **Level Up** Plutonium miga na
   złoto i gracze szli za nim zamiast za naszym. Licznik mówi coś, czego migający
@@ -404,7 +406,9 @@ i Arkanista deklarują progresję, nie mając na pierwszym poziomie czego rzuca�
 a klasa z dodatku może działać jeszcze inaczej. Komórki to wynik, który system
 policzył dla **tej** postaci na **tym** poziomie — gdy ich nie ma, milczymy.
 
-Wykrywanie jest **wstrzymane w trakcie importu**: Plutonium potrafi wystawić okno
+Wykrywanie jest **wstrzymane w trakcie importu** — od naciśnięcia przycisku aż do
+sygnału `Import Complete`, na wszystkich ścieżkach, także przy dodawaniu drugiej klasy
+przez „Add a level or another class": Plutonium potrafi wystawić okno
 wyboru chwilę po tym, jak przedmiot wyląduje na karcie, więc sprawdzanie od razu
 oskarżałoby gracza o pominięcie czegoś, o co dopiero zostanie zapytany.
 
@@ -897,7 +901,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.48.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.48.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

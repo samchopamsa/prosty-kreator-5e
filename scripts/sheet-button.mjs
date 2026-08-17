@@ -142,20 +142,6 @@ function inject(app, html) {
       if (incomplete && el === button) el.classList.add("is-unfinished");
     }
 
-    // Under the character's name, where there is room and nothing else is
-    // competing. The header strip is crowded - rest buttons, inspiration,
-    // level, experience - and anything added there lands on top of something.
-    const subtitle = root.querySelector(
-      ".header-details .subtitle, .actor-subtitle, header .subtitle, [class*='subtitle']"
-    );
-    if (subtitle?.parentElement) {
-      const row = document.createElement("div");
-      row.className = "pk5e-sheet-row pk5e-sheet-row-subtitle";
-      for (const el of buttons) row.appendChild(el);
-      subtitle.insertAdjacentElement("afterend", row);
-      return;
-    }
-
     // Plutonium's own button sits on a row below the rest buttons, where there
     // is room. Following it keeps us out of the header strip: adding to the end
     // of that pushed our buttons over the inspiration marker beside it.
@@ -221,7 +207,61 @@ function maybeAutoOpen(actor) {
   setTimeout(() => CreationGuide.open(actor.id), 400);
 }
 
+/**
+ * Adds the same two entries to the sheet's three-dot menu.
+ *
+ * A second way in, because the buttons depend on finding a place among someone
+ * else's markup and that place has moved once already. The menu is a list -
+ * nothing to collide with, nothing to be pushed off the edge of.
+ */
+function addHeaderControls(app, controls) {
+  const actor = app?.document ?? app?.actor;
+  if (!actor || actor.type !== "character" || !actor.isOwner) return;
+  if (controls.some((c) => c?.pk5e)) return;
+
+  if (game.settings.get(MODULE_ID, "sheetButton")) {
+    controls.push({
+      pk5e: true,
+      icon: "fa-solid fa-hat-wizard",
+      label: isIncomplete(actor) ? "Resume creation" : "Character creation",
+      onClick: () => CreationGuide.open(actor.id)
+    });
+  }
+
+  const hasClass = actor.items.some((i) => i.type === "class");
+  if (hasClass && game.settings.get(MODULE_ID, "levelUpButton")) {
+    controls.push({
+      pk5e: true,
+      icon: "fa-solid fa-arrow-up-right-dots",
+      label: "Level up",
+      onClick: () => LevelUpGuide.open(actor.id)
+    });
+  }
+}
+
+/**
+ * Foundry names this hook after the application class, and dnd5e has renamed
+ * its sheets between versions, so several are tried - the same approach the
+ * render hooks above take.
+ */
+const HEADER_HOOKS = [
+  "getHeaderControlsCharacterActorSheet",
+  "getHeaderControlsActorSheet5eCharacter2",
+  "getHeaderControlsApplicationV2",
+  "getActorSheetHeaderButtons"
+];
+
 export function registerSheetButton() {
+  for (const hook of HEADER_HOOKS) {
+    Hooks.on(hook, (app, controls) => {
+      try {
+        if (Array.isArray(controls)) addHeaderControls(app, controls);
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not add menu entries via ${hook}`, err);
+      }
+    });
+  }
+
   for (const hook of SHEET_HOOKS) {
     Hooks.on(hook, (app, html) => {
       try {
