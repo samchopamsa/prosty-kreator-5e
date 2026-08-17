@@ -159,11 +159,10 @@ function inject(app, html) {
       plutonium.style.display = "none";
     }
     if (plutonium?.parentElement) {
-      let previous = plutonium;
-      for (const el of buttons) {
-        previous.insertAdjacentElement("afterend", el);
-        previous = el;
-      }
+      // Into Plutonium's row, ahead of its button rather than after it. A row
+      // of our own pushed the experience bar down into the ability scores; this
+      // uses a row that already exists, and puts ours where the eye lands first.
+      for (const el of buttons) plutonium.insertAdjacentElement("beforebegin", el);
       return;
     }
 

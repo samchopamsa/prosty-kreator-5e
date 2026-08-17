@@ -83,10 +83,26 @@ export function multiclassProblems(actor) {
  */
 const CHOICE_TYPES = ["Trait", "AbilityScoreImprovement", "Size", "ItemChoice"];
 
-/** True when a choice was offered and nothing came back. */
-export function choiceWasSkipped(advancement) {
+/**
+ * True when a choice was offered and nothing came back.
+ *
+ * @param {object}  advancement
+ * @param {boolean} secondaryClass  This entry belongs to a class taken as a
+ *                                  multiclass rather than the first one.
+ */
+export function choiceWasSkipped(advancement, secondaryClass = false) {
   const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
   if (!CHOICE_TYPES.includes(type)) return false;
+
+  // Multiclassing grants a reduced set: no skill proficiencies from the second
+  // class, for instance. Those entries are left empty on purpose, and reading
+  // that as a skipped choice produced a warning that could never be cleared -
+  // the player would remove and re-add the class, and it would come back.
+  //
+  // The entry says so itself: dnd5e marks the ones that only apply to a first
+  // class, so no list of exceptions is needed here.
+  const restriction = advancement?.configuration?.classRestriction ?? "";
+  if (secondaryClass && restriction === "primary") return false;
 
   const value = advancement.value?.toObject?.() ?? advancement.value ?? {};
 
@@ -123,7 +139,13 @@ export function itemsWithSkippedChoices(actor) {
     const advancements = Array.from(
       item.advancement?.byId?.values?.() ?? item.system?.advancement ?? []
     );
-    if (!advancements.some(choiceWasSkipped)) continue;
+
+    // Plutonium records which class was taken first; anything else is a
+    // multiclass and gets less.
+    const secondary =
+      item.type === "class" && item.flags?.plutonium?.isPrimaryClass === false;
+
+    if (!advancements.some((adv) => choiceWasSkipped(adv, secondary))) continue;
 
     problems.push({ id: item.id, name: item.name, type: item.type });
   }

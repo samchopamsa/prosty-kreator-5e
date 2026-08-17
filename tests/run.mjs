@@ -165,6 +165,30 @@ group("validate: advancement choices left unmade", () => {
     choiceWasSkipped({ type: "ScaleValue", value: {} }), false);
   check("HitPoints is not a choice we police",
     choiceWasSkipped({ type: "HitPoints", value: {} }), false);
+  // Multiclassing grants less than a first class does - no skill proficiencies
+  // from the second - so those entries are empty by the rules, not by mistake.
+  // Read as skipped, they produced a warning the player could not clear.
+  check(
+    "a primary-only trait, empty on a multiclass, is not a skipped choice",
+    choiceWasSkipped(
+      { type: "Trait", value: { chosen: [] }, configuration: { classRestriction: "primary" } },
+      true
+    ),
+    false
+  );
+  check(
+    "the same entry on a first class is still checked",
+    choiceWasSkipped(
+      { type: "Trait", value: { chosen: [] }, configuration: { classRestriction: "primary" } },
+      false
+    ),
+    true
+  );
+  check(
+    "an unrestricted trait is checked on a multiclass too",
+    choiceWasSkipped({ type: "Trait", value: { chosen: [] } }, true),
+    true
+  );
   check("an unknown advancement type stays silent",
     choiceWasSkipped({ type: "SomethingNew", value: {} }), false);
 

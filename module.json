@@ -2,7 +2,7 @@
   "id": "prosty-kreator-5e",
   "title": "Prosty Kreator Postaci (D&D 5e)",
   "description": "Prowadzony krok po kroku kreator postaci dla systemu dnd5e. Nie zastępuje importera ani systemowego mechanizmu Advancement - klika przyciski karty postaci i pilnuje, czego jeszcze brakuje. Uzupełnia atrybuty i języki, których importery nie pytają, pokazuje opisy klas obok importera i wykrywa pominięte okna wyboru.",
-  "version": "1.48.1",
+  "version": "1.48.2",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

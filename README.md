@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.48.1**
+- Wersja modułu: **1.48.2**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,7 +101,7 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Przycisk na karcie postaci** (w wierszu pod przyciskami odpoczynku) oraz pozycja
+- **Przycisk na karcie postaci** (w tym samym wierszu co przycisk Plutonium, przed nim) oraz pozycja
   w **menu trzykropka** karty — druga droga, bo przycisk zależy od znalezienia miejsca
   w cudzych znacznikach, a menu to lista: nie ma z czym kolidować — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
@@ -411,6 +411,13 @@ sygnału `Import Complete`, na wszystkich ścieżkach, także przy dodawaniu dru
 przez „Add a level or another class": Plutonium potrafi wystawić okno
 wyboru chwilę po tym, jak przedmiot wyląduje na karcie, więc sprawdzanie od razu
 oskarżałoby gracza o pominięcie czegoś, o co dopiero zostanie zapytany.
+
+**Wieloklasowość jest brana pod uwagę.** Druga klasa daje mniej niż pierwsza — nie
+przyznaje na przykład biegłości w umiejętnościach — więc te wpisy są puste zgodnie
+z zasadami, a nie przez pomyłkę. Czytane jako pominięcie dawały ostrzeżenie, którego
+nie dało się usunąć: gracz kasował klasę, dodawał ponownie i wracało. Rozstrzygają to
+same dane — `configuration.classRestriction` na wpisie i `flags.plutonium.isPrimaryClass`
+na klasie — więc nie ma potrzeby wypisywania wyjątków w kodzie.
 
 To także **ostrzeżenie, nie błąd** — nie blokuje finalizacji. Gracz mógł zostawić
 wybór świadomie, a przy wieloklasowości okno bywa spóźnione.
@@ -901,7 +908,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.48.1**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.48.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
