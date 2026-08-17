@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.48.3**
+- Wersja modułu: **1.49.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,10 +101,12 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Jeden przycisk na karcie postaci**, w rzędzie przycisków odpoczynku: kreator, dopóki
-  postać jest niedokończona, potem awans. Dwa naraz dawały pięć przycisków w tym rzędzie
-  i zawijały go, przez co pasek doświadczenia spadał na atrybuty. Obie pozycje są zawsze
-  dostępne w **menu trzykropka**, gdzie lista może być dowolnej długości oraz pozycja
+- **Jeden przycisk na karcie postaci**, otwierający krótkie okienko z wyborem:
+  *Awansuj* albo *Kreator postaci* (z liczbą pozostałych kroków). Dwa osobne przyciski
+  zawijały rząd i spychały pasek doświadczenia na atrybuty, a wybieranie jednego z nich
+  według stanu postaci sprawiało, że awans znikał z postaci grywalnej, która wciąż nosiła
+  domyślną nazwę. Okienko kosztuje jedno kliknięcie i nie ma żadnej z tych wad. Obie
+  pozycje są też w **menu trzykropka** oraz pozycja
   w **menu trzykropka** karty — druga droga, bo przycisk zależy od znalezienia miejsca
   w cudzych znacznikach, a menu to lista: nie ma z czym kolidować — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
@@ -134,8 +136,8 @@ przerysowaniami. Każda postać ma własne okno panelu, więc dwa jednocześnie 
 | --- | --- | --- |
 | 1 | **Nazwa** | Pole tekstowe. Do tego sekcja „Ownership and filing”: przypisanie gracza i folder. |
 | 2 | **Klasa** | Naciska „Add Class”. Obok odnośnik do kompendium klas i „Add a level or another class”. |
-| 3 | **Gatunek** | Naciska „Add Species” na karcie. |
-| 4 | **Pochodzenie** | Naciska „Add Background”. |
+| 3 | **Gatunek** | Naciska „Add Species” na karcie. Podpowiada, że w importerze `[+]` rozwija opis. |
+| 4 | **Pochodzenie** | Naciska „Add Background”. Ta sama podpowiedź o `[+]`. |
 | 5 | **Atrybuty** | Własne okno: standardowy zestaw / point buy / rzut 4k6 / ręcznie. |
 | 6 | **Języki** | Własne okno: tabela Standard Languages, rzut 1k12 albo wybór. |
 | 7 | **Portret** | Opcjonalny. Wybór obrazka. |
@@ -916,7 +918,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.48.3**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.49.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

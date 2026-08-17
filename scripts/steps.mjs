@@ -198,7 +198,10 @@ export function buildSteps(actor, { importing = false } = {}) {
       removable: true,
       done: !!species,
       entries: species ? [entryFor(species)] : [],
-      blurb: text("textSpecies", "blurb.species")
+      blurb: text("textSpecies", "blurb.species"),
+      // The importer hides each entry's description behind a [+]; players were
+      // choosing from a list of names without knowing it was there.
+      expandHint: t("guide.expandHint")
     },
     {
       key: "background",
@@ -209,7 +212,8 @@ export function buildSteps(actor, { importing = false } = {}) {
       removable: true,
       done: !!background,
       entries: background ? [entryFor(background)] : [],
-      blurb: text("textBackground", "blurb.background")
+      blurb: text("textBackground", "blurb.background"),
+      expandHint: t("guide.expandHint")
     },
     {
       key: "abilities",

@@ -19,6 +19,7 @@ const STRINGS = {
   en: {
     "guide.title": "New Character",
     "guide.windowTitle": "Character Creation Wizard",
+    "guide.expandHint": "In the importer, click [+] beside an entry to read what it does before choosing.",
     "levelup.windowTitle": "Level Up",
     "levelup.lead": "Levelling goes through the importer, one level at a time. Work through every window it opens, right to \"Import Complete\" - then this window will list what you gained.",
     "levelup.target": "Level to reach",
@@ -270,6 +271,7 @@ const STRINGS = {
   pl: {
     "guide.title": "Nowa postać",
     "guide.windowTitle": "Kreator postaci",
+    "guide.expandHint": "W importerze kliknij [+] obok pozycji, żeby przeczytać, co daje, zanim wybierzesz.",
     "levelup.windowTitle": "Awans",
     "levelup.lead": "Awans przechodzi przez importer, po jednym poziomie naraz. Przejdź wszystkie okna, które otworzy, aż do \"Import Complete\" - wtedy to okno wypisze, co przybyło.",
     "levelup.target": "Poziom docelowy",

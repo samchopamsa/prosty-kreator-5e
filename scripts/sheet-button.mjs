@@ -102,7 +102,14 @@ function inject(app, html) {
   let label = "Character creation panel";
   if (incomplete) label = outstanding >= 4 ? "Start creation" : "Resume creation";
 
-  const button = make("fa-hat-wizard", label, () => CreationGuide.open(actor.id));
+  // One button that asks, rather than one button per errand.
+  //
+  // Two buttons made five in that row alongside the rest buttons and
+  // Plutonium's, and it wrapped - the experience bar dropped onto the ability
+  // scores. Picking one by the character's state instead meant the level-up was
+  // simply absent from a character that was playable but still carrying its
+  // default name. A short menu costs one click and neither problem.
+  const button = make("fa-hat-wizard", label, () => openChooser(actor));
 
   // A count of what is still outstanding, the way unread messages are counted.
   // Plutonium's own Level Up button flashes gold for attention, and players
@@ -115,22 +122,7 @@ function inject(app, html) {
     button.appendChild(badge);
   }
 
-  // One button, not two.
-  //
-  // Two of them - creation and level-up - made five in that row alongside the
-  // rest buttons and Plutonium's, and the row wrapped: the experience bar
-  // dropped onto the ability scores. Rather than fight someone else's layout
-  // for the width, the sheet gets whichever of the two the character actually
-  // needs. Both remain in the three-dot menu, where a list can be any length.
-  const hasClass = actor.items.some((i) => i.type === "class");
-  const wantsLevelUp =
-    !incomplete && hasClass && game.settings.get(MODULE_ID, "levelUpButton");
-
-  const buttons = [
-    wantsLevelUp
-      ? make("fa-arrow-up-right-dots", "Level up", () => LevelUpGuide.open(actor.id))
-      : button
-  ];
+  const buttons = [button];
 
   if (restButton) {
     // Sized like the rest buttons - same square, same spacing - but not styled
@@ -213,6 +205,48 @@ function maybeAutoOpen(actor) {
  * else's markup and that place has moved once already. The menu is a list -
  * nothing to collide with, nothing to be pushed off the edge of.
  */
+/**
+ * Asks which of the two the player wants.
+ *
+ * Both are offered whenever they make sense, rather than one being chosen for
+ * them: a character can be worth levelling while the creator still considers it
+ * unfinished, and can be worth returning to the creator long after it has been
+ * played.
+ */
+async function openChooser(actor) {
+  const hasClass = actor.items.some((i) => i.type === "class");
+  const canLevel = hasClass && game.settings.get(MODULE_ID, "levelUpButton");
+
+  if (!canLevel) {
+    CreationGuide.open(actor.id);
+    return;
+  }
+
+  const outstanding = missingSteps(actor).length;
+  const creationLabel = outstanding
+    ? `Character creation (${outstanding} left)`
+    : "Character creation";
+
+  try {
+    const choice = await foundry.applications.api.DialogV2.wait({
+      window: { title: actor.name, icon: "fa-solid fa-hat-wizard" },
+      content: "",
+      buttons: [
+        { action: "levelup", label: "Level up", icon: "fa-solid fa-arrow-up-right-dots" },
+        { action: "creation", label: creationLabel, icon: "fa-solid fa-hat-wizard" }
+      ],
+      // Dismissing is a real answer here: the player opened the menu, looked,
+      // and wants neither.
+      rejectClose: false
+    });
+    if (choice === "levelup") LevelUpGuide.open(actor.id);
+    else if (choice === "creation") CreationGuide.open(actor.id);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not offer the choice, opening the creator`, err);
+    CreationGuide.open(actor.id);
+  }
+}
+
 function addHeaderControls(app, controls) {
   const actor = app?.document ?? app?.actor;
   if (!actor || actor.type !== "character" || !actor.isOwner) return;

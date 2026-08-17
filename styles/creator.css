@@ -1152,3 +1152,12 @@ body.pk5e-hide-plutonium-levelup [class*="level-up"]:not(.pk5e-sheet-button) {
   margin-top: 6px;
   gap: 6px;
 }
+
+/* The hint about the importer's [+] toggle. Quieter than the blurb above it:
+   it is about how to use another window, not about the character. */
+.pk5e-expand-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  opacity: 0.75;
+  font-style: italic;
+}
