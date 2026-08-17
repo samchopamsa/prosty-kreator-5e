@@ -51,7 +51,8 @@ export class ClassReference extends HandlebarsApplicationMixin(ApplicationV2) {
     // deliberately, on its own, to browse.
     const vh = globalThis.innerHeight ?? 900;
     const vw = globalThis.innerWidth ?? 1400;
-    const width = Math.min(620, Math.max(420, vw - 80));
+    // Wider than it was: the description column is the point of the window.
+    const width = Math.min(860, Math.max(480, vw - 80));
     const height = Math.max(480, vh - 120);
     super({
       ...options,

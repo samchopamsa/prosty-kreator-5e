@@ -80,7 +80,7 @@ function shortSummary(item) {
   return "";
 }
 
-export function buildSteps(actor) {
+export function buildSteps(actor, { importing = false } = {}) {
 
   const species = actor.items.find((i) => i.type === "race" || i.type === "species");
   const background = actor.items.find((i) => i.type === "background");
@@ -138,7 +138,12 @@ export function buildSteps(actor) {
   // per render and attached to the entry itself: collected at the bottom of
   // the panel the warning sat a long way from the thing it was about, and
   // with two classes there was no telling which one it meant.
-  const skippedIds = new Set(itemsWithSkippedChoices(actor).map((problem) => problem.id));
+  // Not while an import is running. Plutonium sometimes puts its choice dialog
+  // up a moment after the item lands, so checking straight away reports a
+  // character as having skipped something they are about to be asked.
+  const skippedIds = importing
+    ? new Set()
+    : new Set(itemsWithSkippedChoices(actor).map((problem) => problem.id));
 
   const entryFor = (item, label, summary, alsoCheck = null) => ({
     itemId: item.id,

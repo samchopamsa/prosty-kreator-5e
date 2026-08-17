@@ -117,10 +117,16 @@ function inject(app, html) {
 
   const buttons = [button];
 
-  // A second button, for a character that is finished and playing. Kept apart
-  // from the first: "build this character" and "this character has earned a
-  // level" are different errands, and one button doing both would have to guess.
-  if (!incomplete && game.settings.get(MODULE_ID, "levelUpButton")) {
+  // A second button, for a character that is playing. Kept apart from the
+  // first: "build this character" and "this character has earned a level" are
+  // different errands, and one button doing both would have to guess.
+  //
+  // Shown for anything with a class, rather than only for a character the
+  // module considers finished. A character can be entirely playable while still
+  // carrying the name it was created with, and hiding the way to level it up
+  // over that was not a trade anyone asked for.
+  const hasClass = actor.items.some((i) => i.type === "class");
+  if (hasClass && game.settings.get(MODULE_ID, "levelUpButton")) {
     buttons.push(
       make("fa-arrow-up-right-dots", "Level up", () => LevelUpGuide.open(actor.id))
     );
@@ -134,6 +140,20 @@ function inject(app, html) {
       el.className = restButton.className;
       el.classList.add("pk5e-sheet-button");
       if (incomplete && el === button) el.classList.add("is-unfinished");
+    }
+
+    // Under the character's name, where there is room and nothing else is
+    // competing. The header strip is crowded - rest buttons, inspiration,
+    // level, experience - and anything added there lands on top of something.
+    const subtitle = root.querySelector(
+      ".header-details .subtitle, .actor-subtitle, header .subtitle, [class*='subtitle']"
+    );
+    if (subtitle?.parentElement) {
+      const row = document.createElement("div");
+      row.className = "pk5e-sheet-row pk5e-sheet-row-subtitle";
+      for (const el of buttons) row.appendChild(el);
+      subtitle.insertAdjacentElement("afterend", row);
+      return;
     }
 
     // Plutonium's own button sits on a row below the rest buttons, where there

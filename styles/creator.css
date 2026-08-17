@@ -591,8 +591,13 @@
 
 .pk5e-split { flex-direction: row; gap: 10px; overflow: hidden; }
 
+/* The list needs enough room for a subclass name and its book; the description
+   needs enough for a paragraph of rules text. 42% each way gave the list more
+   than it used and left the reading side cramped - and reading is what this
+   window is for. */
 .pk5e-list-col {
-  flex: 0 0 42%;
+  flex: 0 0 32%;
+  min-width: 190px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1138,4 +1143,12 @@ body.pk5e-hide-plutonium-levelup [class*="level-up"]:not(.pk5e-sheet-button) {
   gap: 4px;
   margin-top: 4px;
   flex: 0 0 100%;
+}
+
+/* Under the character's name. The header strip is already carrying the rest
+   buttons, inspiration, the level badge and the experience bar; anything added
+   there lands on top of something. */
+.pk5e-sheet-row-subtitle {
+  margin-top: 6px;
+  gap: 6px;
 }

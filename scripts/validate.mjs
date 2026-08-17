@@ -207,13 +207,15 @@ export function checkCharacter(actor) {
   const hasPortrait = portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
   add(!!hasPortrait, WARNING, t("check.portrait"), t("check.portraitHint"));
 
-  // Skipped choice dialogs. An error, because the character is genuinely
-  // missing things the rules grant - and the only reliable fix is to remove the
-  // item and add it again.
+  // Skipped choice dialogs. A warning rather than an error, and so not a bar to
+  // finalising: the dialogs sometimes arrive a beat after the item does, so
+  // this fires on a character who is mid-import and about to be fine - and a
+  // player may have left a choice unmade on purpose. Worth saying, not worth
+  // refusing over.
   for (const problem of itemsWithSkippedChoices(actor)) {
     add(
       false,
-      ERROR,
+      WARNING,
       t("check.skipped", problem.name),
       t("check.skippedHint", t(`check.kindOf.${problem.type}`))
     );

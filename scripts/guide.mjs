@@ -282,7 +282,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     let steps = [];
     let stepsFailed = false;
     try {
-      steps = buildSteps(actor);
+      steps = buildSteps(actor, { importing: !!this._importing });
     } catch (err) {
       stepsFailed = true;
       console.error(`${MODULE_ID} | Could not build the steps for ${actor.name}`, err);

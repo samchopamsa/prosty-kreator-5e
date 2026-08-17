@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.47.4**
+- Wersja modułu: **1.48.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,7 +101,7 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Przycisk na karcie postaci** (obok przycisków odpoczynku) — „Start creation" / „Resume creation".
+- **Przycisk na karcie postaci** (pod nazwą postaci) — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
   i nosi licznik pozostałych kroków. Powód: przycisk **Level Up** Plutonium miga na
   złoto i gracze szli za nim zamiast za naszym. Licznik mówi coś, czego migający
@@ -403,6 +403,13 @@ Ta sama zasada rządzi sprawdzaniem zaklęć: pytamy o **przyznane komórki**
 i Arkanista deklarują progresję, nie mając na pierwszym poziomie czego rzucać,
 a klasa z dodatku może działać jeszcze inaczej. Komórki to wynik, który system
 policzył dla **tej** postaci na **tym** poziomie — gdy ich nie ma, milczymy.
+
+Wykrywanie jest **wstrzymane w trakcie importu**: Plutonium potrafi wystawić okno
+wyboru chwilę po tym, jak przedmiot wyląduje na karcie, więc sprawdzanie od razu
+oskarżałoby gracza o pominięcie czegoś, o co dopiero zostanie zapytany.
+
+To także **ostrzeżenie, nie błąd** — nie blokuje finalizacji. Gracz mógł zostawić
+wybór świadomie, a przy wieloklasowości okno bywa spóźnione.
 
 **Wszystkie pozostałe typy są pomijane.** `ScaleValue` jest pusty na **każdej**
 postaci — trzyma wartości liczone z poziomu, nie wybory — więc sprawdzanie samej
@@ -890,7 +897,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.47.4**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.48.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,
