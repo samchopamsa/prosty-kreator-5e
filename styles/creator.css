@@ -1130,28 +1130,13 @@
    Hidden, not removed: this module levels a character by pressing that very
    button, so it has to stay in the page. Turning it off in Plutonium's own
    settings takes it out of the document and leaves nothing to press. */
-body.pk5e-hide-plutonium-levelup .imp-cls__btn-sheet-level-up,
-body.pk5e-hide-plutonium-levelup [class*="btn-sheet-level-up"],
-body.pk5e-hide-plutonium-levelup [class*="level-up"]:not(.pk5e-sheet-button) {
+body.pk5e-hide-plutonium-levelup button.imp-cls__btn-sheet-level-up,
+body.pk5e-hide-plutonium-levelup button[class*="btn-sheet-level-up"],
+body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-button) {
   display: none !important;
 }
 
-/* Our own row under the rest buttons, for sheets where Plutonium has not put a
-   button there for us to follow. Same spacing as the row above it. */
-.pk5e-sheet-row {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-  flex: 0 0 100%;
-}
 
-/* Under the character's name. The header strip is already carrying the rest
-   buttons, inspiration, the level badge and the experience bar; anything added
-   there lands on top of something. */
-.pk5e-sheet-row-subtitle {
-  margin-top: 6px;
-  gap: 6px;
-}
 
 /* The hint about the importer's [+] toggle. Quieter than the blurb above it:
    it is about how to use another window, not about the character. */
@@ -1160,4 +1145,18 @@ body.pk5e-hide-plutonium-levelup [class*="level-up"]:not(.pk5e-sheet-button) {
   font-size: 11px;
   opacity: 0.75;
   font-style: italic;
+}
+
+/* The little "which one?" dialog. Both labels on one line, side by side: at the
+   default width the longer one wrapped and the pair read as broken. */
+.pk5e-chooser .form-footer,
+.pk5e-chooser .dialog-buttons {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.pk5e-chooser button {
+  flex: 1 1 0;
+  white-space: nowrap;
+  padding: 6px 10px;
 }

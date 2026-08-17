@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.49.0**
+- Wersja modułu: **1.49.2**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -101,12 +101,16 @@ grep '"version"' module.json && ls scripts/ | wc -l
 Panel można otworzyć na cztery sposoby:
 
 - **Zakładka Aktorzy → przycisk „New Character"** — tworzy pustą postać i od razu otwiera panel
-- **Jeden przycisk na karcie postaci**, otwierający krótkie okienko z wyborem:
+- **Jeden przycisk na karcie postaci**, trzeci w rzędzie przycisków odpoczynku, otwierający
+  krótkie okienko z wyborem:
   *Awansuj* albo *Kreator postaci* (z liczbą pozostałych kroków). Dwa osobne przyciski
   zawijały rząd i spychały pasek doświadczenia na atrybuty, a wybieranie jednego z nich
   według stanu postaci sprawiało, że awans znikał z postaci grywalnej, która wciąż nosiła
   domyślną nazwę. Okienko kosztuje jedno kliknięcie i nie ma żadnej z tych wad. Obie
-  pozycje są też w **menu trzykropka** oraz pozycja
+  pozycje są też w **menu trzykropka**. Licznik na przycisku pomija krok nazwy: panel
+  jest listą kontrolną i wymienia ją wśród siedmiu, ale znaczek na cudzej karcie nie
+  powinien się palić dlatego, że nikt nie nadpisał domyślnej nazwy — nic z tego nie
+  przeszkadza w grze oraz pozycja
   w **menu trzykropka** karty — druga droga, bo przycisk zależy od znalezienia miejsca
   w cudzych znacznikach, a menu to lista: nie ma z czym kolidować — „Start creation" / „Resume creation".
   Wyróżniony obwódką w kolorze akcentu, a dopóki postać jest niedokończona, pulsuje
@@ -918,7 +922,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.49.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.49.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

@@ -69,6 +69,14 @@ function inject(app, html) {
   const incomplete = isIncomplete(actor);
   const outstanding = missingSteps(actor).length;
 
+  // What the badge counts, and what makes the button pulse.
+  //
+  // Not the same as what the panel counts. The panel is a checklist and lists
+  // the name among its seven; the badge is a mark on someone else's sheet, and
+  // a character that is mechanically finished should not carry one because
+  // nobody has typed a name over the default. Nothing here stops play.
+  const blocking = missingSteps(actor).filter((step) => step !== "name").length;
+
   // There are two rest buttons (short and long). Take the LAST match so we land
   // to the right of Long Rest rather than between the two.
   let restButton = null;
@@ -115,10 +123,10 @@ function inject(app, html) {
   // Plutonium's own Level Up button flashes gold for attention, and players
   // were following it instead of this one; a number says something that a
   // flashing button cannot, and says it without competing animation.
-  if (outstanding > 0) {
+  if (blocking > 0) {
     const badge = document.createElement("span");
     badge.className = "pk5e-sheet-badge";
-    badge.textContent = String(outstanding);
+    badge.textContent = String(blocking);
     button.appendChild(badge);
   }
 
@@ -131,12 +139,9 @@ function inject(app, html) {
     for (const el of buttons) {
       el.className = restButton.className;
       el.classList.add("pk5e-sheet-button");
-      if (incomplete && el === button) el.classList.add("is-unfinished");
+      if (blocking > 0 && el === button) el.classList.add("is-unfinished");
     }
 
-    // Plutonium's own button sits on a row below the rest buttons, where there
-    // is room. Following it keeps us out of the header strip: adding to the end
-    // of that pushed our buttons over the inspiration marker beside it.
     // Same selectors used to press it. The narrower pair missed whichever
     // variant this Plutonium build actually renders, so the button stayed
     // visible even with the setting on.
@@ -148,23 +153,32 @@ function inject(app, html) {
     // setting is read at startup, but a sheet rendered before that - or one
     // Plutonium adds its button to afterwards - kept showing it.
     if (plutonium && game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")) {
-      plutonium.style.display = "none";
+      // setProperty with "important", not style.display: Plutonium sets its own
+      // display through a class that carries !important, and a plain inline
+      // value loses to it.
+      plutonium.style.setProperty("display", "none", "important");
     }
-    if (plutonium?.parentElement) {
-      // Into Plutonium's row, ahead of its button rather than after it. A row
-      // of our own pushed the experience bar down into the ability scores; this
-      // uses a row that already exists, and puts ours where the eye lands first.
-      for (const el of buttons) plutonium.insertAdjacentElement("beforebegin", el);
+    // Into the container that already holds the rest buttons.
+    //
+    // Measured on a real sheet: div.sheet-header-buttons is 68px wide inside a
+    // parent of 232, so a third 30px button fits with room to spare. Every
+    // other placement tried - a row of our own, Plutonium's row - wrapped the
+    // header and dropped the experience bar onto the ability scores.
+    hidePlutoniumButton(root);
+
+    const container = restButton.parentElement;
+    if (container) {
+      for (const el of buttons) container.appendChild(el);
       return;
     }
 
-    // Nothing to follow: make that second row ourselves, directly beneath the
-    // rest buttons rather than alongside them.
-    const row = document.createElement("div");
-    row.className = "pk5e-sheet-row";
-    for (const el of buttons) row.appendChild(el);
-    (restButton.parentElement ?? restButton).insertAdjacentElement("afterend", row);
+    let previous = restButton;
+    for (const el of buttons) {
+      previous.insertAdjacentElement("afterend", el);
+      previous = el;
+    }
     return;
+
   }
 
   let anchor = null;
@@ -176,7 +190,7 @@ function inject(app, html) {
 
   for (const el of buttons.reverse()) {
     el.className = "pk5e-sheet-button pk5e-sheet-button-standalone";
-    if (incomplete && el === button) el.classList.add("is-unfinished");
+      if (blocking > 0 && el === button) el.classList.add("is-unfinished");
     anchor.prepend(el);
   }
 }
@@ -213,6 +227,29 @@ function maybeAutoOpen(actor) {
  * unfinished, and can be worth returning to the creator long after it has been
  * played.
  */
+/**
+ * Hides Plutonium's own level-up button, if the GM asked for that.
+ *
+ * Hidden rather than removed: this module levels a character by pressing that
+ * button, so it has to stay in the page. A hidden element still receives a
+ * programmatic click.
+ *
+ * setProperty with "important" rather than style.display, because Plutonium
+ * sets its display through a class that carries !important, and a plain inline
+ * value loses to it.
+ */
+function hidePlutoniumButton(root) {
+  try {
+    if (!game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")) return;
+    const found = LEVEL_UP_SELECTORS.map((sel) => root.querySelector(sel)).find(
+      (el) => el && !el.classList.contains("pk5e-sheet-button")
+    );
+    found?.style.setProperty("display", "none", "important");
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not hide Plutonium's button`, err);
+  }
+}
+
 async function openChooser(actor) {
   const hasClass = actor.items.some((i) => i.type === "class");
   const canLevel = hasClass && game.settings.get(MODULE_ID, "levelUpButton");
@@ -230,6 +267,10 @@ async function openChooser(actor) {
   try {
     const choice = await foundry.applications.api.DialogV2.wait({
       window: { title: actor.name, icon: "fa-solid fa-hat-wizard" },
+      // Wide enough for both labels to sit on one line: at the default width
+      // the longer one wrapped onto two and the pair looked like a mistake.
+      position: { width: 460 },
+      classes: ["pk5e-chooser"],
       content: "",
       buttons: [
         { action: "levelup", label: "Level up", icon: "fa-solid fa-arrow-up-right-dots" },
