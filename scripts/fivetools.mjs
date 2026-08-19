@@ -240,8 +240,64 @@ function describeFeature(f) {
     // Features that only mark a decision point read oddly on their own, so
     // callers can tell them apart from ones with real text.
     isGainSubclass: Boolean(f.gainSubclassFeature),
-    hash: featureHash(f)
+    hash: featureHash(f),
+    choice: choiceIn(f),
+    isPhantom: isPhantomFeature(f)
   };
+}
+
+/**
+ * A feature that never becomes an item on the sheet.
+ *
+ * Two kinds, both found by comparing a finished character against the rules:
+ *
+ * "Ability Score Improvement" raises numbers or grants a feat of the player's
+ * choosing. What lands on the sheet is a changed score or an item named after
+ * the chosen feat - never an item by this name, in any class, at any level.
+ *
+ * Resource-shaped entries like "Superiority Die" arrive as a resource with no
+ * flags at all rather than as a feature.
+ *
+ * Expecting either would mean reporting a permanent, unfixable gap on every
+ * character that reaches the level.
+ */
+function isPhantomFeature(f) {
+  const name = String(f?.name ?? "").toLowerCase();
+  if (/^ability score improvement/.test(name)) return true;
+  // Feats taken instead of an ASI are the player's choice, not a fixed grant.
+  if (/^(epic boon|ability score)/.test(name)) return true;
+  return false;
+}
+
+/**
+ * The choice a feature contains, if it contains one.
+ *
+ * "Maneuver Options" is not something a character can hold - it is twenty
+ * maneuvers with an instruction to take three. In the data that is a nested
+ * block of `type: "options"` carrying a `count`. On the sheet it appears as
+ * that many separate items, tagged by Plutonium as `optionalfeatures.html`.
+ *
+ * So the useful question is not "is Maneuver Options present" - it never can
+ * be - but "were three of them chosen".
+ */
+function choiceIn(f) {
+  const walk = (entries) => {
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (!entry || typeof entry !== "object") continue;
+      if (entry.type === "options") {
+        return {
+          count: Number(entry.count) || 1,
+          options: (Array.isArray(entry.entries) ? entry.entries : [])
+            .map((option) => option?.name)
+            .filter(Boolean)
+        };
+      }
+      const nested = walk(entry.entries);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  return walk(f?.entries);
 }
 
 /**
@@ -482,6 +538,45 @@ export function missingFeatures(expected, present) {
 }
 
 /**
+ * How many of a choice were actually taken.
+ *
+ * The rules say "three maneuvers"; the sheet holds three items tagged as
+ * optional features with a matching subtype. Plutonium marks these with
+ * `page: "optionalfeatures.html"` and `system.type.subtype` - a different
+ * namespace from the `classFeature`/`subclassFeature` used for granted
+ * features, so the two never get confused.
+ *
+ * @param {object[]} expected  features from gainsForLevel(), some with .choice
+ * @param {object[]} chosen    [{ name, subtype }] optional-feature items
+ */
+export function countChoices(expected, chosen) {
+  const results = [];
+
+  for (const feature of expected ?? []) {
+    if (!feature.choice) continue;
+
+    const names = new Set((feature.choice.options ?? []).map(normaliseName));
+    const taken = (chosen ?? []).filter((item) => {
+      const name = normaliseName(item?.name);
+      if (names.has(name)) return true;
+      // Plutonium prefixes the item ("Maneuvers: Ambush"), so also accept a
+      // name that ends with one of the options.
+      return [...names].some((option) => option && name.endsWith(option));
+    });
+
+    results.push({
+      name: feature.name,
+      required: feature.choice.count,
+      taken: taken.length,
+      names: taken.map((item) => item.name),
+      isComplete: taken.length >= feature.choice.count
+    });
+  }
+
+  return results;
+}
+
+/**
  * What a level of a class is meant to give.
  *
  * The one entry point worth calling from a window. Returns null - never throws
@@ -576,59 +671,204 @@ export async function debugRules(className, level = 1, options = {}) {
 // --- comparing a real character against the rules ---------------------------
 
 /**
- * Compares a character against what the rules say the level gives.
+ * The two kinds of item a character carries, as far as this comparison cares.
  *
- * Reads the sheet's own feature items - name and Plutonium's hash flag - and
- * hands both sides to missingFeatures(). Nothing is changed; the answer is a
- * report.
+ * Plutonium tags granted features `classFeature`/`subclassFeature`/`raceFeature`
+ * and chosen options `optionalfeatures.html`/`feats.html` - note the extension,
+ * which makes the two namespaces impossible to confuse. Items with no flag at
+ * all (a character built partly from the system compendium, or a resource like
+ * "Superiority Die") fall in with the granted features, where a name match can
+ * still find them.
  */
-export async function verifyLevel(actor, className, level, options = {}) {
-  const gains = await gainsForLevel(className, level, options);
-  if (!gains || !actor) return null;
+function readSheet(actor) {
+  const features = [];
+  const chosen = [];
 
-  const present = actor.items
-    .filter((item) => item.type === "feat")
+  for (const item of actor.items) {
+    if (item.type !== "feat") continue;
+    const page = item.flags?.plutonium?.page ?? "";
+    const entry = {
+      name: item.name,
+      hash: item.flags?.plutonium?.hash ?? null,
+      subtype: item.system?.type?.subtype ?? ""
+    };
+    if (page.endsWith(".html")) chosen.push(entry);
+    else features.push(entry);
+  }
+
+  return { features, chosen };
+}
+
+/** The classes on a character, with the level reached in each. */
+export function classesOn(actor) {
+  return actor.items
+    .filter((item) => item.type === "class")
     .map((item) => ({
       name: item.name,
-      hash: item.flags?.plutonium?.hash ?? null
+      levels: Number(item.system?.levels) || 0,
+      subclass: actor.items.find(
+        (other) =>
+          other.type === "subclass" &&
+          other.system?.classIdentifier === item.system?.identifier
+      )?.name ?? null
     }));
-
-  const expected = [...gains.features, ...gains.subclassFeatures].filter(
-    // The "you gain a subclass" entry is a signpost rather than something that
-    // lands on the sheet, so reporting it as missing would be noise.
-    (feature) => !feature.isGainSubclass
-  );
-
-  return { ...gains, ...missingFeatures(expected, present) };
 }
 
 /**
- * Prints that comparison for one character.
+ * Compares a character against what the rules say a level gives.
  *
- *   characterCreator.verify("New Character", "Barbarian", 3, { subclass: "Path of the World Tree" })
- *
- * Takes an id or a name, because at the console a name is what you have.
+ * Refuses rather than guesses when the character has no such class: an empty
+ * sheet would otherwise come back as "everything is missing", which reads like
+ * a finding and is nothing of the sort. That mistake cost us two rounds of
+ * diagnosis, so it is now an explicit refusal.
  */
-export async function debugVerify(actorRef, className, level = 1, options = {}) {
-  const actor = game.actors.get(actorRef) ?? game.actors.getName(actorRef);
-  if (!actor) {
-    console.warn(`${MODULE_ID} | No character matching "${actorRef}"`);
-    return null;
-  }
+export async function verifyLevel(actor, className, level, options = {}) {
+  if (!actor) return null;
 
-  const report = await verifyLevel(actor, className, level, options);
-  if (!report) {
-    console.warn(`${MODULE_ID} | Nothing to compare against for ${className} ${level}`);
-    return null;
-  }
-
-  console.group(
-    `%c${MODULE_ID} | ${actor.name}: ${report.className} level ${report.level}`,
-    "color:#7fb069;font-weight:bold"
+  const onSheet = classesOn(actor).find(
+    (cls) => cls.name.toLowerCase() === String(className).toLowerCase()
   );
-  for (const match of report.matched) console.log(`  ok   ${match.name}  (${match.by})`);
-  for (const feature of report.missing) console.log(`  ??   ${feature.name}`);
-  if (!report.missing.length) console.log("  nothing missing");
+  if (!onSheet) {
+    return {
+      refused: `${actor.name} has no levels in ${className}`,
+      classesOn: classesOn(actor)
+    };
+  }
+
+  const gains = await gainsForLevel(className, level, {
+    subclass: options.subclass ?? onSheet.subclass,
+    source: options.source
+  });
+  if (!gains) return null;
+
+  const { features: present, chosen } = readSheet(actor);
+
+  const expected = [...gains.features, ...gains.subclassFeatures].filter(
+    (feature) =>
+      // A signpost saying "pick a subclass", not something that lands anywhere.
+      !feature.isGainSubclass &&
+      // Never becomes an item, in any class, at any level.
+      !feature.isPhantom &&
+      // Counted separately below - the container itself is never on the sheet.
+      !feature.choice
+  );
+
+  return {
+    ...gains,
+    ...missingFeatures(expected, present),
+    choices: countChoices([...gains.features, ...gains.subclassFeatures], chosen)
+  };
+}
+
+/**
+ * The whole character, level by level, rather than one level at a time.
+ *
+ * This is the question actually worth asking - "is this character complete" -
+ * and it works for multiclass characters by walking each class up to the level
+ * reached in it.
+ */
+export async function verifyCharacter(actor, options = {}) {
+  if (!actor) return null;
+
+  const classes = classesOn(actor);
+  if (!classes.length) {
+    return { refused: `${actor.name} has no class`, levels: [] };
+  }
+
+  const levels = [];
+  for (const cls of classes) {
+    for (let level = 1; level <= cls.levels; level += 1) {
+      const report = await verifyLevel(actor, cls.name, level, {
+        subclass: cls.subclass,
+        source: options.source
+      });
+      if (report && !report.refused) levels.push(report);
+    }
+  }
+
+  return {
+    actor: actor.name,
+    classes,
+    levels,
+    missing: levels.flatMap((l) => l.missing.map((f) => ({ ...f, className: l.className }))),
+    incompleteChoices: levels.flatMap((l) =>
+      l.choices.filter((c) => !c.isComplete).map((c) => ({ ...c, level: l.level }))
+    )
+  };
+}
+
+/** Finds a character by id, or by name when the name is unambiguous. */
+function resolveActor(actorRef) {
+  const byId = game.actors.get(actorRef);
+  if (byId) return { actor: byId };
+
+  const matches = game.actors.filter((a) => a.name === actorRef);
+  if (!matches.length) return { error: `No character matching "${actorRef}"` };
+  if (matches.length > 1) {
+    // Silently taking the first one sent us chasing a phantom bug for two
+    // rounds, on a world with six characters all called "New Character".
+    return {
+      error:
+        `${matches.length} characters are called "${actorRef}". Use an id:\n` +
+        matches.map((a) => `  ${a.id}  (level ${a.system?.details?.level ?? 0})`).join("\n")
+    };
+  }
+  return { actor: matches[0] };
+}
+
+/**
+ * Checks a character and prints the result.
+ *
+ *   characterCreator.verify("3je2eThGuGPTtKV4")                  whole character
+ *   characterCreator.verify("3je2eThGuGPTtKV4", "Fighter", 3)    one level
+ */
+export async function debugVerify(actorRef, className = null, level = null, options = {}) {
+  const { actor, error } = resolveActor(actorRef);
+  if (error) return void console.warn(`${MODULE_ID} | ${error}`);
+
+  const title = (text) =>
+    console.group(`%c${MODULE_ID} | ${text}`, "color:#7fb069;font-weight:bold");
+
+  const printLevel = (report) => {
+    console.group(`${report.className} level ${report.level}`);
+    for (const match of report.matched) console.log(`  ok   ${match.name}  (${match.by})`);
+    for (const feature of report.missing) console.log(`  ??   ${feature.name}`);
+    for (const choice of report.choices) {
+      const mark = choice.isComplete ? "ok  " : "??  ";
+      console.log(
+        `  ${mark} ${choice.name}: ${choice.taken} of ${choice.required}` +
+          (choice.names.length ? ` - ${choice.names.join(", ")}` : "")
+      );
+    }
+    if (!report.matched.length && !report.missing.length && !report.choices.length) {
+      console.log("  (this level grants nothing)");
+    }
+    console.groupEnd();
+  };
+
+  if (className) {
+    const report = await verifyLevel(actor, className, level ?? 1, options);
+    if (!report) return void console.warn(`${MODULE_ID} | Nothing to compare against`);
+    if (report.refused) return void console.warn(`${MODULE_ID} | ${report.refused}`);
+    title(actor.name);
+    printLevel(report);
+    console.groupEnd();
+    return report;
+  }
+
+  const report = await verifyCharacter(actor, options);
+  if (!report) return null;
+  if (report.refused) return void console.warn(`${MODULE_ID} | ${report.refused}`);
+
+  title(`${actor.name} - ${report.classes.map((c) => `${c.name} ${c.levels}`).join(", ")}`);
+  report.levels.forEach(printLevel);
+  const problems = report.missing.length + report.incompleteChoices.length;
+  console.log(
+    problems
+      ? `%c${problems} thing(s) to look at`
+      : "%cnothing missing",
+    problems ? "color:#d98c3f;font-weight:bold" : "color:#7fb069;font-weight:bold"
+  );
   console.groupEnd();
 
   return report;

@@ -49,7 +49,7 @@ const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
-  featureHash, missingFeatures } =
+  featureHash, missingFeatures, countChoices } =
   await import("../scripts/fivetools.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
@@ -934,6 +934,79 @@ group("fivetools: comparing the rules against the sheet", () => {
     3
   );
   check("nothing expected is nothing missing", missingFeatures([], []).missing, []);
+});
+
+group("fivetools: choices are counted, not looked for", () => {
+  // "Maneuver Options" is twenty maneuvers and an instruction to take three.
+  // No character ever holds an item by that name, so expecting one would mean
+  // reporting a permanent gap on every Battle Master.
+  const maneuverOptions = {
+    name: "Maneuver Options",
+    level: 3,
+    source: "XPHB",
+    className: "Fighter",
+    classSource: "XPHB",
+    subclassShortName: "Battle Master",
+    subclassSource: "XPHB",
+    __prop: "subclassFeature",
+    entries: [
+      "The maneuvers are presented in alphabetical order.",
+      {
+        type: "options",
+        count: 3,
+        entries: [
+          { name: "Ambush", __prop: "optionalfeature" },
+          { name: "Brace", __prop: "optionalfeature" },
+          { name: "Commanding Presence", __prop: "optionalfeature" },
+          { name: "Parry", __prop: "optionalfeature" }
+        ]
+      }
+    ]
+  };
+
+  const [expected] = subclassFeaturesAtLevel(
+    { subclassFeatures: [[{ level: 3, __prop: "subclassFeature", entries: [maneuverOptions] }]] },
+    3
+  );
+
+  check("the choice is recognised", expected.choice?.count, 3);
+  check("with its options", expected.choice.options.length, 4);
+
+  // Plutonium prefixes the chosen items: "Maneuvers: Ambush".
+  const full = countChoices([expected], [
+    { name: "Maneuvers: Ambush", subtype: "maneuver" },
+    { name: "Maneuvers: Brace", subtype: "maneuver" },
+    { name: "Maneuvers: Commanding Presence", subtype: "maneuver" }
+  ]);
+  check("three of three is complete", full[0].isComplete, true);
+  check("and it says which", full[0].taken, 3);
+
+  const short = countChoices([expected], [{ name: "Maneuvers: Ambush", subtype: "maneuver" }]);
+  check("one of three is not", short[0].isComplete, false);
+  check("the shortfall is visible", `${short[0].taken} of ${short[0].required}`, "1 of 3");
+
+  check(
+    "a feature without a choice is not counted",
+    countChoices([{ name: "Second Wind", choice: null }], []),
+    []
+  );
+});
+
+group("fivetools: features that never reach the sheet", () => {
+  const asi = { name: "Ability Score Improvement", level: 4, entries: ["Increase one score..."] };
+  const ordinary = { name: "Action Surge", level: 2, entries: ["Push yourself..."] };
+
+  const fighter = { classFeatures: [[], [ordinary], [], [asi]] };
+
+  check("ASI is flagged", featuresAtLevel(fighter, 4)[0].isPhantom, true);
+  check("an ordinary feature is not", featuresAtLevel(fighter, 2)[0].isPhantom, false);
+  // Every Fighter reaches level 4. Expecting an item by this name would mean
+  // an unfixable warning on every character in the campaign.
+  check(
+    "an Epic Boon is the same case",
+    featuresAtLevel({ classFeatures: [[{ name: "Epic Boon", level: 19 }]] }, 19)[0].isPhantom,
+    true
+  );
 });
 
 // --- result ------------------------------------------------------------------

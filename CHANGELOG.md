@@ -12,6 +12,31 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.53.0
+
+Sprawdzanie calej postaci zamiast pojedynczego poziomu. Wszystkie zmiany
+wynikaja z porownania na postaciach wzorcowych.
+
+- `characterCreator.verify(id)` bez poziomu sprawdza postac od 1. poziomu do
+  obecnego, klasa po klasie, wiec dziala takze przy wieloklasowosci.
+- **Wybory sa liczone, nie szukane.** `Maneuver Options` to nie przedmiot,
+  tylko dwadziescia manewrow z poleceniem wybrania trzech. Zamiast zglaszac
+  brak, modul pisze teraz "3 z 3". Rozpoznanie po bloku `type: "options"`
+  w danych i po `page: "optionalfeatures.html"` na karcie.
+- **Pozycje bez odpowiednika sa pomijane.** `Ability Score Improvement` nigdy
+  nie tworzy przedmiotu - zostaje po nim zmieniona wartosc cechy albo atut
+  o innej nazwie. Kazdy Wojownik na 4. poziomie dostawal przez to falszywe
+  ostrzezenie.
+- **Odmowa zamiast zgadywania.** Porownanie postaci, ktora nie ma danej klasy,
+  konczy sie komunikatem, a nie lista "brakuje wszystkiego".
+- **Ostrzezenie przy zdublowanych nazwach.** `verify("New Character")` przy
+  szesciu postaciach o tej nazwie wypisze ich identyfikatory zamiast po cichu
+  wziac pierwsza z brzegu.
+
+Filtra na listy zaklec nie ma - sprawdzenie na Kleryku pokazalo, ze
+`Light Domain Spells` trafia na karte jako zwykla cecha i dopasowuje sie
+poprawnie.
+
 ## 1.52.0
 
 Dopasowanie regul do karty postaci kluczem, a nie nazwa.
