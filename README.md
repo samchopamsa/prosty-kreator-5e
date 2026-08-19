@@ -5,7 +5,7 @@ Moduł do Foundry VTT, który prowadzi gracza przez tworzenie postaci krok po kr
 przycisk, który jest na karcie postaci, więc Plutonium, Compendium Browser i systemowy
 mechanizm Advancement działają dokładnie tak jak zwykle.
 
-- Wersja modułu: **1.49.2**
+- Wersja modułu: **1.52.0**
 - Foundry: **v13 lub v14** (weryfikowane pod v14)
 - System: **dnd5e 5.0+** (rozwijane i testowane na 5.3.x)
 
@@ -736,6 +736,7 @@ prosty-kreator-5e/
 │   ├── option-watch.mjs     czujka na pominięte wybory w oknach Plutonium
 │   ├── levelup.mjs          okno awansu
 │   ├── snapshot.mjs         odczyt stanu postaci i porównanie przed/po
+│   ├── fivetools.mjs        odczyt reguł z danych 5etools (co daje poziom N)
 │   ├── import-end.mjs       oczekiwanie na sygnał `Import Complete`
 │   ├── migrate.mjs          numer schematu flag i migracje
 │   ├── debug.mjs            characterCreator.debug() — zrzut stanu wykrywania
@@ -922,7 +923,7 @@ Typowe przypadki:
 
 ## Utrzymanie README
 
-Ten plik opisuje wersję **1.49.2**. Przy każdej zmianie funkcjonalności aktualizujemy:
+Ten plik opisuje wersję **1.52.0**. Przy każdej zmianie funkcjonalności aktualizujemy:
 
 1. numer wersji na górze (musi zgadzać się z `module.json`),
 2. tabelę ustawień, jeśli doszło lub zniknęło ustawienie,

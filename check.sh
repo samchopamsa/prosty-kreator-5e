@@ -166,7 +166,14 @@ node -e '
     console.log("  FAIL module.json says " + version + ", README says " + wrong.join(", "));
     process.exit(1);
   }
-  console.log("  ok   " + version + " everywhere");
+  // A release is a tag, and a tag without a changelog entry is a version
+  // nobody can find their way back to.
+  const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+  if (!new RegExp("^## " + version.replace(/\./g, "\\.") + "\\s*$", "m").test(changelog)) {
+    console.log("  FAIL CHANGELOG.md has no \"## " + version + "\" section");
+    process.exit(1);
+  }
+  console.log("  ok   " + version + " everywhere, changelog written");
 ' || fail=1
 
 # --- 6. tests --------------------------------------------------------------
