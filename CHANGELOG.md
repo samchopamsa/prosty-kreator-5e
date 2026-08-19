@@ -12,6 +12,20 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.53.1
+
+Poprawki liczenia wyborow, obie wykryte na postaciach wzorcowych.
+
+- Wybory liczone po konwencji nazewniczej Plutonium ("Nazwa: Opcja"), a nie po
+  liscie opcji z danych. Manewr `Brace` pochodzi z TCE i nie ma go na liscie
+  `Maneuver Options` z XPHB, przez co kompletny wybor pokazywal sie jako 2 z 3.
+- `Divine Order` wybor trafia na karte z `page: "classFeature"`, nie jako
+  `optionalfeature` - liczenie obejmuje teraz obie przestrzenie nazw.
+- Cecha zawierajaca wybor nie jest juz zglaszana jako brakujaca; mowi o niej
+  linia z licznikiem. `Divine Order` istnieje na karcie i dopasowuje sie po
+  hashu, `Maneuver Options` nie istnieje nigdy - obie sytuacje daja teraz
+  jedna czytelna linie.
+
 ## 1.53.0
 
 Sprawdzanie calej postaci zamiast pojedynczego poziomu. Wszystkie zmiany

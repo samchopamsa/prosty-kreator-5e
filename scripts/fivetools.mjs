@@ -540,40 +540,62 @@ export function missingFeatures(expected, present) {
 /**
  * How many of a choice were actually taken.
  *
- * The rules say "three maneuvers"; the sheet holds three items tagged as
- * optional features with a matching subtype. Plutonium marks these with
- * `page: "optionalfeatures.html"` and `system.type.subtype` - a different
- * namespace from the `classFeature`/`subclassFeature` used for granted
- * features, so the two never get confused.
+ * Matched on Plutonium's naming convention rather than on the list of options,
+ * because the list is per-book and the player is not. A Battle Master whose
+ * third maneuver is Brace (from TCE) has made a complete choice, but Brace does
+ * not appear in the XPHB "Maneuver Options" list, so checking membership
+ * reported 2 of 3 on a finished character.
+ *
+ * The convention is "<feature name>: <chosen option>", and it holds across the
+ * two namespaces Plutonium uses:
+ *
+ *   Maneuvers: Ambush            page: optionalfeatures.html
+ *   Divine Order: Protector      page: classFeature
+ *   Fighting Style: Archery      page: feats.html
+ *
+ * The prefix is the feature's name minus any trailing "Options", since the
+ * container is called "Maneuver Options" while the items say "Maneuvers:".
  *
  * @param {object[]} expected  features from gainsForLevel(), some with .choice
- * @param {object[]} chosen    [{ name, subtype }] optional-feature items
+ * @param {object[]} taken     every feature-ish item on the sheet
  */
-export function countChoices(expected, chosen) {
+export function countChoices(expected, taken) {
   const results = [];
 
   for (const feature of expected ?? []) {
     if (!feature.choice) continue;
 
-    const names = new Set((feature.choice.options ?? []).map(normaliseName));
-    const taken = (chosen ?? []).filter((item) => {
+    const prefixes = choicePrefixes(feature.name);
+    const chosen = (taken ?? []).filter((item) => {
       const name = normaliseName(item?.name);
-      if (names.has(name)) return true;
-      // Plutonium prefixes the item ("Maneuvers: Ambush"), so also accept a
-      // name that ends with one of the options.
-      return [...names].some((option) => option && name.endsWith(option));
+      return prefixes.some((prefix) => name.startsWith(prefix));
     });
 
     results.push({
       name: feature.name,
       required: feature.choice.count,
-      taken: taken.length,
-      names: taken.map((item) => item.name),
-      isComplete: taken.length >= feature.choice.count
+      taken: chosen.length,
+      names: chosen.map((item) => item.name),
+      isComplete: chosen.length >= feature.choice.count
     });
   }
 
   return results;
+}
+
+/**
+ * The name prefixes a chosen item might carry.
+ *
+ * "Maneuver Options" -> items named "Maneuvers: ...", so the trailing word is
+ * dropped and a plural allowed. "Divine Order" -> "Divine Order: ...", which
+ * needs no adjustment.
+ */
+function choicePrefixes(featureName) {
+  const base = normaliseName(featureName).replace(/\s+options?$/, "");
+  if (!base) return [];
+  const forms = new Set([base, `${base}s`]);
+  // "maneuver" -> "maneuvers"; harmless where the plural is already right.
+  return [...forms].map((form) => `${form} `);
 }
 
 /**
@@ -742,21 +764,29 @@ export async function verifyLevel(actor, className, level, options = {}) {
   if (!gains) return null;
 
   const { features: present, chosen } = readSheet(actor);
+  const all = [...present, ...chosen];
 
   const expected = [...gains.features, ...gains.subclassFeatures].filter(
     (feature) =>
       // A signpost saying "pick a subclass", not something that lands anywhere.
       !feature.isGainSubclass &&
       // Never becomes an item, in any class, at any level.
-      !feature.isPhantom &&
-      // Counted separately below - the container itself is never on the sheet.
-      !feature.choice
+      !feature.isPhantom
   );
+
+  const choices = countChoices(expected, all);
+  const { missing, matched } = missingFeatures(expected, present);
 
   return {
     ...gains,
-    ...missingFeatures(expected, present),
-    choices: countChoices([...gains.features, ...gains.subclassFeatures], chosen)
+    matched,
+    // A feature that contains a choice is reported by its choice line instead.
+    // Some are on the sheet in their own right ("Divine Order", which then also
+    // matches by hash) and some never are ("Maneuver Options" is twenty
+    // maneuvers and an instruction, not an item). Listing the latter as missing
+    // was the bug; suppressing both keeps one clear line per choice.
+    missing: missing.filter((feature) => !feature.choice),
+    choices
   };
 }
 

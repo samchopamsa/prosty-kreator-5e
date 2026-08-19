@@ -972,18 +972,40 @@ group("fivetools: choices are counted, not looked for", () => {
   check("the choice is recognised", expected.choice?.count, 3);
   check("with its options", expected.choice.options.length, 4);
 
-  // Plutonium prefixes the chosen items: "Maneuvers: Ambush".
+  // Matched on the naming convention, not on the option list. The third
+  // maneuver here is Brace, which is from TCE and so absent from the XPHB
+  // "Maneuver Options" list - on a real character this reported 2 of 3.
   const full = countChoices([expected], [
-    { name: "Maneuvers: Ambush", subtype: "maneuver" },
-    { name: "Maneuvers: Brace", subtype: "maneuver" },
-    { name: "Maneuvers: Commanding Presence", subtype: "maneuver" }
+    { name: "Maneuvers: Ambush" },
+    { name: "Maneuvers: Brace" },
+    { name: "Maneuvers: Commanding Presence" }
   ]);
   check("three of three is complete", full[0].isComplete, true);
-  check("and it says which", full[0].taken, 3);
+  check("and an option from another book still counts", full[0].taken, 3);
 
-  const short = countChoices([expected], [{ name: "Maneuvers: Ambush", subtype: "maneuver" }]);
+  const short = countChoices([expected], [{ name: "Maneuvers: Ambush" }]);
   check("one of three is not", short[0].isComplete, false);
   check("the shortfall is visible", `${short[0].taken} of ${short[0].required}`, "1 of 3");
+
+  // Divine Order is a choice whose result lands with page "classFeature"
+  // rather than as an optional feature - the naming convention covers both.
+  const divineOrder = {
+    name: "Divine Order",
+    choice: { count: 1, options: ["Protector", "Thaumaturge"] }
+  };
+  check(
+    "a choice in the other namespace is counted too",
+    countChoices([divineOrder], [
+      { name: "Divine Order" },
+      { name: "Divine Order: Protector" }
+    ])[0].taken,
+    1
+  );
+  check(
+    "the feature itself is not mistaken for its own choice",
+    countChoices([divineOrder], [{ name: "Divine Order" }])[0].taken,
+    0
+  );
 
   check(
     "a feature without a choice is not counted",
