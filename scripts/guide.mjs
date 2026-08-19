@@ -21,6 +21,7 @@ import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
+import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
@@ -326,6 +327,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const classes = actor.items.filter((i) => i.type === "class");
 
     const report = checkCharacter(actor);
+
+    // Rules comparison, folded into the same list. Awaited here rather than
+    // rendered separately so the player reads one checklist, not two, and so a
+    // slow or absent 5etools simply contributes nothing.
+    const fromRules = await rulesChecks(actor);
+    if (fromRules.length) {
+      report.checks.push(...fromRules);
+      report.warnings += fromRules.filter((c) => !c.ok).length;
+    }
+
     const ownership = actor.ownership ?? {};
 
     return {

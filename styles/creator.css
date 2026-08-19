@@ -1160,3 +1160,29 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
   white-space: nowrap;
   padding: 6px 10px;
 }
+
+/* Rules comparison notes in the level-up window.
+   Warning-coloured rather than error-coloured on purpose: a missing feature is
+   worth saying, but the data covers one reading of the rules and the table may
+   have agreed otherwise. */
+.pk5e-levelup-notes ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pk5e-levelup-notes li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.35rem;
+  border-left: 3px solid var(--pk5e-warning, #d98c3f);
+  background: var(--pk5e-surface-sunken, rgba(0, 0, 0, 0.04));
+  border-radius: 0 3px 3px 0;
+}
+
+.pk5e-note-hint {
+  font-size: 0.85em;
+  opacity: 0.8;
+}

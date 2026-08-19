@@ -34,6 +34,7 @@ import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
 import { takeSnapshot, compareSnapshots } from "./snapshot.mjs";
+import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import { trace } from "./trace.mjs";
@@ -75,6 +76,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._busy = false;
     /** Everything gained so far, accumulated across levels. */
     this._changes = [];
+    this._notes = [];
     /** Levels that finished without anything visibly changing. */
     this._emptyLevels = 0;
     this._stopOptionWatch = null;
@@ -168,6 +170,11 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           text: describeChange(change)
         }))
       })),
+      // Only the problems. The "everything matches" line belongs on the
+      // creation panel, where the player is deciding whether they are done;
+      // here it would be one more thing to read after a level they already
+      // watched arrive.
+      notes: (this._notes ?? []).filter((note) => !note.ok),
       skipped: skippedOptions(actor).map((entry) => ({
         ...entry,
         text:
@@ -268,6 +275,13 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           changes
         });
       }
+
+      // Compared against the rules once the level has settled, so a choice
+      // left unmade is said out loud here rather than discovered weeks later.
+      // Deliberately after the snapshot: this reports what is missing, the
+      // snapshot reports what arrived, and running both gives the player the
+      // two halves of the same answer.
+      this._notes = await rulesChecks(actor);
 
       if (!changes.length) {
         // Nothing moved. Either the import was cancelled, or the character was

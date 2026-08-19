@@ -60,6 +60,20 @@
         </section>
         {{/if}}
 
+        {{#if notes}}
+        <section class="pk5e-levelup-notes">
+          <h3 class="pk5e-gained-title">{{pkT "levelup.notes"}}</h3>
+          <ul>
+            {{#each notes}}
+            <li class="pk5e-change is-warning">
+              <strong>{{label}}</strong>
+              {{#if hint}}<span class="pk5e-note-hint">{{hint}}</span>{{/if}}
+            </li>
+            {{/each}}
+          </ul>
+        </section>
+        {{/if}}
+
         {{#if skipped}}
         <section class="pk5e-skipped">
           {{#each skipped}}

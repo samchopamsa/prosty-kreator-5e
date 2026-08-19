@@ -12,6 +12,26 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.54.0
+
+Porownanie z regulami trafia do interfejsu - pierwsza rzecz z tego watku,
+ktora widzi gracz, a nie tylko konsola.
+
+- `scripts/checkup.mjs` - porownanie w ksztalcie, ktorym mowi lista kontrolna
+  panelu tworzenia. Zawsze ostrzezenia, nigdy bledy: brak cechy warto
+  powiedziec, ale to nie powod, zeby nie pozwolic skonczyc postaci.
+- Panel tworzenia dopisuje wyniki do istniejacej listy kontrolnej. Gracz czyta
+  jedna liste, nie dwie, i nie musi wiedziec, skad co pochodzi.
+- Okno awansu pokazuje uwagi po kazdym zdobytym poziomie, obok podsumowania
+  zmian z migawek. Migawka mowi co przyszlo, porownanie - czego brakuje.
+- Linia "cechy zgadzaja sie z regulami" przy braku uwag. Bez niej ciche
+  przejscie jest nie do odroznienia od tego, ze sprawdzenie sie nie odbylo.
+
+**Podsluch okien Plutonium zostaje.** Obie metody sa slepe gdzie indziej:
+porownanie widzi tylko to, co zostawia przedmiot na karcie (nie ASI, nie wybor
+zaklec, nie jezyki), a podsluch dziala tylko przy otwartym panelu. Zamiana
+jednego na drugie oznaczalaby utrate zasiegu.
+
 ## 1.53.1
 
 Poprawki liczenia wyborow, obie wykryte na postaciach wzorcowych.
