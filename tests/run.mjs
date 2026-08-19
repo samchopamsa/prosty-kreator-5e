@@ -48,6 +48,9 @@ const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scri
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
+const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
+  featureHash, missingFeatures } =
+  await import("../scripts/fivetools.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -596,6 +599,341 @@ group("import-end: only signals raised after the wait began", () => {
     1
   );
   check("an unrelated toast is ignored", accepts([], [{ text: "Rest complete" }]).length, 0);
+});
+
+// --- reading the rules from 5etools -----------------------------------------
+
+group("fivetools: picking the right book", () => {
+  // Both editions are in the data at once. Asking for "Fighter" without saying
+  // which one is how you quietly get the 2014 class.
+  const classes = [
+    { name: "Fighter", source: "PHB", hd: { number: 1, faces: 10 } },
+    { name: "Fighter", source: "XPHB", hd: { number: 1, faces: 10 } },
+    { name: "Artificer", source: "EFA" },
+    { name: "Mystic", source: "UATheMysticClass" }
+  ];
+
+  check("2024 wins by default", selectClass(classes, "Fighter")?.source, "XPHB");
+  check("an explicit book is honoured", selectClass(classes, "Fighter", "PHB")?.source, "PHB");
+  check("names are matched case-insensitively", selectClass(classes, "fighter")?.source, "XPHB");
+  check("the Artificer is found in EFA", selectClass(classes, "Artificer")?.source, "EFA");
+  // Unlisted books still beat returning nothing: homebrew arrives this way.
+  check("an unranked source is still returned", selectClass(classes, "Mystic")?.source, "UATheMysticClass");
+  check("an unknown class is null, not a guess", selectClass(classes, "Warlord"), null);
+  check("insisting on a book it is not in gives null", selectClass(classes, "Artificer", "XPHB"), null);
+});
+
+group("fivetools: subclasses belong to a class, not a name", () => {
+  const subclasses = [
+    { name: "College of Swords", className: "Bard", classSource: "XPHB", source: "XPHB" },
+    { name: "Path of the Berserker", className: "Barbarian", source: "XPHB" },
+    // The case that matters: one subclass name under two different classes.
+    { name: "Champion", className: "Fighter", source: "XPHB" },
+    { name: "Champion", className: "Rogue", source: "HOMEBREW" }
+  ];
+
+  check(
+    "the parent class decides which Champion",
+    selectSubclass(subclasses, "Rogue", "Champion")?.source,
+    "HOMEBREW"
+  );
+  check(
+    "the Fighter's Champion is a different entry",
+    selectSubclass(subclasses, "Fighter", "Champion")?.source,
+    "XPHB"
+  );
+  check(
+    "a subclass under the wrong class is not found",
+    selectSubclass(subclasses, "Wizard", "College of Swords"),
+    null
+  );
+});
+
+group("fivetools: features come from the level field, not the array position", () => {
+  // Shaped like the real reading: an array per level, each feature carrying its
+  // own level. Here the two disagree, which is exactly what the field is for.
+  const fighter = {
+    name: "Fighter",
+    classFeatures: [
+      [
+        { name: "Fighting Style", level: 1, source: "XPHB", entries: ["You have honed..."] },
+        { name: "Second Wind", level: 1, source: "XPHB", entries: ["A limited well..."] },
+        { name: "Weapon Mastery", level: 1, source: "XPHB", entries: ["Your training..."] }
+      ],
+      [{ name: "Action Surge", level: 2, source: "XPHB", entries: ["Push yourself..."] }],
+      // Misfiled: sitting in the third group but marked as level 2.
+      [{ name: "Tactical Mind", level: 2, source: "XPHB", entries: ["..."] }]
+    ]
+  };
+
+  check(
+    "level 1 gives all three",
+    featuresAtLevel(fighter, 1).map((f) => f.name),
+    ["Fighting Style", "Second Wind", "Weapon Mastery"]
+  );
+  check(
+    "a misfiled feature is read from its own level",
+    featuresAtLevel(fighter, 2).map((f) => f.name),
+    ["Action Surge", "Tactical Mind"]
+  );
+  check("a level with nothing on it returns empty", featuresAtLevel(fighter, 4), []);
+  check("a class with no features at all does not throw", featuresAtLevel({}, 1), []);
+  check("a level given as a string still matches", featuresAtLevel(fighter, "1").length, 3);
+});
+
+group("fivetools: starting equipment", () => {
+  // Taken verbatim from the Fighter reading, including the coin values, which
+  // are in copper: 400 is the 4 GP the printed text quotes.
+  const fighter = {
+    startingEquipment: {
+      defaultData: [
+        {
+          A: [
+            { item: "chain mail|xphb" },
+            { item: "greatsword|xphb" },
+            { item: "javelin|xphb", quantity: 8 },
+            { value: 400 }
+          ],
+          C: [{ value: 15500 }]
+        }
+      ]
+    }
+  };
+
+  const options = equipmentOptions(fighter);
+  check("each lettered choice becomes an option", options.map((o) => o.letter), ["A", "C"]);
+  check("copper is reported as gold", options[0].gold, 4);
+  check("the all-coin option reads as 155 GP", options[1].gold, 155);
+  check(
+    "the source suffix is not part of the name",
+    options[0].items.map((i) => i.name),
+    ["Chain Mail", "Greatsword", "Javelin"]
+  );
+  check("quantities survive", options[0].items[2].quantity, 8);
+  check("a class without the field gives no options", equipmentOptions({}), []);
+});
+
+group("fivetools: stripping 5etools markup", () => {
+  check(
+    "a plain tag leaves its display text",
+    stripTags("gain a {@feat Defense|XPHB} of your choice"),
+    "gain a Defense of your choice"
+  );
+  check(
+    "a third part overrides the first",
+    stripTags("{@item Arrows (20)|XPHB|20 Arrows}"),
+    "20 Arrows"
+  );
+  check("dice keep their formula", stripTags("regain {@dice 1d10} hit points"), "regain 1d10 hit points");
+  // @filter's later parts are query syntax and would read as gibberish.
+  check(
+    "filter queries are not mistaken for text",
+    stripTags("a {@filter Fighting Style feat|feats|category=FS}"),
+    "a Fighting Style feat"
+  );
+  check("untagged text is left alone", stripTags("You can use this feature twice."), "You can use this feature twice.");
+  check("nothing at all is empty, not a crash", stripTags(null), "");
+});
+
+group("fivetools: subclass features hide one level down", () => {
+  // Taken from the Battle Master reading. Level 3 wraps its features in an
+  // object named after the subclass; level 7's wrapper has no name at all.
+  const battleMaster = {
+    name: "Battle Master",
+    className: "Fighter",
+    subclassFeatures: [
+      [
+        {
+          name: "Battle Master",
+          level: 3,
+          source: "XPHB",
+          __prop: "subclassFeature",
+          entries: [
+            "{@i Master Sophisticated Battle Maneuvers}",
+            "Battle Masters are students of the art of battle.",
+            {
+              name: "Combat Superiority",
+              level: 3,
+              source: "XPHB",
+              __prop: "subclassFeature",
+              entries: [
+                "You learn maneuvers.",
+                // No __prop: these are headings within the feature's own text.
+                { type: "entries", name: "Maneuvers", entries: ["You learn three."] },
+                { type: "entries", name: "Superiority Dice", entries: ["You have four."] }
+              ]
+            },
+            {
+              name: "Student of War",
+              level: 3,
+              source: "XPHB",
+              __prop: "subclassFeature",
+              entries: ["You gain proficiency with one type of tools."]
+            },
+            {
+              name: "Maneuver Options",
+              level: 3,
+              source: "XPHB",
+              __prop: "subclassFeature",
+              entries: [
+                "The maneuvers are presented in alphabetical order.",
+                {
+                  type: "options",
+                  count: 3,
+                  // A menu to pick from, not something the level grants.
+                  entries: [
+                    { name: "Ambush", __prop: "optionalfeature", entries: ["..."] },
+                    { name: "Parry", __prop: "optionalfeature", entries: ["..."] }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      [
+        {
+          // The wrapper that caught this: level and header, but no name.
+          className: "Fighter",
+          level: 7,
+          header: 2,
+          __prop: "subclassFeature",
+          entries: [
+            {
+              name: "Know Your Enemy",
+              level: 7,
+              source: "XPHB",
+              __prop: "subclassFeature",
+              entries: ["You can discern strengths and weaknesses."]
+            }
+          ]
+        }
+      ]
+    ]
+  };
+
+  check(
+    "the wrapper's own name is not reported as a gain",
+    subclassFeaturesAtLevel(battleMaster, 3).map((f) => f.name),
+    ["Combat Superiority", "Student of War", "Maneuver Options"]
+  );
+  check(
+    "an unnamed wrapper yields the feature inside it",
+    subclassFeaturesAtLevel(battleMaster, 7).map((f) => f.name),
+    ["Know Your Enemy"]
+  );
+  check(
+    "headings inside a feature stay part of its text",
+    subclassFeaturesAtLevel(battleMaster, 3)[0].entries.length,
+    3
+  );
+  // Maneuvers are chosen, not granted, so they must not be listed as gains.
+  check(
+    "optionalfeature entries are not mistaken for features",
+    subclassFeaturesAtLevel(battleMaster, 3).some((f) => f.name === "Parry"),
+    false
+  );
+  check("a level with nothing on it is empty", subclassFeaturesAtLevel(battleMaster, 5), []);
+  check("a subclass with no features does not throw", subclassFeaturesAtLevel({}, 3), []);
+});
+
+group("fivetools: the level that grants a subclass is marked", () => {
+  // Fighter level 3 in the class data: the point where a subclass is chosen.
+  const fighter = {
+    classFeatures: [
+      [{ name: "Second Wind", level: 1, entries: ["..."] }],
+      [],
+      [
+        {
+          name: "Fighter Subclass",
+          level: 3,
+          entries: ["You gain a Fighter subclass of your choice."],
+          gainSubclassFeature: true
+        }
+      ]
+    ]
+  };
+
+  check("the flag is carried through", featuresAtLevel(fighter, 3)[0].isGainSubclass, true);
+  check("an ordinary feature is not flagged", featuresAtLevel(fighter, 1)[0].isGainSubclass, false);
+});
+
+group("fivetools: the hash that links a rule to a sheet item", () => {
+  // Both strings below were read off a live character's flags.plutonium.hash.
+  // They are the whole point of this function, so they are pinned exactly.
+  const bardicInspiration = {
+    name: "Bardic Inspiration",
+    className: "Bard",
+    classSource: "XPHB",
+    level: 1,
+    source: "XPHB",
+    __prop: "classFeature"
+  };
+  const vitalityOfTheTree = {
+    name: "Vitality of the Tree",
+    className: "Barbarian",
+    classSource: "XPHB",
+    subclassShortName: "World Tree",
+    subclassSource: "XPHB",
+    level: 3,
+    source: "XPHB",
+    __prop: "subclassFeature"
+  };
+
+  check(
+    "a class feature hashes as Plutonium stamped it",
+    featureHash(bardicInspiration),
+    "bardic%20inspiration_bard_xphb_1_xphb"
+  );
+  check(
+    "a subclass feature carries the subclass shortName",
+    featureHash(vitalityOfTheTree),
+    "vitality%20of%20the%20tree_barbarian_xphb_world%20tree_xphb_3_xphb"
+  );
+  // A half-built hash would match the wrong thing, which is worse than no match.
+  check(
+    "a missing field gives null rather than a partial hash",
+    featureHash({ name: "Rage", className: "Barbarian", __prop: "classFeature" }),
+    null
+  );
+  check("nothing at all is null", featureHash(null), null);
+});
+
+group("fivetools: comparing the rules against the sheet", () => {
+  const expected = [
+    { name: "Rage", hash: "rage_barbarian_xphb_1_xphb" },
+    { name: "Unarmored Defense", hash: "unarmored%20defense_barbarian_xphb_1_xphb" },
+    { name: "Weapon Mastery", hash: "weapon%20mastery_barbarian_xphb_1_xphb" }
+  ];
+
+  const byHash = missingFeatures(expected, [
+    { name: "Rage", hash: "rage_barbarian_xphb_1_xphb" },
+    { name: "Unarmored Defense", hash: "unarmored%20defense_barbarian_xphb_1_xphb" }
+  ]);
+  check("what is absent is reported", byHash.missing.map((f) => f.name), ["Weapon Mastery"]);
+  check("and how each match was made", byHash.matched.map((m) => m.by), ["hash", "hash"]);
+
+  // The case that made this necessary: a character built from the system's own
+  // compendium has features with no Plutonium flag, so no hash to match on.
+  const byName = missingFeatures(expected, [
+    { name: "Rage", hash: null },
+    { name: "Unarmored Defense", hash: null },
+    { name: "Weapon Mastery", hash: null }
+  ]);
+  check("unflagged features still match on their names", byName.missing, []);
+  check("the weaker match is labelled as such", byName.matched.map((m) => m.by), ["name", "name", "name"]);
+
+  check(
+    "punctuation and case do not break a name match",
+    missingFeatures([{ name: "Bardic Inspiration", hash: "x" }], [{ name: "bardic inspiration" }]).missing,
+    []
+  );
+  check(
+    "an empty sheet reports everything missing",
+    missingFeatures(expected, []).missing.length,
+    3
+  );
+  check("nothing expected is nothing missing", missingFeatures([], []).missing, []);
 });
 
 // --- result ------------------------------------------------------------------

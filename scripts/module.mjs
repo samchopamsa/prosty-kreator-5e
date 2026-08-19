@@ -18,6 +18,7 @@ import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
+import { debugRules, debugVerify } from "./fivetools.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
@@ -288,6 +289,8 @@ Hooks.once("ready", () => {
     levelUp: (actorId) => openLevelUp(actorId),
     debug: (actorId) => debugActor(actorId),
     debugCompendiums: () => debugCompendiums(),
+    rules: (className, level, options) => debugRules(className, level, options),
+    verify: (actorRef, className, level, options) => debugVerify(actorRef, className, level, options),
     setDebug: (on = true) => {
       game.settings.set(MODULE_ID, "debug", !!on);
       return `${MODULE_ID} | diagnostics ${on ? "on" : "off"}`;
