@@ -28,6 +28,7 @@ import {
 } from "./compendium.mjs";
 import { watchImporter, importerRect } from "./importer-watch.mjs";
 import { watchForHost, stopWatchingHost, undockPanel } from "./dock.mjs";
+import { describeRow } from "./class-text.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -239,6 +240,34 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
    * compendiums" is useful information, while an empty panel just looks broken.
    */
   async follow(row) {
+    // The 5etools data first: it covers every entry the importer lists, across
+    // every book, which the compendiums cannot - they hold what was imported
+    // into this world, and the importer offers 352 entries from all of them.
+    // A player hovering Path of the Battlerager wants to know what it is, not
+    // that it is absent from world.xphb.
+    try {
+      const described = await describeRow(row);
+      if (described) {
+        this._notice = null;
+        this._limitTo = null;
+        this._query = "";
+        this._listOpen = false;
+        this.selectedUuid = null;
+        // The template renders the header from a compendium entry, which there
+        // is no longer one of, so the heading travels with the body.
+        this._detail =
+          `<header class="pk5e-text-head"><h3>${described.title}</h3>` +
+          `<span class="pk5e-panel-origin">${described.subtitle}</span></header>` +
+          described.html;
+        this.render();
+        return;
+      }
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not read "${row.name}" from the 5etools data`, err);
+    }
+
+    // Falls back to the compendiums, which still work when Plutonium is not
+    // loaded at all - the panel can be opened on its own.
     const match = matchImporterEntry(this.entries, row);
 
     if (match) {
@@ -264,6 +293,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
     this.render();
   }
+
 
   async show(uuid) {
     this.selectedUuid = uuid;

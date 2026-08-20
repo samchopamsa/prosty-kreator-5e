@@ -12,6 +12,41 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.56.0
+
+Opisy klas czytane wprost z danych 5etools, nie z kompendiow.
+
+- `scripts/class-text.mjs` - pelny tekst klasy albo podklasy: opis z pliku
+  fluffu, tabela poziomow z `classTableGroups` i cechy wszystkich dwudziestu
+  poziomow z opisami. Gracz widzi nie tylko to, co dostaje teraz, ale i co
+  przyjdzie pozniej.
+- **Dziala dla wszystkich 352 pozycji, ktore wypisuje importer.** Kompendia
+  trzymaja to, co zostalo do tego swiata zaimportowane, a importer oferuje
+  wszystko ze wszystkich podrecznikow - Path of the Battlerager z SCAG czy
+  College of Spirits z RHW dawaly dotad "nie ma w kompendiach", czyli akurat
+  te pozycje, ktorych gracz najpewniej nie zna.
+- Zrodlo jest jawne takze przy fluffie. Pliki fluffu zawieraja obie edycje, a
+  zapytanie o "Barbarian" bez podania ksiazki zwraca tekst z 2014 - to nie
+  brak opisu, tylko opis nieprawdziwy, trudniejszy do zauwazenia i gorszy
+  w skutkach.
+- Kompendia zostaja jako zapas, gdy Plutonium nie jest zaladowane.
+- Obrazy pominiete: ich sciezki sa wewnetrzne dla 5etools, bez adresu
+  bazowego, wiec to, na co sie rozwina, zalezy od konfiguracji.
+
+## 1.55.2
+
+- Panel czeka na swoje okno, zamiast wisiec obok. Plutonium otwiera najpierw
+  okno wyboru zrodel danych, a liste klas dopiero po nim - panel byl proszony
+  o otwarcie, zanim bylo gdzie go wstawic, i pokazywal sie jako osobne okno
+  obok okna, z ktorym nie ma nic wspolnego. Teraz jest ukryty do czasu, az
+  gospodarz sie pojawi. Ukryty, nie zamkniety, wiec wraca juz sledzac liste.
+- Lista wezsza (40%), opis szerszy (60%), wymuszana szerokosc okna zmniejszona
+  z 54 do 46 rem. Lista to nazwy i skrot zrodla, wiec szerokosc lepiej wydac
+  na opis.
+- Usuniety prog 1100 px, ponizej ktorego panel wracal pod liste. Miala to byc
+  pomoc na malym ekranie, a wychodzilo na to, ze panel laduje na dole takze
+  tam, gdzie miejsca po prawej jest dosc.
+
 ## 1.55.1
 
 Poprawki dokowania, obie z podgladu na zywo.

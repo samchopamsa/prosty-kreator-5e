@@ -120,8 +120,20 @@ export function watchForHost(panel) {
     const element = panel?.element;
     if (!element) return;
 
-    if (host && !host.contains(element)) dockPanel(panel);
-    else if (!host && element.classList.contains("pk5e-docked")) undockPanel(panel);
+    if (host) {
+      element.classList.remove("pk5e-dock-waiting");
+      if (!host.contains(element)) dockPanel(panel);
+      return;
+    }
+
+    if (element.classList.contains("pk5e-docked")) undockPanel(panel);
+
+    // Plutonium opens a data-source window first and the class list only after
+    // it, so the panel is asked for before there is anywhere to put it. Left
+    // visible it appears as a stray window next to a window it has nothing to
+    // do with, which is exactly what docking was meant to stop. So it waits,
+    // out of sight, until its host exists.
+    element.classList.add("pk5e-dock-waiting");
   };
 
   observer = new MutationObserver(sync);

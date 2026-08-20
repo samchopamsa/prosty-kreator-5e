@@ -1212,27 +1212,9 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
 /* Without an explicit basis flex gives the list the whole row and the panel
    collapses to nothing. */
 .pk5e-dock-split > .veapp__list {
-  flex: 1 1 55% !important;
+  flex: 1 1 40% !important;
   min-width: 0;
   height: auto !important;
-}
-
-/* Narrow screens: two columns leave the list unreadable, so it falls back to
-   the stacked layout that at least keeps both usable. */
-@media (max-width: 1100px) {
-  .pk5e-dock-split {
-    flex-direction: column !important;
-  }
-
-  .pk5e-dock-split > .veapp__list {
-    flex: 1 1 auto !important;
-  }
-
-  .application.pk5e-docked {
-    border-left: none;
-    border-top: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.25));
-    max-height: 40vh !important;
-  }
 }
 
 /* Foundry writes position, width, height and z-index inline on every render,
@@ -1246,8 +1228,8 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
   height: auto !important;
   max-height: none !important;
   z-index: auto !important;
-  flex: 1 1 45%;
-  min-width: 16rem;
+  flex: 1 1 60%;
+  min-width: 18rem;
   margin: 0;
   border: none;
   border-left: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.25));
@@ -1272,9 +1254,16 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
 }
 
 /* The importer opens too narrow for two columns. Only widened while the panel
-   is actually inside it. */
+   is actually inside it, and modestly: the list is names and a source, so most
+   of the width is better spent on the description. */
 .application.ve-app.pk5e-dock-host {
-  min-width: 54rem;
+  min-width: 46rem;
+}
+
+/* Waiting for its host. Hidden rather than closed, so the panel keeps the
+   state it has built up and reappears already following the list. */
+.application.pk5e-dock-waiting {
+  display: none !important;
 }
 
 /* Docked, the panel's own search field and dropdown are redundant: the list
@@ -1283,4 +1272,61 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
 .application.pk5e-docked [data-panel-search],
 .application.pk5e-docked [data-action="toggleList"] {
   display: none !important;
+}
+
+/* Class and subclass text built from the 5etools data. */
+.pk5e-text-head {
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.25));
+}
+
+.pk5e-text-head h3 {
+  margin: 0;
+  font-size: 1.3em;
+  font-weight: 700;
+}
+
+.pk5e-text-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.6rem 0 0.9rem;
+  font-size: 0.85em;
+}
+
+.pk5e-text-table th,
+.pk5e-text-table td {
+  padding: 0.2rem 0.35rem;
+  text-align: left;
+  border-bottom: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.15));
+}
+
+.pk5e-text-table th {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
+
+/* The features column carries the sentence; the rest are numbers. */
+.pk5e-text-table td:nth-child(3) {
+  width: 45%;
+}
+
+.pk5e-text-level {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.6;
+  border-bottom: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.2));
+}
+
+.pk5e-text-feature {
+  margin-bottom: 0.6rem;
+}
+
+.pk5e-text-feature strong {
+  display: block;
+  margin-bottom: 0.1rem;
 }
