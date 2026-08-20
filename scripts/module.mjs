@@ -17,6 +17,7 @@ import { registerContextMenu } from "./context-menu.mjs";
 import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
+import { startHostWatch } from "./dock.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
 import { debugRules, debugVerify } from "./fivetools.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
@@ -295,6 +296,10 @@ Hooks.once("ready", () => {
     "pk5e-hide-plutonium-levelup",
     game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")
   );
+
+  // The panel belongs to Plutonium's class importer, so it appears with it
+  // rather than only when the creation panel's class step opened it.
+  if (game.settings.get(MODULE_ID, "dockImporterPanel")) startHostWatch(openImporterPanel);
 
   const api = {
     guide: () => CreationGuide.start(),

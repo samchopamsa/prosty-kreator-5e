@@ -175,7 +175,6 @@ export function buildSteps(actor, { importing = false } = {}) {
       label: t("step.class"),
       actionLabel: t("stepAcc.class"),
       icon: "fa-shield-halved",
-      reference: true,
       levelUp: classes.length > 0,
       help: t("help.class") + importFlowNote(),
       removable: true,

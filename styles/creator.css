@@ -781,23 +781,6 @@
 /* No accent bar here. The skipped-choices warning uses the same callout shape
    with a coloured bar, and a bar on this purely informational block made the
    class step look like it was reporting a problem. */
-.pk5e-reference-callout {
-  margin-bottom: 4px;
-  border-left: none;
-  padding-left: 0;
-  background: none;
-}
-
-/* A text link, not a button. A second full-width button here looked like an
-   alternative way of choosing the class, which is exactly what it is not. */
-.pk5e-reference-link {
-  display: inline-block;
-  margin-top: 6px;
-  opacity: 1;
-  font-weight: 600;
-}
-.pk5e-reference-link:hover { opacity: 0.75; }
-
 .pk5e-lang-switch { display: flex; gap: 2px; flex: 0 0 auto; }
 
 /* ---------------------------------------------------------------------------
@@ -1202,24 +1185,28 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
    same specificity - so whichever stylesheet loads last would win, which is not
    something to leave to chance. Without this the panel lands under the list
    instead of beside it. */
-.pk5e-dock-split {
+.application.ve-app .pk5e-dock-split {
   display: flex !important;
   flex-direction: row !important;
+  flex-wrap: nowrap !important;
   gap: 0.5rem;
   min-height: 0;
 }
 
 /* Without an explicit basis flex gives the list the whole row and the panel
    collapses to nothing. */
-.pk5e-dock-split > .veapp__list {
+.application.ve-app .pk5e-dock-split > .veapp__list {
   flex: 1 1 40% !important;
-  min-width: 0;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
   height: auto !important;
 }
 
 /* Foundry writes position, width, height and z-index inline on every render,
    so these have to be forced. This is the same problem as Plutonium's own
    !important on display, solved the same way. */
+.application.ve-app .application.pk5e-docked,
 .application.pk5e-docked {
   position: static !important;
   left: auto !important;

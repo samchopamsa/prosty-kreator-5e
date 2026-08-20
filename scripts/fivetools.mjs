@@ -83,12 +83,30 @@ export async function loadRules() {
 
   pending = (async () => {
     try {
-      const data = await globalThis.DataUtil.class.loadJSON();
+      const api = globalThis.DataUtil.class;
+
+      // Three sources, because a world's list of books is its own. loadJSON is
+      // the official data; brew is what the GM has added (Northlands, Griffon's
+      // Saddlebag, anything from the importer's source list); prerelease is
+      // Unearthed Arcana. The importer offers all of them side by side, so a
+      // panel that only knows the first has nothing to say about exactly the
+      // entries a player is least likely to recognise.
+      const loaders = [
+        api.loadJSON?.(),
+        api.loadBrew?.().catch(() => null),
+        api.loadPrerelease?.().catch(() => null)
+      ];
+      const parts = (await Promise.all(loaders)).filter(Boolean);
+
       cache = {
-        classes: Array.isArray(data?.class) ? data.class : [],
-        subclasses: Array.isArray(data?.subclass) ? data.subclass : []
+        classes: parts.flatMap((part) => (Array.isArray(part.class) ? part.class : [])),
+        subclasses: parts.flatMap((part) => (Array.isArray(part.subclass) ? part.subclass : []))
       };
-      trace(`5etools: ${cache.classes.length} classes, ${cache.subclasses.length} subclasses`);
+
+      trace(
+        `5etools: ${cache.classes.length} classes, ${cache.subclasses.length} subclasses ` +
+          `from ${parts.length} source set(s)`
+      );
       return cache;
     } catch (err) {
       console.warn(`${MODULE_ID} | Could not read the 5etools class data`, err);

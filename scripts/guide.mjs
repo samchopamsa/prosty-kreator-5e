@@ -153,7 +153,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       setPortrait: CreationGuide.onSetPortrait,
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
-      openReference: CreationGuide.onOpenReference,
       setLanguage: CreationGuide.onSetLanguage,
       setTheme: CreationGuide.onSetTheme,
       finalise: CreationGuide.onFinalise,
@@ -708,15 +707,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       this.render();
     } catch (err) {
       console.error(`${MODULE_ID} | Could not change the panel language`, err);
-    }
-  }
-
-  static onOpenReference(event, target) {
-    try {
-      new ClassReference({ kind: target.dataset.kind ?? "class" }).render(true);
-    } catch (err) {
-      console.error(`${MODULE_ID} | Could not open the reference window`, err);
-      ui.notifications.error(`Could not open the reference: ${err.message}`);
     }
   }
 

@@ -91,10 +91,6 @@ const STRINGS = {
     "guide.addOptional": "Add {0} (optional)",
     "guide.change": "Change",
     "guide.remove": "Remove",
-    "guide.referenceTitle": "Browse the class compendium",
-    "guide.referenceBody":
-      "The full list of classes and subclasses with their descriptions. Reading only - it picks nothing and changes nothing on your sheet.",
-    "guide.referenceButton": "Open the compendium",
 
     "panel.title": "Class descriptions",
     "panel.searchPlaceholder": "Search classes and subclasses",
@@ -362,10 +358,6 @@ const STRINGS = {
     "guide.addOptional": "Dodaj {0} (opcjonalnie)",
     "guide.change": "Zmień",
     "guide.remove": "Usuń",
-    "guide.referenceTitle": "Przeglądaj kompendium klas",
-    "guide.referenceBody":
-      "Pełna lista klas i podklas wraz z opisami. Tylko do czytania - niczego nie wybiera i nic nie zmienia na karcie.",
-    "guide.referenceButton": "Otwórz kompendium",
 
     "panel.title": "Opisy klas",
     "panel.searchPlaceholder": "Szukaj klas i podklas",

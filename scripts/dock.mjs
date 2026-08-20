@@ -153,3 +153,40 @@ export function stopWatchingHost() {
   observer?.disconnect();
   observer = null;
 }
+
+
+/**
+ * Opens the panel whenever the class importer appears, however it was opened.
+ *
+ * It used to be opened by the creation panel's class step, which meant a player
+ * who reached the importer any other way - a second class, the sheet's own
+ * button, reopening after a cancel - got the list with no descriptions and no
+ * sign that descriptions existed.
+ *
+ * Now the panel belongs to that window rather than to the step that usually
+ * precedes it.
+ */
+let opener = null;
+
+export function startHostWatch(openPanel) {
+  if (opener) return;
+
+  const check = () => {
+    if (!hostWindow()) return;
+    if (!game.settings.get(MODULE_ID, "dockImporterPanel")) return;
+    try {
+      openPanel();
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not open the description panel`, err);
+    }
+  };
+
+  opener = new MutationObserver(check);
+  opener.observe(document.body, { childList: true, subtree: true });
+  check();
+}
+
+export function stopHostWatch() {
+  opener?.disconnect();
+  opener = null;
+}

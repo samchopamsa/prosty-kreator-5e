@@ -12,6 +12,29 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.56.2
+
+- Usunieta ramka "Przegladaj kompendium klas" z kroku Klasa. Panel czyta teraz
+  wprost z danych 5etools, wiec kompendium przestalo byc droga do opisow -
+  a odsylanie do niego bylo odsylaniem do gorszego zrodla.
+- Razem z nia poszly: nieuzywana juz akcja `openReference`, trzy klucze
+  tlumaczen i dwie reguly stylow bez wlasciciela.
+- Okno `ClassReference` zostaje dostepne przez `characterCreator.reference()`.
+
+## 1.56.1
+
+- **Brew i prerelease dociagane razem z danymi podstawowymi.** `loadJSON()`
+  zwraca tylko oficjalne dane, wiec Path of the Titan z NWB czy inne pozycje
+  z listy zrodel Plutonium nie mialy opisu - czyli akurat te, ktorych gracz
+  najpewniej nie zna. Doszly `loadBrew()` i `loadPrerelease()`, kazde osobno
+  zabezpieczone, wiec brak jednego nie psuje reszty.
+- Panel ladowal pod lista mimo `!important`. Plutonium tez uzywa `!important`,
+  a przy remisie decyduje waga selektora - podbita.
+- Panel otwiera sie razem z oknem importera, niezaleznie od tego, jak zostalo
+  otwarte. Dotad wolal go tylko krok "Klasa" w kreatorze, wiec dojscie do
+  importera inna droga - druga klasa, przycisk na karcie, ponowne otwarcie po
+  anulowaniu - dawalo liste bez opisow i bez sladu, ze opisy istnieja.
+
 ## 1.56.0
 
 Opisy klas czytane wprost z danych 5etools, nie z kompendiow.
