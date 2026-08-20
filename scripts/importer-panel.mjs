@@ -27,6 +27,7 @@ import {
   readDescription
 } from "./compendium.mjs";
 import { watchImporter, importerRect } from "./importer-watch.mjs";
+import { watchForHost, stopWatchingHost, undockPanel } from "./dock.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -58,6 +59,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this._query = "";
     this._limitTo = null;
     this._stopWatching = null;
+    this._stopDocking = null;
   }
 
   static DEFAULT_OPTIONS = {
@@ -194,6 +196,31 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     if (!this._stopWatching) this.startWatching();
+
+    // Re-docked on every render: Foundry rewrites position and size as inline
+    // styles each time, and re-parents the element if it has been moved.
+    if (!this._stopDocking && game.settings.get(MODULE_ID, "dockImporterPanel")) {
+      this._stopDocking = watchForHost(this);
+    }
+  }
+
+  /**
+   * Leaves Plutonium's window before this one goes away.
+   *
+   * Without this the element would be torn down inside a window that knows
+   * nothing about it, and the layout class would be left behind on a container
+   * that no longer has a second column.
+   */
+  _onClose(options) {
+    this._stopDocking?.();
+    this._stopDocking = null;
+    stopWatchingHost();
+    try {
+      undockPanel(this);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not undock the panel`, err);
+    }
+    return super._onClose?.(options);
   }
 
   /** Follows the importer until either it or this panel closes. */

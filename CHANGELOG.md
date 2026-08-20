@@ -12,6 +12,30 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.55.0
+
+Panel opisow wchodzi do srodka okna Plutonium, zamiast obok niego wisiec.
+
+- `scripts/dock.mjs` - przenosi element panelu do okna "Import Classes &
+  Subclasses", po prawej stronie listy. Panel dziala dokladnie jak dotad:
+  sledzi podswietlony wiersz i czyta opisy z kompendiow. Zmienia sie wylacznie
+  to, gdzie jego element siedzi na stronie.
+- Wlasny pasek tytulu, uchwyt przeciagania i rog zmiany rozmiaru sa ukryte -
+  w cudzym oknie nic nie znacza.
+- Przy zamknieciu okna Plutonium albo panelu element wraca na strone, zeby nie
+  zostal zniszczony razem z gospodarzem.
+- Ustawienie "Put the description panel inside the importer", per uzytkownik,
+  domyslnie wlaczone. Wylaczenie przywraca ruchome okno - przydatne na malym
+  ekranie, gdzie dwie kolumny zostawiaja za waska liste.
+
+**Odrzucone po drodze.** Wersja robocza przemalowywala wszystkie okna
+zbudowane jako lista pol wyboru. Wycofane: gracz spotkalby trzy okna
+poprawione i cztery nietkniete, wiec niespojnosc, ktora miala zniknac,
+byloby wieksza.
+
+Druga wersja robocza budowala wlasny panel opisow od zera - duplikat tego, co
+`importer-panel.mjs` robi od dawna. Rowniez wycofana.
+
 ## 1.54.0
 
 Porownanie z regulami trafia do interfejsu - pierwsza rzecz z tego watku,

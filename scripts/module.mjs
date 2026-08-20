@@ -245,6 +245,23 @@ Hooks.once("ready", () => {
     default: true
   });
 
+  game.settings.register(MODULE_ID, "dockImporterPanel", {
+    name: "Put the description panel inside the importer",
+    hint:
+      "The class description panel normally floats beside Plutonium's importer as a second " +
+      "window, which can end up behind something and reads as a separate tool. With this on it " +
+      "sits inside the importer, to the right of the list. Turn it off to go back to a movable " +
+      "window - useful on a small screen, where two columns leave the list too narrow.",
+    scope: "client",
+    config: true,
+    type: Boolean,
+    default: true,
+    onChange: () => {
+      const open = foundry.applications.instances?.get("pk5e-importer-panel");
+      open?.render();
+    }
+  });
+
   game.settings.register(MODULE_ID, "hidePlutoniumLevelUp", {
     name: "Hide Plutonium's own level-up button",
     hint:

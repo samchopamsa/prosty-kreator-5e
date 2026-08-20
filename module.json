@@ -2,9 +2,9 @@
   "id": "prosty-kreator-5e",
   "title": "Prosty Kreator Postaci (D&D 5e)",
   "description": "Prowadzony krok po kroku kreator postaci dla systemu dnd5e. Nie zastępuje importera ani systemowego mechanizmu Advancement - klika przyciski karty postaci i pilnuje, czego jeszcze brakuje. Uzupełnia atrybuty i języki, których importery nie pytają, pokazuje opisy klas obok importera i wykrywa pominięte okna wyboru.",
-  "version": "1.54.0",
+  "version": "1.55.0",
   "manifest": "https://github.com/samchopamsa/prosty-kreator-5e/releases/latest/download/module.json",
-  "download": "https://github.com/samchopamsa/prosty-kreator-5e/releases/download/v1.54.0/module.zip",
+  "download": "https://github.com/samchopamsa/prosty-kreator-5e/releases/download/v1.55.0/module.zip",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

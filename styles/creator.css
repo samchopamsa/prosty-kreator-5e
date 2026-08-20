@@ -1186,3 +1186,69 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
   font-size: 0.85em;
   opacity: 0.8;
 }
+
+
+
+/* ---------------------------------------------------------------------------
+   The description panel, docked inside Plutonium's class importer.
+
+   Everything here is scoped to classes dock.mjs adds. If Plutonium changes its
+   markup the panel stays a floating window rather than breaking anything.
+   --------------------------------------------------------------------------- */
+
+/* The container holding the list becomes two columns. */
+.pk5e-dock-split {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  min-height: 0;
+}
+
+/* Without an explicit basis flex gives the list the whole row and the panel
+   collapses to nothing. */
+.pk5e-dock-split > .veapp__list {
+  flex: 1 1 55%;
+  min-width: 0;
+}
+
+/* Foundry writes position, width, height and z-index inline on every render,
+   so these have to be forced. This is the same problem as Plutonium's own
+   !important on display, solved the same way. */
+.application.pk5e-docked {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  z-index: auto !important;
+  flex: 1 1 45%;
+  min-width: 16rem;
+  margin: 0;
+  border: none;
+  border-left: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.25));
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+/* One title bar is enough, and it is the host's. The drag handle and resize
+   corner go with it: neither means anything for an element that no longer
+   moves independently. */
+.application.pk5e-docked > .window-header,
+.application.pk5e-docked .window-resize-handle {
+  display: none !important;
+}
+
+.application.pk5e-docked > .window-content {
+  height: 100%;
+  overflow-y: auto;
+  padding: 0.5rem 0.6rem;
+  background: transparent;
+}
+
+/* The importer opens too narrow for two columns. Only widened while the panel
+   is actually inside it. */
+.application.ve-app.pk5e-dock-host {
+  min-width: 54rem;
+}
