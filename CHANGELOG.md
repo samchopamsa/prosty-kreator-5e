@@ -12,6 +12,17 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.57.1
+
+- **Opisy klas homebrew.** Illrigger szedl od razu do tabeli poziomow, podczas
+  gdy kazda oficjalna klasa miala najpierw akapit. Tekst nie byl nieobecny -
+  szukalem go w zlym miejscu. `DataUtil.classFluff` czyta pliki oficjalne, a
+  klasa z brew trzyma swoj opis w przetworzonym brew, obok swoich regul.
+  Dochodza `BrewUtil2` i `PrereleaseUtil`.
+- `characterCreator.fluff("class", "Illrigger")` w konsoli - pokazuje, ile
+  wpisow opisowych znaleziono i z jakich zrodel. Przydatne, bo zrodla sa teraz
+  trzy i przy braku opisu warto wiedziec, ktore zawiodlo.
+
 ## 1.57.0
 
 - **Podklasa przedstawia sie przed lista swoich cech.** Tekst mowiacy, na czym

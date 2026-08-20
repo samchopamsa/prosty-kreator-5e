@@ -44,20 +44,31 @@ const fluffCache = new Map();
 async function loadFluff(kind) {
   if (fluffCache.has(kind)) return fluffCache.get(kind);
 
-  let list = [];
+  const key = `${kind}Fluff`;
+  const list = [];
+
+  // Official files.
   try {
-    const api = globalThis.DataUtil?.[`${kind}Fluff`];
-    const key = `${kind}Fluff`;
-    const parts = await Promise.all([
-      api?.loadJSON?.(),
-      api?.loadBrew?.().catch(() => null),
-      api?.loadPrerelease?.().catch(() => null)
-    ]);
-    // Homebrew classes bring their own descriptive text, and it arrives the
-    // same way the class data does - separately from the official files.
-    list = parts.filter(Boolean).flatMap((part) => part[key] ?? []);
+    const data = await globalThis.DataUtil?.[key]?.loadJSON?.();
+    if (data?.[key]) list.push(...data[key]);
   } catch (err) {
-    trace(`no ${kind} fluff available`, err);
+    trace(`no official ${kind} fluff`, err);
+  }
+
+  // Homebrew, which lives somewhere else entirely.
+  //
+  // DataUtil's fluff loaders read the official files; a brewed class keeps its
+  // description in the processed brew alongside its rules. Illrigger has one
+  // and showed none, going straight to its level table while every official
+  // class had a paragraph first - the missing text was never absent, only
+  // being looked for in the wrong place.
+  for (const util of ["BrewUtil2", "PrereleaseUtil"]) {
+    try {
+      const brew = await globalThis[util]?.pGetBrewProcessed?.();
+      if (brew?.[key]) list.push(...brew[key]);
+    } catch (err) {
+      trace(`no ${kind} fluff from ${util}`, err);
+    }
   }
 
   fluffCache.set(kind, list);
@@ -254,6 +265,20 @@ export async function describeRow(row) {
       .filter(Boolean)
       .join("")
   };
+}
+
+/** What descriptive text is available, and from where. */
+export async function debugFluff(kind = "class", name = null) {
+  const list = await loadFluff(kind);
+  const sources = [...new Set(list.map((entry) => entry.source))].sort();
+  console.log(`${MODULE_ID} | ${list.length} ${kind} fluff entries, sources:`, sources);
+  if (name) {
+    const found = list.filter((entry) => same(entry.name, name));
+    console.log(
+      found.length ? found.map((e) => `${e.name} (${e.source})`) : `nothing named "${name}"`
+    );
+  }
+  return list;
 }
 
 /** For the console, when a row will not resolve. */

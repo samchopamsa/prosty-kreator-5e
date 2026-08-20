@@ -20,6 +20,7 @@ import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { startHostWatch } from "./dock.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
 import { debugRules, debugVerify } from "./fivetools.mjs";
+import { debugFluff } from "./class-text.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
@@ -312,6 +313,7 @@ Hooks.once("ready", () => {
     debug: (actorId) => debugActor(actorId),
     debugCompendiums: () => debugCompendiums(),
     rules: (className, level, options) => debugRules(className, level, options),
+    fluff: (kind, name) => debugFluff(kind, name),
     verify: (actorRef, className, level, options) => debugVerify(actorRef, className, level, options),
     setDebug: (on = true) => {
       game.settings.set(MODULE_ID, "debug", !!on);
