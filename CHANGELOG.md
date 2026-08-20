@@ -12,6 +12,20 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.56.5
+
+- **Lista i panel dostaja wlasny kontener.** Dotad ustawialem w poziom rodzica
+  listy - a to cale wnetrze okna: pasek filtrow, przelaczniki zrodel, naglowki
+  kolumn, lista, panel i stopka. Kazde z nich stawalo sie pionowa kolumna,
+  stad filtry zaslaniajace ekran. Teraz te dwie rzeczy, ktore maja lezec obok
+  siebie, dostaja wlasny rzad wstawiony w miejsce listy; wszystko nad nim i pod
+  nim zostaje nietkniete.
+- Przy oddokowaniu rzad jest rozpakowywany, a lista wraca na swoje miejsce.
+
+To byla czwarta proba tego ukladu. Trzy poprzednie - waga selektora, `!important`
+w arkuszu, `setProperty` na rodzicu - nie dzialaly nie dlatego, ze przegrywaly
+z Plutonium, tylko dlatego, ze celowaly w niewlasciwy element.
+
 ## 1.56.4
 
 - **Zrodlo z wiersza narzuca, ale nie przesadza.** Importer pokazuje skrot

@@ -66,35 +66,47 @@ export function dockPanel(panel) {
   if (host.contains(element)) return true;
 
   const list = host.querySelector(".veapp__list");
-  const column = list?.parentElement;
-  if (!column) return false;
+  if (!list?.parentElement) return false;
 
-  // Remembered before the move, because after it the old parent is unreachable.
   if (!origin) origin = { parent: element.parentElement, next: element.nextSibling };
 
-  column.classList.add("pk5e-dock-split");
-  element.classList.add("pk5e-docked");
-  list.after(element);
+  // A new row holding just the list and the panel.
+  //
+  // The obvious move - make the list's parent a row - is wrong, and was wrong
+  // three times before this. That parent is the whole window body: the filter
+  // bar, the source toggles, the column headers, the list, and the footer. Set
+  // it to a row and every one of those becomes a vertical column, which is
+  // exactly what happened.
+  //
+  // So the two things that belong side by side get a container of their own,
+  // slotted in where the list was. Everything above and below it is untouched.
+  const row = document.createElement("div");
+  row.className = "pk5e-dock-row";
+  list.replaceWith(row);
+  row.append(list, element);
 
-  // Written onto the elements rather than left to the stylesheet.
-  //
-  // The stylesheet rule was correct - higher specificity than Plutonium's
-  // ve-flex-col, and !important on top - and still lost: the container kept
-  // computing to `column`. Rather than keep guessing at why, the layout is set
-  // where nothing can outrank it. An inline property flagged important beats
-  // every rule from every sheet, which is the same answer we reached for
-  // hiding Plutonium's level-up button.
-  //
-  // The stylesheet keeps the rest - padding, borders, the hidden title bar -
-  // because none of that is contested.
+  element.classList.add("pk5e-docked");
+  host.classList.add("pk5e-dock-host");
+
+  // Written inline and flagged important: this competes with Plutonium's own
+  // layout classes, and losing quietly is how the last three attempts failed.
   const force = (node, styles) => {
     for (const [name, value] of Object.entries(styles)) {
       node.style.setProperty(name, value, "important");
     }
   };
 
-  force(column, { display: "flex", "flex-direction": "row", "flex-wrap": "nowrap", gap: "0.5rem" });
-  force(list, { flex: "1 1 40%", width: "auto", "min-width": "0", "max-width": "none" });
+  force(row, {
+    display: "flex",
+    "flex-direction": "row",
+    "flex-wrap": "nowrap",
+    gap: "0.5rem",
+    // Takes the vertical space the list used to claim.
+    flex: "1 1 auto",
+    "min-height": "0",
+    overflow: "hidden"
+  });
+  force(list, { flex: "1 1 40%", width: "auto", "min-width": "0", "max-width": "none", height: "auto" });
   force(element, {
     flex: "1 1 60%",
     position: "static",
@@ -103,36 +115,36 @@ export function dockPanel(panel) {
     width: "auto",
     height: "auto",
     "max-height": "none",
-    "min-width": "16rem"
+    "min-width": "16rem",
+    "min-height": "0"
   });
 
-  // Plutonium's window opens too narrow for two columns.
-  host.classList.add("pk5e-dock-host");
-
-  trace("importer panel docked into the class importer");
+  trace("importer panel docked beside the list");
   return true;
 }
 
-/** Returns the panel to the page, so closing the host does not take it along. */
+/** Returns the panel to the page and puts the list back where it was. */
 export function undockPanel(panel) {
   const element = panel?.element;
   if (!element) return;
 
   element.classList.remove("pk5e-docked");
-
-  // Undone explicitly: inline styles do not disappear with the class, and a
-  // panel left at `position: static` outside a flex row would sit wherever the
-  // page happened to flow it.
   for (const name of [
-    "flex", "position", "left", "top", "width", "height", "max-height", "min-width"
+    "flex", "position", "left", "top", "width", "height", "max-height", "min-width", "min-height"
   ]) {
     element.style.removeProperty(name);
   }
-  for (const node of document.querySelectorAll(".pk5e-dock-split, .pk5e-dock-split > .veapp__list")) {
-    for (const name of [
-      "display", "flex-direction", "flex-wrap", "gap", "flex", "width", "min-width", "max-width"
-    ]) {
-      node.style.removeProperty(name);
+
+  // Unwrap: the list goes back where the row now stands, and the row goes away.
+  for (const row of document.querySelectorAll(".pk5e-dock-row")) {
+    const list = row.querySelector(".veapp__list");
+    if (list) {
+      for (const name of ["flex", "width", "min-width", "max-width", "height"]) {
+        list.style.removeProperty(name);
+      }
+      row.replaceWith(list);
+    } else {
+      row.remove();
     }
   }
 
@@ -140,14 +152,10 @@ export function undockPanel(panel) {
   else document.body.appendChild(element);
   origin = null;
 
-  for (const split of document.querySelectorAll(".pk5e-dock-split")) {
-    split.classList.remove("pk5e-dock-split");
-  }
   for (const host of document.querySelectorAll(".pk5e-dock-host")) {
     host.classList.remove("pk5e-dock-host");
   }
 
-  // Back to being a window: Foundry's own positioning takes over again.
   panel.setPosition?.(panel.constructor.beside?.() ?? {});
 }
 

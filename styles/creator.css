@@ -1179,28 +1179,17 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
    markup the panel stays a floating window rather than breaking anything.
    --------------------------------------------------------------------------- */
 
-/* The container holding the list becomes two columns.
+/* The list and the panel, side by side.
 
-   Forced, because Plutonium's own ve-flex-col sets a column direction with the
-   same specificity - so whichever stylesheet loads last would win, which is not
-   something to leave to chance. Without this the panel lands under the list
-   instead of beside it. */
-.application.ve-app .pk5e-dock-split {
-  display: flex !important;
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  gap: 0.5rem;
-  min-height: 0;
-}
+   Only these two: the row is a container dock.mjs creates for exactly this
+   pair, so the filter bar, the column headers and the footer above and below it
+   are left alone. An earlier version turned the whole window body into a row
+   and stood every one of those on end.
 
-/* Without an explicit basis flex gives the list the whole row and the panel
-   collapses to nothing. */
-.application.ve-app .pk5e-dock-split > .veapp__list {
-  flex: 1 1 40% !important;
-  width: auto !important;
-  min-width: 0 !important;
-  max-width: none !important;
-  height: auto !important;
+   The measurements live in dock.mjs as inline properties, because they compete
+   with Plutonium's own layout classes. What is left here is the appearance. */
+.pk5e-dock-row > .veapp__list {
+  overflow-y: auto;
 }
 
 /* Foundry writes position, width, height and z-index inline on every render,
