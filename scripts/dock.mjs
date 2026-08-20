@@ -126,7 +126,13 @@ export function watchForHost(panel) {
 
   observer = new MutationObserver(sync);
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // The observer only fires on a change, and the host window is often already
+  // open and settled by the time the panel renders - in which case there is no
+  // change to react to. A few passes over the first half-second cover the
+  // orderings the observer misses, without polling forever.
   sync();
+  for (const delay of [50, 200, 600]) setTimeout(sync, delay);
 
   return () => stopWatchingHost();
 }

@@ -1196,10 +1196,15 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
    markup the panel stays a floating window rather than breaking anything.
    --------------------------------------------------------------------------- */
 
-/* The container holding the list becomes two columns. */
+/* The container holding the list becomes two columns.
+
+   Forced, because Plutonium's own ve-flex-col sets a column direction with the
+   same specificity - so whichever stylesheet loads last would win, which is not
+   something to leave to chance. Without this the panel lands under the list
+   instead of beside it. */
 .pk5e-dock-split {
-  display: flex;
-  flex-direction: row;
+  display: flex !important;
+  flex-direction: row !important;
   gap: 0.5rem;
   min-height: 0;
 }
@@ -1207,8 +1212,27 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
 /* Without an explicit basis flex gives the list the whole row and the panel
    collapses to nothing. */
 .pk5e-dock-split > .veapp__list {
-  flex: 1 1 55%;
+  flex: 1 1 55% !important;
   min-width: 0;
+  height: auto !important;
+}
+
+/* Narrow screens: two columns leave the list unreadable, so it falls back to
+   the stacked layout that at least keeps both usable. */
+@media (max-width: 1100px) {
+  .pk5e-dock-split {
+    flex-direction: column !important;
+  }
+
+  .pk5e-dock-split > .veapp__list {
+    flex: 1 1 auto !important;
+  }
+
+  .application.pk5e-docked {
+    border-left: none;
+    border-top: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.25));
+    max-height: 40vh !important;
+  }
 }
 
 /* Foundry writes position, width, height and z-index inline on every render,
@@ -1251,4 +1275,12 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
    is actually inside it. */
 .application.ve-app.pk5e-dock-host {
   min-width: 54rem;
+}
+
+/* Docked, the panel's own search field and dropdown are redundant: the list
+   they duplicate is right there, and the panel follows it. */
+.application.pk5e-docked .pk5e-panel-search,
+.application.pk5e-docked [data-panel-search],
+.application.pk5e-docked [data-action="toggleList"] {
+  display: none !important;
 }

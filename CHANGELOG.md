@@ -12,6 +12,21 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.55.1
+
+Poprawki dokowania, obie z podgladu na zywo.
+
+- Panel ladowal pod lista zamiast obok niej. Rodzic listy ma klase
+  `ve-flex-col` od Plutonium, ktora ustawia kolumne z ta sama waga co nasza
+  regula - wygrywal arkusz zaladowany pozniej. Kierunek wymuszony.
+- Dokowanie bywalo pomijane i panel zostawal osobnym oknem. Obserwator reaguje
+  tylko na zmiane, a okno Plutonium czesto jest juz otwarte, gdy panel sie
+  renderuje. Dolozone kilka przebiegow w ciagu pierwszego polsekundy.
+- Ponizej 1100 px panel wraca pod liste zamiast obok - dwie kolumny zostawialy
+  liste nieczytelna.
+- Zadokowany panel ukrywa wlasne pole wyszukiwania i rozwijana liste: dubluja
+  liste, ktora jest tuz obok.
+
 ## 1.55.0
 
 Panel opisow wchodzi do srodka okna Plutonium, zamiast obok niego wisiec.
