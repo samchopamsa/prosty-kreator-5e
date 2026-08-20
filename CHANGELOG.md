@@ -12,6 +12,30 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.56.4
+
+- **Zrodlo z wiersza narzuca, ale nie przesadza.** Importer pokazuje skrot
+  ("IllR"), a dane niosą pelny identyfikator ("IllriggerRevised") - przy
+  homebrew te dwie postaci nie musza sie zgadzac wcale. Zadanie dokladnego
+  trafienia sprawialo, ze klasa, ktorej dane byly juz wczytane, wracala jako
+  "nie ma w kompendiach". Teraz zrodlo zawęża szukanie, gdy dziala, i jest
+  pomijane, gdy nie.
+- Fluff dociagany takze z brew i prerelease. Klasy homebrew przynosza wlasny
+  tekst opisowy i przychodzi on ta sama droga co dane klasy - osobno od plikow
+  oficjalnych.
+- Dopasowanie fluffu po zrodle rozwiazanej pozycji, nie po skrocie z wiersza.
+
+## 1.56.3
+
+- Uklad dwoch kolumn ustawiany wprost na elementach, przez `setProperty` z flaga
+  `important`, zamiast z arkusza. Regula w arkuszu byla poprawna - wyzsza waga
+  niz `ve-flex-col` Plutonium i `!important` na wierzchu - a kontener i tak
+  wyliczal sie na `column`. Zamiast dalej zgadywac dlaczego, uklad jest teraz
+  pisany tam, gdzie nic go nie przebije. To samo rozwiazanie co przy ukrywaniu
+  przycisku awansu Plutonium.
+- Style sa jawnie zdejmowane przy oddokowaniu: nie znikaja razem z klasa, a
+  panel zostawiony na `position: static` poza rzedem wyladowalby gdziekolwiek.
+
 ## 1.56.2
 
 - Usunieta ramka "Przegladaj kompendium klas" z kroku Klasa. Panel czyta teraz

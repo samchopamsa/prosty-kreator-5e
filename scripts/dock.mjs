@@ -76,6 +76,36 @@ export function dockPanel(panel) {
   element.classList.add("pk5e-docked");
   list.after(element);
 
+  // Written onto the elements rather than left to the stylesheet.
+  //
+  // The stylesheet rule was correct - higher specificity than Plutonium's
+  // ve-flex-col, and !important on top - and still lost: the container kept
+  // computing to `column`. Rather than keep guessing at why, the layout is set
+  // where nothing can outrank it. An inline property flagged important beats
+  // every rule from every sheet, which is the same answer we reached for
+  // hiding Plutonium's level-up button.
+  //
+  // The stylesheet keeps the rest - padding, borders, the hidden title bar -
+  // because none of that is contested.
+  const force = (node, styles) => {
+    for (const [name, value] of Object.entries(styles)) {
+      node.style.setProperty(name, value, "important");
+    }
+  };
+
+  force(column, { display: "flex", "flex-direction": "row", "flex-wrap": "nowrap", gap: "0.5rem" });
+  force(list, { flex: "1 1 40%", width: "auto", "min-width": "0", "max-width": "none" });
+  force(element, {
+    flex: "1 1 60%",
+    position: "static",
+    left: "auto",
+    top: "auto",
+    width: "auto",
+    height: "auto",
+    "max-height": "none",
+    "min-width": "16rem"
+  });
+
   // Plutonium's window opens too narrow for two columns.
   host.classList.add("pk5e-dock-host");
 
@@ -89,6 +119,22 @@ export function undockPanel(panel) {
   if (!element) return;
 
   element.classList.remove("pk5e-docked");
+
+  // Undone explicitly: inline styles do not disappear with the class, and a
+  // panel left at `position: static` outside a flex row would sit wherever the
+  // page happened to flow it.
+  for (const name of [
+    "flex", "position", "left", "top", "width", "height", "max-height", "min-width"
+  ]) {
+    element.style.removeProperty(name);
+  }
+  for (const node of document.querySelectorAll(".pk5e-dock-split, .pk5e-dock-split > .veapp__list")) {
+    for (const name of [
+      "display", "flex-direction", "flex-wrap", "gap", "flex", "width", "min-width", "max-width"
+    ]) {
+      node.style.removeProperty(name);
+    }
+  }
 
   if (origin?.parent?.isConnected) origin.parent.insertBefore(element, origin.next);
   else document.body.appendChild(element);

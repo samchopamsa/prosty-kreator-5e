@@ -45,14 +45,41 @@ async function loadFluff(kind) {
 
   let list = [];
   try {
-    const data = await globalThis.DataUtil?.[`${kind}Fluff`]?.loadJSON?.();
-    list = data?.[`${kind}Fluff`] ?? [];
+    const api = globalThis.DataUtil?.[`${kind}Fluff`];
+    const key = `${kind}Fluff`;
+    const parts = await Promise.all([
+      api?.loadJSON?.(),
+      api?.loadBrew?.().catch(() => null),
+      api?.loadPrerelease?.().catch(() => null)
+    ]);
+    // Homebrew classes bring their own descriptive text, and it arrives the
+    // same way the class data does - separately from the official files.
+    list = parts.filter(Boolean).flatMap((part) => part[key] ?? []);
   } catch (err) {
     trace(`no ${kind} fluff available`, err);
   }
 
   fluffCache.set(kind, list);
   return list;
+}
+
+
+/**
+ * Finds an entry, preferring the source the row named but never insisting.
+ *
+ * The importer shows an abbreviation ("IllR") while the data carries a full
+ * identifier ("IllriggerRevised"), and for homebrew the two need not agree at
+ * all. Demanding an exact match meant a class whose data was already loaded
+ * came back as "not in the available compendiums" - the least helpful possible
+ * answer, and a wrong one.
+ *
+ * So the source narrows the search when it works and is dropped when it does
+ * not. A name that matches nothing still returns nothing; a name that matches
+ * something returns it.
+ */
+function resolve(finder, ...args) {
+  const source = args.pop();
+  return finder(...args, source || null) ?? finder(...args, null);
 }
 
 const same = (a, b) => String(a ?? "").toLowerCase() === String(b ?? "").toLowerCase();
@@ -159,15 +186,27 @@ export async function describeRow(row) {
   if (!rules) return null;
 
   if (row.type === "subclass") {
-    const subclass = selectSubclass(rules.subclasses, row.parentName, row.name, row.code || null);
+    const subclass = resolve(
+      (parent, name, source) => selectSubclass(rules.subclasses, parent, name, source),
+      row.parentName,
+      row.name,
+      row.code
+    );
     if (!subclass) return null;
 
-    const fluff = (await loadFluff("subclass")).find(
-      (entry) =>
-        same(entry.name, subclass.name) &&
-        same(entry.className, subclass.className) &&
-        same(entry.source, subclass.source)
-    );
+    // Matched on the resolved entry's own source rather than the row's, since
+    // that is the one the data agrees on.
+    const fluffList = await loadFluff("subclass");
+    const fluff =
+      fluffList.find(
+        (entry) =>
+          same(entry.name, subclass.name) &&
+          same(entry.className, subclass.className) &&
+          same(entry.source, subclass.source)
+      ) ??
+      fluffList.find(
+        (entry) => same(entry.name, subclass.name) && same(entry.className, subclass.className)
+      );
 
     return {
       title: subclass.name,
@@ -176,12 +215,13 @@ export async function describeRow(row) {
     };
   }
 
-  const cls = selectClass(rules.classes, row.name, row.code || null);
+  const cls = resolve((name, source) => selectClass(rules.classes, name, source), row.name, row.code);
   if (!cls) return null;
 
-  const fluff = (await loadFluff("class")).find(
-    (entry) => same(entry.name, cls.name) && same(entry.source, cls.source)
-  );
+  const classFluff = await loadFluff("class");
+  const fluff =
+    classFluff.find((entry) => same(entry.name, cls.name) && same(entry.source, cls.source)) ??
+    classFluff.find((entry) => same(entry.name, cls.name));
 
   const facts = [];
   if (cls.hd) facts.push(t("text.hitDie", `${cls.hd.number}d${cls.hd.faces}`));
