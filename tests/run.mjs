@@ -49,7 +49,7 @@ const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
-  featureHash, missingFeatures, countChoices } =
+  featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/fivetools.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
@@ -835,6 +835,49 @@ group("fivetools: subclass features hide one level down", () => {
   );
   check("a level with nothing on it is empty", subclassFeaturesAtLevel(battleMaster, 5), []);
   check("a subclass with no features does not throw", subclassFeaturesAtLevel({}, 3), []);
+});
+
+group("fivetools: a subclass introduces itself inside its first level", () => {
+  // The description of what a subclass is about has no entry of its own - it
+  // sits in the wrapper for the level the subclass arrives at, ahead of the
+  // features. Taken from the Battle Master reading.
+  const battleMaster = {
+    subclassFeatures: [
+      [
+        {
+          name: "Battle Master",
+          level: 3,
+          __prop: "subclassFeature",
+          entries: [
+            "{@i Master Sophisticated Battle Maneuvers}",
+            "Battle Masters are students of the art of battle.",
+            { name: "Combat Superiority", level: 3, __prop: "subclassFeature", entries: ["..."] }
+          ]
+        }
+      ],
+      [
+        {
+          level: 7,
+          __prop: "subclassFeature",
+          entries: [{ name: "Know Your Enemy", level: 7, __prop: "subclassFeature", entries: ["..."] }]
+        }
+      ]
+    ]
+  };
+
+  check("the introductory lines are recovered", subclassIntro(battleMaster).length, 2);
+  check(
+    "features are not mistaken for introduction",
+    subclassIntro(battleMaster).some((line) => /Combat Superiority/.test(line)),
+    false
+  );
+  // Later levels carry features, not introductions.
+  check(
+    "only the earliest level is read",
+    subclassIntro(battleMaster)[0],
+    "{@i Master Sophisticated Battle Maneuvers}"
+  );
+  check("a subclass with no features gives nothing", subclassIntro({}), []);
 });
 
 group("fivetools: the level that grants a subclass is marked", () => {

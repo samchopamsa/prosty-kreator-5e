@@ -1306,3 +1306,16 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
   display: block;
   margin-bottom: 0.1rem;
 }
+
+/* A subclass's introduction, ahead of its features. Set apart from the feature
+   text below it, which is rules rather than flavour. */
+.pk5e-text-intro {
+  margin-bottom: 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--pk5e-border, rgba(128, 128, 128, 0.18));
+}
+
+.pk5e-text-intro p:first-child i {
+  font-size: 1.02em;
+  opacity: 0.8;
+}

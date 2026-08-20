@@ -33,6 +33,7 @@ import {
   selectSubclass,
   featuresAtLevel,
   subclassFeaturesAtLevel,
+  subclassIntro,
   renderEntries,
   isAvailable
 } from "./fivetools.mjs";
@@ -208,10 +209,20 @@ export async function describeRow(row) {
         (entry) => same(entry.name, subclass.name) && same(entry.className, subclass.className)
       );
 
+    // Fluff file first where one exists, and the subclass's own introduction
+    // otherwise - which is the usual case, since most subclasses carry their
+    // description inside the level they arrive at rather than in a fluff entry.
+    const intro = fluffHtml(fluff) || renderEntries(subclassIntro(subclass));
+
     return {
       title: subclass.name,
       subtitle: t("text.subclassOf", subclass.className, subclass.source),
-      html: [fluffHtml(fluff), featuresHtml(subclass, true)].filter(Boolean).join("")
+      html: [
+        intro ? `<div class="pk5e-text-intro">${intro}</div>` : "",
+        featuresHtml(subclass, true)
+      ]
+        .filter(Boolean)
+        .join("")
     };
   }
 

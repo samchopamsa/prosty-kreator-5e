@@ -12,6 +12,19 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.57.0
+
+- **Podklasa przedstawia sie przed lista swoich cech.** Tekst mowiacy, na czym
+  polega podklasa, nie ma wlasnego wpisu - siedzi w opakowaniu poziomu, na
+  ktorym podklasa przychodzi, przed cechami. `subclassFeaturesAtLevel()`
+  schodzi do najglebszych nazwanych cech i po drodze go gubil, co jest sluszne
+  przy sprawdzaniu postaci i niesluszne przy opisywaniu dwunastu podklas
+  graczowi, ktory miedzy nimi wybiera.
+- `subclassIntro()` w `fivetools.mjs` wyciaga te linie. Bierze wylacznie zwykle
+  lancuchy z najwczesniejszego opakowania: cokolwiek ma `__prop` jest cecha i
+  ma wlasne miejsce nizej.
+- Cztery testy, przypiete do odczytu Battle Mastera.
+
 ## 1.56.5
 
 - **Lista i panel dostaja wlasny kontener.** Dotad ustawialem w poziom rodzica

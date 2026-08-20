@@ -319,6 +319,43 @@ function choiceIn(f) {
 }
 
 /**
+ * The subclass's own introduction, as the book prints it.
+ *
+ * Subclasses have no separate description: the text that says what one is
+ * about lives inside the wrapper for the level it arrives at, ahead of the
+ * features. Battle Master's reads
+ *
+ *   "{@i Master Sophisticated Battle Maneuvers}"
+ *   "Battle Masters are students of the art of battle, learning martial
+ *    techniques passed down through generations."
+ *
+ * subclassFeaturesAtLevel() walks past this on its way to the named features,
+ * which is right for checking a character and wrong for describing one to a
+ * player deciding between twelve of them.
+ *
+ * Only plain strings are taken - anything with a __prop is a feature in its own
+ * right and gets reported separately.
+ */
+export function subclassIntro(subclass) {
+  const groups = subclass?.subclassFeatures;
+  if (!Array.isArray(groups)) return [];
+
+  // The earliest wrapper, since that is where the introduction sits; later
+  // levels carry features and nothing introductory.
+  const wrappers = groups
+    .flatMap((group) => (Array.isArray(group) ? group : [group]))
+    .filter((wrapper) => wrapper && typeof wrapper === "object")
+    .sort((a, b) => Number(a.level ?? 99) - Number(b.level ?? 99));
+
+  const first = wrappers[0];
+  if (!first) return [];
+
+  return (Array.isArray(first.entries) ? first.entries : []).filter(
+    (entry) => typeof entry === "string"
+  );
+}
+
+/**
  * A feature's nested subclassFeature children, or itself when it has none.
  *
  * Recursive rather than one level deep: nothing promises the nesting stops at
