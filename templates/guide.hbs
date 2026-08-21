@@ -32,7 +32,7 @@
         <select id="pk5e-owner" data-owner>
           <option value="">{{pkT "guide.nobody"}}</option>
           {{#each players}}
-          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
           {{/each}}
         </select>
         <p class="pk5e-note">{{pkT "guide.playerHint"}}</p>
@@ -41,7 +41,7 @@
         <select id="pk5e-folder" data-folder>
           <option value="">{{pkT "guide.noFolder"}}</option>
           {{#each folders}}
-          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
           {{/each}}
         </select>
         <button type="button" class="pk5e-link" data-action="setDefaultFolder">

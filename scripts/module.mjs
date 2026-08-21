@@ -21,6 +21,7 @@ import { startHostWatch } from "./dock.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
 import { debugRules, debugVerify } from "./fivetools.mjs";
 import { debugFluff } from "./class-text.mjs";
+import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
 
@@ -301,6 +302,11 @@ Hooks.once("ready", () => {
   // The panel belongs to Plutonium's class importer, so it appears with it
   // rather than only when the creation panel's class step opened it.
   if (game.settings.get(MODULE_ID, "dockImporterPanel")) startHostWatch(openImporterPanel);
+
+  // prototypeToken.name is copied from the actor once, at creation, and never
+  // again - so renaming a character left its token saying "New Character" on
+  // every hover.
+  startTokenNameSync(["New Character", /^New Character for .+$/, /^New Character \(\d+\)$/]);
 
   const api = {
     guide: () => CreationGuide.start(),

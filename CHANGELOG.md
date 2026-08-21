@@ -12,6 +12,39 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.58.1
+
+- **Nazwa tokenu idzie za nazwa postaci.** `prototypeToken.name` jest kopiowane
+  z aktora raz, przy tworzeniu, i nigdy wiecej - wiec zmiana nazwy na "Lucznik"
+  zostawiala token mowiacy "New Character" przy kazdym najechaniu i w liczniku
+  inicjatywy. Nazwa jest teraz ustawiana przy tworzeniu i pilnowana pozniej.
+- Podmieniana wylacznie wtedy, gdy token nosi nazwe, ktorej nikt nie wybral:
+  poprzednia nazwe aktora albo zastepcza. Token nazwany celowo inaczej
+  ("Nieznajomy w kapturze" nad postacia, ktorej imienia druzyna nie zna) jest
+  prawdziwym zastosowaniem i zostaje nietkniety.
+- Nasluch pilnuje sie trzykrotnie: reaguje tylko na zmiane nazwy, tylko
+  u klienta, ktory jej dokonal, i tylko dla postaci.
+- Piec testow, w tym na przypadek, ktory ma sie NIE odpalic.
+
+## 1.58.0
+
+- **Lista folderow pokazuje hierarchie.** `game.folders` zwraca plaska
+  kolekcje z odnosnikiem do rodzica - dobre do przechowywania, zle do listy
+  rozwijanej: same nazwy w kolejnosci alfabetycznej nie mowia, ktory folder
+  siedzi w ktorym, a dwa foldery na roznych poziomach moga nazywac sie tak
+  samo. `folderChoices()` sklada z tego drzewo i splaszcza je z powrotem
+  z wcieciem.
+- **Nowe postacie dostaja niepowtarzalne nazwy.** "New Character",
+  "New Character (2)", i tak dalej - takze dla postaci gracza. Numer juz
+  obecny w nawiasie jest traktowany jako czesc serii, wiec druga "(2)" staje
+  sie "(3)", a nie "New Character (2) (2)".
+- Siedem testow na numerowanie.
+
+Powod jest praktyczny: swiat z szescioma postaciami o nazwie "New Character"
+sprawia, ze kazde pozniejsze pytanie - ktora jest skonczona, ktora sprawdzic -
+nie ma odpowiedzi bez otwierania wszystkich. Kosztowalo nas to juz dwie rundy
+diagnostyki.
+
 ## 1.57.1
 
 - **Opisy klas homebrew.** Illrigger szedl od razu do tabeli poziomow, podczas

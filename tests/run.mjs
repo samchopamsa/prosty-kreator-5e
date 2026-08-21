@@ -48,6 +48,7 @@ const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scri
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
+const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/fivetools.mjs");
@@ -1071,6 +1072,91 @@ group("fivetools: features that never reach the sheet", () => {
     "an Epic Boon is the same case",
     featuresAtLevel({ classFeatures: [[{ name: "Epic Boon", level: 19 }]] }, 19)[0].isPhantom,
     true
+  );
+});
+
+group("naming: a name nobody else is using", () => {
+  const withActors = (names, fn) => {
+    const before = globalThis.game;
+    globalThis.game = { actors: { contents: names.map((name, i) => ({ name, id: `a${i}` })) } };
+    try { return fn(); } finally { globalThis.game = before; }
+  };
+
+  check(
+    "a free name is left alone",
+    withActors(["Keray"], () => uniqueActorName("New Character")),
+    "New Character"
+  );
+  check(
+    "a taken name gets the next number",
+    withActors(["New Character"], () => uniqueActorName("New Character")),
+    "New Character (2)"
+  );
+  check(
+    "and keeps counting past a gap-free run",
+    withActors(["New Character", "New Character (2)"], () => uniqueActorName("New Character")),
+    "New Character (3)"
+  );
+  // Otherwise a second copy of "(2)" becomes "New Character (2) (2)".
+  check(
+    "an existing number is part of the series, not the name",
+    withActors(["New Character", "New Character (2)"], () => uniqueActorName("New Character (2)")),
+    "New Character (3)"
+  );
+  check(
+    "a character may keep its own name",
+    withActors(["New Character"], () =>
+      uniqueActorName("New Character", "a0")),
+    "New Character"
+  );
+  check(
+    "player names are numbered the same way",
+    withActors(["New Character for Kamil"], () => uniqueActorName("New Character for Kamil")),
+    "New Character for Kamil (2)"
+  );
+  check("an empty name still gives something", withActors([], () => uniqueActorName("")), "New Character");
+});
+
+group("naming: the token follows the character", () => {
+  const placeholders = ["New Character", /^New Character for .+$/];
+
+  // prototypeToken.name is copied once, at creation, and never again - so the
+  // token kept saying "New Character" after the character became Łucznik.
+  check(
+    "a placeholder token name is replaced",
+    tokenNameUpdate(
+      { name: "New Character", prototypeToken: { name: "New Character" } },
+      "Łucznik",
+      placeholders
+    ),
+    { "prototypeToken.name": "Łucznik" }
+  );
+  check(
+    "so is one matching the character's previous name",
+    tokenNameUpdate({ name: "Keray", prototypeToken: { name: "Keray" } }, "Keray Two", placeholders),
+    { "prototypeToken.name": "Keray Two" }
+  );
+  check(
+    "an empty token name is filled in",
+    tokenNameUpdate({ name: "Keray", prototypeToken: { name: "" } }, "Łucznik", placeholders),
+    { "prototypeToken.name": "Łucznik" }
+  );
+
+  // The case worth protecting: a token deliberately named something else,
+  // because the party does not know who the character is.
+  check(
+    "a deliberately different token name is left alone",
+    tokenNameUpdate(
+      { name: "Keray", prototypeToken: { name: "Hooded Stranger" } },
+      "Łucznik",
+      placeholders
+    ),
+    {}
+  );
+  check(
+    "nothing to do when it already matches",
+    tokenNameUpdate({ name: "Keray", prototypeToken: { name: "Łucznik" } }, "Łucznik", placeholders),
+    {}
   );
 });
 

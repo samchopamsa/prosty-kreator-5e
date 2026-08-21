@@ -22,6 +22,7 @@ import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { rulesChecks } from "./checkup.mjs";
+import { folderChoices, uniqueActorName, tokenNameUpdate } from "./naming.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
@@ -239,12 +240,25 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       console.warn(`${MODULE_ID} | Could not read the default folder`, err);
     }
 
+    // Numbered when the name is already taken. A player can reach this more
+    // than once, and a world with two identically named sheets is one where
+    // every later question - which one is finished, which one to check - has
+    // no answer without opening both.
+    const wanted = isPlayer ? `${DEFAULT_NAME} for ${game.user.name}` : DEFAULT_NAME;
+    // Computed once and used for both the actor and its token, so the two
+    // cannot drift apart before the character has even been opened.
+    const name = uniqueActorName(wanted);
+
     const actor = await Actor.implementation.create({
-      name: isPlayer ? `${DEFAULT_NAME} for ${game.user.name}` : DEFAULT_NAME,
+      name,
       type: "character",
       folder,
       ownership,
       prototypeToken: {
+        // Set here as well as watched afterwards: a token created before the
+        // first rename would otherwise carry the placeholder until something
+        // else changed.
+        name,
         actorLink: true,
         disposition: CONST.TOKEN_DISPOSITIONS.FRIENDLY,
         sight: { enabled: true }
@@ -392,9 +406,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           selected: ownership[u.id] === CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER
         }))
         .sort((a, b) => a.name.localeCompare(b.name)),
-      folders: game.folders
-        .filter((f) => f.type === "Actor")
-        .map((f) => ({ id: f.id, name: f.name, selected: f.id === actor.folder?.id })),
+      // Nested, not flat: a list of bare names says nothing about which folder
+      // sits inside which, and two folders at different depths can share one.
+      folders: folderChoices(actor.folder?.id ?? null),
       folderIsDefault:
         !!actor.folder?.id &&
         actor.folder.id === game.settings.get(MODULE_ID, "defaultActorFolder"),
@@ -486,7 +500,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       const isPlaceholder = currentName === DEFAULT_NAME || AUTO_NAME.test(currentName);
       if (isPlaceholder) {
         const player = chosen ? game.users.get(chosen) : null;
-        update.name = player ? `${DEFAULT_NAME} for ${player.name}` : DEFAULT_NAME;
+        update.name = uniqueActorName(
+          player ? `${DEFAULT_NAME} for ${player.name}` : DEFAULT_NAME,
+          this.actor.id
+        );
+        Object.assign(
+          update,
+          tokenNameUpdate(this.actor, update.name, [DEFAULT_NAME, AUTO_NAME])
+        );
       }
 
       try {
