@@ -47,15 +47,22 @@ function shortSummary(item) {
 
   const clean = (html) =>
     html
-      .replace(/@\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
-      .replace(/&\w+\[[^\]]*\](?:\{[^}]*\})?/g, " ")
-      .replace(/\[\[[^\]]*\]\]/g, " ")
-      .replace(/<[^>]+>/g, " ")
+      // Entities first. A description from DDB Importer writes the enricher as
+      // "&amp;Reference[slt]{Sleight of Hand}", so decoding after the strip
+      // left the markup on screen with the ampersand restored - which is how
+      // "&Reference[slt]{Sleight of Hand}" ended up in a background summary.
       .replace(/&nbsp;/g, " ")
       .replace(/&amp;/g, "&")
       .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
       .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
       .replace(/&mdash;/g, "-")
+      // The braces hold what the enricher would have displayed, so they are
+      // kept: "Sleight of Hand" is the point of the sentence, not decoration.
+      .replace(/[@&]\w+\[[^\]]*\]\{([^}]*)\}/g, "$1")
+      .replace(/[@&]\w+\[[^\]]*\]/g, " ")
+      // Roll syntax has no display text worth keeping.
+      .replace(/\[\[[^\]]*\]\]/g, " ")
+      .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
       .trim();
 
@@ -108,7 +115,20 @@ export function buildSteps(actor, { importing = false } = {}) {
 
   const totalLevel = classes.reduce((sum, item) => sum + (item.system?.levels ?? 0), 0);
   const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
-  const abilitiesDone = !!savedAbilities;
+
+  // Read from the sheet as well as from our own flag.
+  //
+  // A character imported by another tool - DDB Importer, say - arrives with
+  // everything filled in, but not by us, so a flag-only check reported two
+  // steps unfinished on a character that was complete. The flag says we did
+  // it; the sheet says it is done, whoever did it.
+  //
+  // Every score at 10 is the default a blank sheet carries. A real character
+  // can legitimately have a 10, which is why this asks whether they are ALL 10
+  // rather than whether any of them is.
+  const scores = Object.values(actor.system?.abilities ?? {}).map((a) => Number(a?.value));
+  const abilitiesSet = scores.length > 0 && scores.some((value) => Number.isFinite(value) && value !== 10);
+  const abilitiesDone = !!savedAbilities || abilitiesSet;
   const abilityMethod = METHOD_KEYS[savedAbilities?.method]
     ? t(METHOD_KEYS[savedAbilities.method])
     : "";
@@ -117,9 +137,12 @@ export function buildSteps(actor, { importing = false } = {}) {
   const hasPortrait =
     !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
 
+  // `value` is a Set, so JSON.stringify shows it as {} and reading it that way
+  // would find every character languageless. Array.from is what tells the truth.
   const known = actor.system?.traits?.languages?.value;
   const languageKeys = known ? Array.from(known) : [];
-  const languageCount = languageKeys.length;
+  const custom = String(actor.system?.traits?.languages?.custom ?? "").trim();
+  const languageCount = languageKeys.length + (custom ? 1 : 0);
 
   // Headline counts, detail below the line - same shape as the other steps.
   let languageHeadline = "";
@@ -239,7 +262,9 @@ export function buildSteps(actor, { importing = false } = {}) {
       help: t("help.languages"),
       removable: false,
       action: "languages",
-      done: !!actor.getFlag(MODULE_ID, "languages"),
+      // Same reasoning as the ability scores: what is on the sheet counts,
+      // whoever put it there.
+      done: !!actor.getFlag(MODULE_ID, "languages") || languageCount > 0,
       result: languageHeadline,
       summary: languageSummary,
       img: "",

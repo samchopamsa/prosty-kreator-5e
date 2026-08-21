@@ -49,6 +49,7 @@ const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
+const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/fivetools.mjs");
@@ -1158,6 +1159,57 @@ group("naming: the token follows the character", () => {
     tokenNameUpdate({ name: "Keray", prototypeToken: { name: "Łucznik" } }, "Łucznik", placeholders),
     {}
   );
+});
+
+group("steps: cleaning imported description text", () => {
+  // Exercised through buildSteps, since the cleaner is internal. The actor is
+  // the smallest thing steps.mjs will accept, with one background carrying a
+  // description shaped like one from DDB Importer.
+  const summaryOf = (html) => {
+    const items = [
+      {
+        id: "bg",
+        type: "background",
+        name: "Criminal",
+        img: "",
+        system: { description: { value: html } },
+        advancement: null,
+        flags: {}
+      }
+    ];
+    items.filter = Array.prototype.filter.bind(items);
+    items.find = Array.prototype.find.bind(items);
+
+    const actor = {
+      name: "Test",
+      img: "",
+      items,
+      system: { abilities: {}, traits: { languages: { value: [] } }, attributes: {}, spells: {} },
+      getFlag: () => null,
+      ownership: {}
+    };
+    // The text lives on the entry, not on the step: one step can hold
+    // several items, as a multiclass character's class step does.
+    return buildSteps(actor).find((step) => step.key === "background")?.entries?.[0]?.summary ?? "";
+  };
+
+  const ddb =
+    "<p>Skill Proficiencies: &amp;Reference[slt]{Sleight of Hand} and " +
+    "&amp;Reference[ste]{Stealth}. Tool Proficiency: Thieves' Tools. " +
+    "Equipment: Choose A or B, then take two daggers and a crowbar with you.</p>";
+
+  // The ampersand arrives encoded, so decoding after the strip left the markup
+  // on screen with the ampersand restored.
+  check("enricher markup does not survive", /Reference\[/.test(summaryOf(ddb)), false);
+  // And what it would have displayed is the point of the sentence.
+  check("its display text does", /Sleight of Hand/.test(summaryOf(ddb)), true);
+  check("as does the second one", /Stealth/.test(summaryOf(ddb)), true);
+
+  const rolls =
+    "<p>You regain hit points equal to [[/r 1d10]] plus your level, and you may " +
+    "consult @UUID[Compendium.dnd5e.x]{Second Wind} for the details of this feature.</p>";
+  check("roll syntax is dropped", /\[\[/.test(summaryOf(rolls)), false);
+  check("a UUID link keeps its label", /Second Wind/.test(summaryOf(rolls)), true);
 });
 
 // --- result ------------------------------------------------------------------

@@ -12,6 +12,28 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.58.2
+
+Postac zaimportowana innym narzedziem (DDB Importer) jest teraz rozpoznawana
+poprawnie.
+
+- **Punktacja cech i jezyki czytane z karty, nie z naszej flagi.** Oba kroki
+  sprawdzaly, czy to MY je ustawilismy, wiec postac z Beyond - kompletna -
+  pokazywala dwa kroki niedokonczone. Flaga mowi, ze zrobilismy to my; karta
+  mowi, ze jest zrobione, ktokolwiek to zrobil.
+- Punktacja: liczy sie, czy NIE wszystkie szesc wartosci to 10. Postac moze
+  miec 10 zgodnie z prawem, wiec pytanie brzmi "czy wszystkie", a nie "czy
+  ktoras".
+- Jezyki: `traits.languages.value` to Set, wiec `JSON.stringify` pokazuje go
+  jako `{}`. Odczyt przez `Array.from`, plus pole `custom` dla jezykow
+  wpisanych recznie.
+- **Znaczniki w opisach.** Opis z DDB pisze enricher jako
+  `&amp;Reference[slt]{Sleight of Hand}`, a dekodowanie encji szlo PO wycieciu
+  znacznikow - wiec markup zostawal na ekranie z przywroconym ampersandem.
+  Kolejnosc odwrocona, a tekst z klamer jest zachowywany: "Sleight of Hand"
+  jest trescia zdania, nie ozdoba.
+- Piec testow na czyszczenie opisow.
+
 ## 1.58.1
 
 - **Nazwa tokenu idzie za nazwa postaci.** `prototypeToken.name` jest kopiowane
