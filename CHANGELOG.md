@@ -12,6 +12,28 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.59.0
+
+Zgodnosc z Tidy 5e Sheets.
+
+- `scripts/tidy.mjs` - przyciski rejestrowane przez API Tidy
+  (`registerCharacterHeaderControls`), a nie wstrzykiwane do jego markupu.
+  Tidy renderuje w Svelte i przebudowuje czesci karty, wiec wstawiony element
+  znikalby przy nastepnej aktualizacji bez zadnego bledu.
+- **To wyjasnia nierozstrzygnieta sprawe z 1.49.2.** Przycisk na karcie celowal
+  w `div.sheet-header-buttons` i `.sheet-header .right` - anchory domyslnej
+  karty dnd5e, ktorych Tidy nie ma. Na swiecie z Tidy nie wstawial sie nigdzie
+  i nic nie wygladalo na zepsute.
+- `position: "header"` zamiast domyslnego `"menu"`: menu jest schowane za
+  trzema kropkami, a zacheta do dokonczenia postaci schowana jest warta tyle,
+  co jej brak.
+- Przycisk awansu ukryty na postaci bez klasy - awansowanie pustej karty to
+  slepy zaulek, nie funkcja.
+- `characterCreator.tidy()` w konsoli: czy Tidy jest aktywne, czy obsluguje
+  karty postaci i czy nasze kontrolki sie zarejestrowaly.
+- Obie drogi startuja rownolegle. Kazda nic nie robi, gdy jej karta nie jest
+  uzywana, wiec swiat przelaczajacy sie miedzy nimi nie wymaga zmian.
+
 ## 1.58.4
 
 - **Premie z gatunku i pochodzenia nie licza sie juz jako przypisana

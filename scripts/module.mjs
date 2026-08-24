@@ -12,6 +12,7 @@ import { CreationGuide } from "./guide.mjs";
 import { CompleteCharacter } from "./complete.mjs";
 import { LanguagePicker } from "./languages.mjs";
 import { registerSheetButton } from "./sheet-button.mjs";
+import { registerTidyControls, debugTidy } from "./tidy.mjs";
 import { registerBrowserTweaks } from "./browser-tweaks.mjs";
 import { registerContextMenu } from "./context-menu.mjs";
 import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
@@ -221,7 +222,17 @@ Hooks.once("init", () => {
 });
 
 registerTranslationHelper();
+// Two routes to the same buttons, one per sheet.
+//
+// The dnd5e route inserts into the sheet's markup; Tidy renders with Svelte
+// and shares none of those anchors, so on a Tidy world it quietly found
+// nothing - which is how the sheet button came to be missing with no error to
+// explain it. Tidy publishes an API for this and it is used instead.
+//
+// Both are started: registration is cheap, each does nothing when its sheet is
+// not in use, and a world that switches between them needs no further change.
 registerSheetButton();
+registerTidyControls();
 registerBrowserTweaks();
 registerContextMenu();
 
@@ -320,6 +331,7 @@ Hooks.once("ready", () => {
     debugCompendiums: () => debugCompendiums(),
     rules: (className, level, options) => debugRules(className, level, options),
     fluff: (kind, name) => debugFluff(kind, name),
+    tidy: () => debugTidy(),
     verify: (actorRef, className, level, options) => debugVerify(actorRef, className, level, options),
     setDebug: (on = true) => {
       game.settings.set(MODULE_ID, "debug", !!on);
