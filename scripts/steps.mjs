@@ -17,7 +17,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { text, importFlowNote } from "./sheet-actions.mjs";
-import { itemsWithSkippedChoices } from "./validate.mjs";
+import { itemsWithSkippedChoices, abilitiesAssigned } from "./validate.mjs";
 import { languageLabels } from "./languages.mjs";
 
 /** Readable names for the ability score methods stored on the actor. */
@@ -116,19 +116,11 @@ export function buildSteps(actor, { importing = false } = {}) {
   const totalLevel = classes.reduce((sum, item) => sum + (item.system?.levels ?? 0), 0);
   const savedAbilities = actor.getFlag(MODULE_ID, "abilities");
 
-  // Read from the sheet as well as from our own flag.
-  //
-  // A character imported by another tool - DDB Importer, say - arrives with
-  // everything filled in, but not by us, so a flag-only check reported two
-  // steps unfinished on a character that was complete. The flag says we did
-  // it; the sheet says it is done, whoever did it.
-  //
-  // Every score at 10 is the default a blank sheet carries. A real character
-  // can legitimately have a 10, which is why this asks whether they are ALL 10
-  // rather than whether any of them is.
-  const scores = Object.values(actor.system?.abilities ?? {}).map((a) => Number(a?.value));
-  const abilitiesSet = scores.length > 0 && scores.some((value) => Number.isFinite(value) && value !== 10);
-  const abilitiesDone = !!savedAbilities || abilitiesSet;
+  // Read from the sheet as well as from our own flag: a character imported by
+  // another tool arrives complete, but not by us. Shared with the checklist so
+  // the two cannot disagree - the same window once said "7 of 7 done" and
+  // "ability scores not assigned".
+  const abilitiesDone = !!savedAbilities || abilitiesAssigned(actor);
   const abilityMethod = METHOD_KEYS[savedAbilities?.method]
     ? t(METHOD_KEYS[savedAbilities.method])
     : "";

@@ -159,6 +159,31 @@ export function itemsWithSkippedChoices(actor) {
   return problems;
 }
 
+/**
+ * Whether somebody actually assigned this character's ability scores.
+ *
+ * Harder than it looks. A blank sheet carries ten in all six, so "any score is
+ * not ten" seemed enough - until a character with a class, a species and a
+ * background showed 10/12/11/10/10/10 and was declared done. Those are the
+ * default tens with the background's +2 and +1 added on top; nobody chose
+ * anything.
+ *
+ * The 2024 rules give bonuses to at most three abilities (+2/+1 or +1/+1/+1),
+ * so three scores away from ten is exactly what bonuses alone produce. Four is
+ * more than any bonus can explain, and every way of assigning scores - the
+ * standard array, point buy, rolling - moves at least five.
+ *
+ * A count rather than a sum, because a sum has to guess at how low a rolled
+ * character may legitimately be.
+ */
+export function abilitiesAssigned(actor) {
+  const scores = Object.values(actor?.system?.abilities ?? {})
+    .map((ability) => Number(ability?.value))
+    .filter(Number.isFinite);
+  if (!scores.length) return false;
+  return scores.filter((value) => value !== 10).length >= 4;
+}
+
 export function checkCharacter(actor) {
   const checks = [];
   const add = (ok, level, label, hint) => checks.push({ ok, level, label, hint });
@@ -186,16 +211,11 @@ export function checkCharacter(actor) {
   const speed = Number(system.attributes?.movement?.walk ?? 0);
   add(speed > 0, ERROR, t("check.speed"), t("check.speedHint"));
 
-  const abilities = Object.values(system.abilities ?? {}).map((a) => Number(a.value) || 0);
-  const allTen = abilities.length > 0 && abilities.every((v) => v === 10);
-  // The sheet decides, not our flag. Requiring both meant a character imported
-  // by another tool - scores plainly assigned - failed a check that says
-  // "importers leave every score at ten" while plainly not being at ten.
-  //
-  // The flag is still honoured on its own, for the rare character deliberately
-  // built with a ten in every ability through our own dialog.
+  // The sheet decides, not our flag - a character imported by another tool has
+  // scores but none of our flags. The flag is still honoured on its own, for
+  // the rare character deliberately built with a ten in every ability.
   add(
-    !allTen || !!actor.getFlag(MODULE_ID, "abilities"),
+    abilitiesAssigned(actor) || !!actor.getFlag(MODULE_ID, "abilities"),
     ERROR,
     t("check.abilities"),
     t("check.abilitiesHint")

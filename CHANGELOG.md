@@ -12,6 +12,24 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.58.4
+
+- **Premie z gatunku i pochodzenia nie licza sie juz jako przypisana
+  punktacja.** Warunek z 1.58.2 - "ktoras wartosc nie jest dziesiatka" - byl za
+  luzny: postac z klasa, gatunkiem i pochodzeniem pokazywala 10/12/11/10/10/10
+  i krok meldowal "wykonany", choc nikt niczego nie wybieral. To domyslne
+  dziesiatki plus +2 i +1 z pochodzenia.
+- `abilitiesAssigned()` liczy, ile wartosci rozni sie od dziesiatki. Regula
+  2024 daje premie najwyzej trzem cechom (+2/+1 albo +1/+1/+1), wiec trzy
+  odchylenia to dokladnie to, co premie potrafia. Cztery to wiecej, niz
+  jakakolwiek premia wyjasnia, a kazdy sposob przypisania - tablica
+  standardowa, zakup punktowy, rzuty - rusza co najmniej piec.
+- Liczba, nie suma: suma wymagalaby zgadywania, jak nisko moze legalnie zejsc
+  postac z rzutow.
+- Regula wspoldzielona przez krok i liste kontrolna, wiec nie moga sie znowu
+  rozjechac.
+- Jedenascie testow, w tym granica trzy/cztery.
+
 ## 1.58.3
 
 - **Naglowek liczy to, co pokazuje lista.** Pisal "1 thing(s) to fix" nad

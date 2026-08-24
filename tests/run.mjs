@@ -41,7 +41,8 @@ globalThis.CONFIG = { DND5E: { abilities: {} }, Actor: { documentClass: { defaul
 globalThis.ui = { notifications: { warn: () => {}, info: () => {}, error: () => {} } };
 
 const { matchImporterEntry, groupByClass, normalise } = await import("../scripts/compendium.mjs");
-const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems, checkCharacter } =
+const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems, checkCharacter,
+  abilitiesAssigned } =
   await import("../scripts/validate.mjs");
 const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mjs");
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
@@ -1231,8 +1232,16 @@ group("validate: the heading counts what the list shows", () => {
     };
   };
 
-  const tens = { str: { value: 10 }, dex: { value: 10 }, con: { value: 10 } };
-  const assigned = { str: { value: 8 }, dex: { value: 16 }, con: { value: 14 } };
+  const six = (...values) =>
+    Object.fromEntries(
+      ["str", "dex", "con", "int", "wis", "cha"].map((key, i) => [key, { value: values[i] }])
+    );
+
+  const tens = six(10, 10, 10, 10, 10, 10);
+  const assigned = six(8, 16, 14, 12, 13, 15);
+  // The case that made the earlier rule wrong: a blank sheet plus a
+  // background's +2 and +1. Nobody chose anything, and three scores moved.
+  const bonusesOnly = six(10, 12, 11, 10, 10, 10);
 
   const fromSheet = checkCharacter(actorWith(assigned));
   const abilityCheck = fromSheet.checks.find((c) => /abilit/i.test(c.label));
@@ -1241,6 +1250,15 @@ group("validate: the heading counts what the list shows", () => {
 
   const blank = checkCharacter(actorWith(tens));
   check("every score at ten does not", blank.checks.find((c) => /abilit/i.test(c.label))?.ok, false);
+
+  // Three scores away from ten is exactly what bonuses alone produce, so it
+  // cannot count as assignment - the step read "done" on 10/12/11/10/10/10.
+  const bonused = checkCharacter(actorWith(bonusesOnly));
+  check(
+    "species and background bonuses alone do not count",
+    bonused.checks.find((c) => /abilit/i.test(c.label))?.ok,
+    false
+  );
 
   // The deliberate case: all tens, but chosen through our own dialog.
   const deliberate = checkCharacter(actorWith(tens, { method: "standard" }));
@@ -1255,6 +1273,27 @@ group("validate: the heading counts what the list shows", () => {
   const failing = blank.checks.filter((c) => !c.ok).length;
   check("the total matches the failing checks", blank.problems, failing);
   check("and is at least as large as the errors alone", blank.problems >= blank.errors, true);
+});
+
+group("validate: telling assigned scores from bonuses", () => {
+  const six = (...values) => ({
+    system: {
+      abilities: Object.fromEntries(
+        ["str", "dex", "con", "int", "wis", "cha"].map((key, i) => [key, { value: values[i] }])
+      )
+    }
+  });
+
+  check("a blank sheet is not assigned", abilitiesAssigned(six(10, 10, 10, 10, 10, 10)), false);
+  // 2024 backgrounds give +2/+1 or +1/+1/+1 - never more than three abilities.
+  check("one bonus is not", abilitiesAssigned(six(12, 10, 10, 10, 10, 10)), false);
+  check("two are not", abilitiesAssigned(six(12, 11, 10, 10, 10, 10)), false);
+  check("three are not - that is the most a bonus can move", abilitiesAssigned(six(12, 11, 11, 10, 10, 10)), false);
+  // Four is more than any bonus explains.
+  check("four are", abilitiesAssigned(six(12, 11, 11, 9, 10, 10)), true);
+  check("the standard array is", abilitiesAssigned(six(15, 14, 13, 12, 10, 8)), true);
+  check("a rolled character is", abilitiesAssigned(six(9, 16, 14, 11, 13, 7)), true);
+  check("an empty sheet does not throw", abilitiesAssigned({}), false);
 });
 
 // --- result ------------------------------------------------------------------
