@@ -12,6 +12,20 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.58.3
+
+- **Naglowek liczy to, co pokazuje lista.** Pisal "1 thing(s) to fix" nad
+  szescioma pozycjami, bo liczyl bledy, a lista pokazuje takze ostrzezenia.
+  Doszlo pole `problems` = bledy + ostrzezenia. `ready` nadal zalezy wylacznie
+  od bledow: ostrzezenie warto powiedziec, ale nie jest powodem, zeby nie dac
+  skonczyc postaci.
+- **Sprawdzenie punktacji przestalo przeczyc krokowi.** Krok od 1.58.2 czyta
+  karte, a lista kontrolna nadal wymagala naszej flagi - wiec to samo okno
+  mowilo "7 z 7 zrobione" i "punktacja nieprzypisana". Teraz decyduje karta;
+  flaga jest honorowana osobno, dla rzadkiego przypadku postaci zbudowanej
+  celowo z dziesiatka w kazdej cesze.
+- Piec testow na `checkCharacter`, ktory dotad nie mial zadnego.
+
 ## 1.58.2
 
 Postac zaimportowana innym narzedziem (DDB Importer) jest teraz rozpoznawana

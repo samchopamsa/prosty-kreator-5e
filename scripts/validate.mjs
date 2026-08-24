@@ -164,7 +164,7 @@ export function checkCharacter(actor) {
   const add = (ok, level, label, hint) => checks.push({ ok, level, label, hint });
 
   if (!actor || actor.type !== "character") {
-    return { checks: [], errors: 0, warnings: 0, ready: false };
+    return { checks: [], errors: 0, warnings: 0, problems: 0, ready: false };
   }
 
   const system = actor.system ?? {};
@@ -188,8 +188,14 @@ export function checkCharacter(actor) {
 
   const abilities = Object.values(system.abilities ?? {}).map((a) => Number(a.value) || 0);
   const allTen = abilities.length > 0 && abilities.every((v) => v === 10);
+  // The sheet decides, not our flag. Requiring both meant a character imported
+  // by another tool - scores plainly assigned - failed a check that says
+  // "importers leave every score at ten" while plainly not being at ten.
+  //
+  // The flag is still honoured on its own, for the rare character deliberately
+  // built with a ten in every ability through our own dialog.
   add(
-    !allTen && !!actor.getFlag(MODULE_ID, "abilities"),
+    !allTen || !!actor.getFlag(MODULE_ID, "abilities"),
     ERROR,
     t("check.abilities"),
     t("check.abilitiesHint")
@@ -272,5 +278,11 @@ export function checkCharacter(actor) {
   const errors = checks.filter((c) => !c.ok && c.level === ERROR).length;
   const warnings = checks.filter((c) => !c.ok && c.level === WARNING).length;
 
-  return { checks, errors, warnings, ready: errors === 0 };
+  // Counted separately from `errors` because the heading counts what is
+  // listed, and the list shows warnings too - a heading reading "1 thing to
+  // fix" above six lines is worse than no heading at all.
+  //
+  // `ready` still turns on errors alone: a warning is worth saying and is not
+  // grounds for refusing to finish a character.
+  return { checks, errors, warnings, problems: errors + warnings, ready: errors === 0 };
 }

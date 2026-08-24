@@ -347,7 +347,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const fromRules = await rulesChecks(actor);
     if (fromRules.length) {
       report.checks.push(...fromRules);
-      report.warnings += fromRules.filter((c) => !c.ok).length;
+      const added = fromRules.filter((c) => !c.ok).length;
+      report.warnings += added;
+      report.problems = (report.problems ?? 0) + added;
     }
 
     const ownership = actor.ownership ?? {};

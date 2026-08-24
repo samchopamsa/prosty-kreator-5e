@@ -41,7 +41,7 @@ globalThis.CONFIG = { DND5E: { abilities: {} }, Actor: { documentClass: { defaul
 globalThis.ui = { notifications: { warn: () => {}, info: () => {}, error: () => {} } };
 
 const { matchImporterEntry, groupByClass, normalise } = await import("../scripts/compendium.mjs");
-const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems } =
+const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems, checkCharacter } =
   await import("../scripts/validate.mjs");
 const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mjs");
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
@@ -1210,6 +1210,51 @@ group("steps: cleaning imported description text", () => {
     "consult @UUID[Compendium.dnd5e.x]{Second Wind} for the details of this feature.</p>";
   check("roll syntax is dropped", /\[\[/.test(summaryOf(rolls)), false);
   check("a UUID link keeps its label", /Second Wind/.test(summaryOf(rolls)), true);
+});
+
+group("validate: the heading counts what the list shows", () => {
+  const actorWith = (abilities, flag = null) => {
+    const items = [];
+    items.filter = Array.prototype.filter.bind(items);
+    items.find = Array.prototype.find.bind(items);
+    return {
+      name: "Test",
+      type: "character",
+      items,
+      system: {
+        abilities,
+        attributes: { movement: { walk: 30 }, hp: { max: 10 } },
+        details: {},
+        traits: {}
+      },
+      getFlag: (mod, key) => (key === "abilities" ? flag : null)
+    };
+  };
+
+  const tens = { str: { value: 10 }, dex: { value: 10 }, con: { value: 10 } };
+  const assigned = { str: { value: 8 }, dex: { value: 16 }, con: { value: 14 } };
+
+  const fromSheet = checkCharacter(actorWith(assigned));
+  const abilityCheck = fromSheet.checks.find((c) => /abilit/i.test(c.label));
+  // A character imported by another tool has no flag of ours and is still done.
+  check("assigned scores pass without our flag", abilityCheck?.ok, true);
+
+  const blank = checkCharacter(actorWith(tens));
+  check("every score at ten does not", blank.checks.find((c) => /abilit/i.test(c.label))?.ok, false);
+
+  // The deliberate case: all tens, but chosen through our own dialog.
+  const deliberate = checkCharacter(actorWith(tens, { method: "standard" }));
+  check(
+    "unless they were chosen deliberately",
+    deliberate.checks.find((c) => /abilit/i.test(c.label))?.ok,
+    true
+  );
+
+  // The heading read "1 thing to fix" above six lines, because it counted
+  // errors while the list showed warnings too.
+  const failing = blank.checks.filter((c) => !c.ok).length;
+  check("the total matches the failing checks", blank.problems, failing);
+  check("and is at least as large as the errors alone", blank.problems >= blank.errors, true);
 });
 
 // --- result ------------------------------------------------------------------
