@@ -44,9 +44,9 @@ jobs:
           fi
           echo "$manifest"
 
-      - name: handlebars (opcjonalnie)
+      - name: handlebars i jsdom (opcjonalne)
         continue-on-error: true
-        run: npm install --no-save --no-audit --no-fund handlebars
+        run: npm install --no-save --no-audit --no-fund handlebars jsdom
 
       - run: ./check.sh
 

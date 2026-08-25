@@ -22,12 +22,14 @@ jobs:
         with:
           node-version: "20"
 
-      # Handlebars nie jest zalezoscia modulu. Gdy jest dostepny, check.sh
-      # naprawde kompiluje szablony zamiast tylko liczyc bloki - wiec warto go
-      # miec, ale awaria rejestru npm nie moze zatrzymac calej kontroli.
-      # check.sh sam schodzi wtedy do wersji bez kompilatora.
-      - name: handlebars (opcjonalnie)
+      # Zadne z tych dwoch nie jest zalezoscia modulu, obu uzywa tylko kontrola.
+      # Handlebars daje prawdziwa kompilacje szablonow zamiast liczenia blokow,
+      # jsdom - prawdziwy DOM dla testow cudzego markupu. Awaria rejestru npm
+      # nie moze zatrzymac calej kontroli: bez handlebars check.sh schodzi do
+      # wersji bez kompilatora, bez jsdom testy markupu koncza sie pominieciem.
+      # Cena jest taka, ze wtedy CI sprawdza mniej, nie mniej dokladnie.
+      - name: handlebars i jsdom (opcjonalne)
         continue-on-error: true
-        run: npm install --no-save --no-audit --no-fund handlebars
+        run: npm install --no-save --no-audit --no-fund handlebars jsdom
 
       - run: ./check.sh

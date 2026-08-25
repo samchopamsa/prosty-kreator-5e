@@ -16,8 +16,16 @@ styling is one stylesheet.
 ./check.sh                    # everything worth checking before pushing (run this)
 node tests/run.mjs            # unit tests (Foundry globals stubbed at the top of the file)
 node tests/steps-smoke.mjs    # buildSteps() against a stand-in actor
+node tests/markup.mjs         # foreign-markup tests; needs jsdom, skips without it
 node --check scripts/foo.mjs  # syntax only
 ```
+
+Two dev-only packages are **optional by design**, mirroring each other:
+`handlebars` gives `check.sh` a real template compile instead of a block-balance
+count, and `jsdom` gives `tests/markup.mjs` a real DOM. Neither is a dependency of
+the module. Install them with `npm install --no-save handlebars jsdom` (CI does the
+same); without them those checks degrade to a skip rather than a failure, and
+`check.sh` prints `--` rather than `ok` so a skip never reads as a pass.
 
 `check.sh` runs, in order: syntax of every `.mjs` + `module.json`, Handlebars block
 balance (a real compile only if `handlebars` happens to be installed), `i18n.mjs`
@@ -104,8 +112,18 @@ be wrong for homebrew). Plain values only, no document references.
 read or manipulate markup owned by Plutonium, the Compendium Browser or the dnd5e
 sheet. The convention is **fail quietly**: if the selectors stop matching, the
 feature does nothing and character creation is unaffected. Preserve that when
-editing — nothing throws, nothing assumes an element exists. The observed markup
-and the reasoning behind each selector are in the file headers, and
+editing — nothing throws, nothing assumes an element exists.
+
+`tests/markup.mjs` covers `importer-watch.mjs` against
+`tests/fixtures/plutonium-import-classes.html`. Know what that fixture is worth:
+it was **reconstructed from the file header, not captured from a live window**, so
+it catches regressions in our parsing and cannot catch 5etools changing its markup.
+Replacing it with a real capture is a one-line job in a live world
+(`copy(document.querySelector(".ve-app").outerHTML)`) and is the thing actually
+worth doing after a Plutonium update. The fixture's own header says so too.
+
+The observed markup and the reasoning behind each selector are in the file headers,
+and
 `docs/plutonium-internals.md` records how Plutonium maps 5etools data onto dnd5e
 (notably: its generated `ItemGrant` advancements set `optional: false`, which is
 why skipped choices cannot be detected from Advancement data at all).

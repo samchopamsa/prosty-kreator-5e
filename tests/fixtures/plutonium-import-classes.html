@@ -1,0 +1,74 @@
+<!--
+  Okno "Import Classes" Plutonium, w postaci, ktora czyta importer-watch.mjs.
+
+  UWAGA, I JEST TO ISTOTNE
+  ------------------------
+  Ten plik zostal ODTWORZONY z opisu w naglowku scripts/importer-watch.mjs,
+  a nie skopiowany z zywego okna. Znaczy to tyle: test na nim oparty wykryje,
+  ze ktos zepsul readRow(). NIE wykryje, ze 5etools zmienilo markup - bo
+  wtedy zmieni sie zywe okno, a ten plik zostanie taki, jaki byl.
+
+  Zeby wart byl tyle, ile obiecuje, nalezy go PODMIENIC NA PRAWDZIWY. W swiecie
+  z otwartym importerem klas, w konsoli przegladarki:
+
+      copy(document.querySelector(".ve-app").outerHTML)
+
+  i wkleic tutaj w miejsce wszystkiego ponizej tego komentarza. Wtedy kazda
+  aktualizacja Plutonium, po ktorej ktos powtorzy te czynnosc, konfrontuje
+  nasze selektory z rzeczywistoscia.
+
+  Wiersze celowo zawieraja przypadki, ktore juz raz cos zlamaly:
+    - podklasa, ktorej nazwa zawiera nazwe innej podklasy (Twilight/Light)
+    - myslnik przed nazwa podklasy we wlasnym span.ve-mx-3
+    - kod ksiazki jako sufiks klasy CSS, nie jako tresc etykiety
+    - wiersz bez kodu zrodla
+    - wiersz, ktory nie jest wierszem listy
+-->
+<div class="ve-app app window-app" data-fixture="plutonium-import-classes">
+  <header class="window-header flexrow">
+    <h1 class="window-title">Import Classes</h1>
+    <a class="header-button close"><i class="fas fa-times"></i>Close</a>
+  </header>
+
+  <section class="window-content">
+    <div class="veapp__wrp-list ve-flex-col">
+      <div class="veapp__list ve-flex-col">
+
+        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="class-artificer">
+          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+          <span class="ve-col-9 ve-bold">Artificer</span>
+          <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Rising from the Last War">EFA</span>
+        </label>
+
+        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="class-cleric">
+          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+          <span class="ve-col-9 ve-bold">Cleric</span>
+          <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player's Handbook (2024)">PHB'24</span>
+        </label>
+
+        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-light">
+          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Light Domain</span>
+          <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player's Handbook (2024)">PHB'24</span>
+        </label>
+
+        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-twilight">
+          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Twilight Domain</span>
+          <span class="ve-col-2 ve-text-center ve-source__TCE" title="Tasha's Cauldron of Everything">TCE</span>
+        </label>
+
+        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-no-source">
+          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Homebrew Domain</span>
+          <span class="ve-col-2 ve-text-center">HB</span>
+        </label>
+
+        <label class="ve-flex ve-w-100" data-case="not-a-row">
+          <div class="ve-col-12">Nothing here looks like a name cell.</div>
+        </label>
+
+      </div>
+    </div>
+  </section>
+</div>

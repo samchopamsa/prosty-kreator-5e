@@ -207,6 +207,22 @@ else
   fail=1
 fi
 
+# Testy cudzego markupu potrzebuja prawdziwego DOM-u, wiec jsdom jest tu
+# zalezoscia opcjonalna - tak samo jak handlebars wyzej. Bez niego plik konczy
+# sie zielono i mowi, ze pominal; w CI jsdom jest instalowany, wiec tam chodza
+# naprawde.
+node tests/markup.mjs > /tmp/pk5e-markup.log 2>&1
+markup=$?
+if [ "$markup" -ne 0 ]; then
+  cat /tmp/pk5e-markup.log | sed 's/^/  /'
+  fail=1
+elif grep -q '^SKIP' /tmp/pk5e-markup.log; then
+  # Nie "ok": nic nie zostalo sprawdzone i musi to byc widac na pierwszy rzut oka.
+  sed -n 's/^SKIP /  --   /p' /tmp/pk5e-markup.log
+else
+  tail -n 1 /tmp/pk5e-markup.log | sed 's/^/  ok   /'
+fi
+
 # --- result ----------------------------------------------------------------
 
 printf '\n'
