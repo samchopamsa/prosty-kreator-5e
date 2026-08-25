@@ -1,7 +1,7 @@
 /**
  * importer-panel.mjs
  * ---------------------------------------------------------------------------
- * A narrow window that sits beside Plutonium's importer and shows what the
+ * A narrow window that sits beside the importer's importer and shows what the
  * highlighted class or subclass actually does.
  *
  * The importer lists names and nothing else, which leaves a new player choosing
@@ -9,7 +9,7 @@
  * read and close. This one follows along: click a name in the importer, read it
  * here, no extra step.
  *
- * When nothing matches - a book the player has enabled in Plutonium but that is
+ * When nothing matches - a book the player has enabled in the importer but that is
  * not in the compendiums - the dropdown stays available so they can pick
  * something themselves. That path narrows to the class the importer named, if
  * we hold it; otherwise it offers everything, because a list narrowed to
@@ -206,7 +206,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Leaves Plutonium's window before this one goes away.
+   * Leaves the importer's window before this one goes away.
    *
    * Without this the element would be torn down inside a window that knows
    * nothing about it, and the layout class would be left behind on a container
@@ -240,7 +240,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
    * compendiums" is useful information, while an empty panel just looks broken.
    */
   async follow(row) {
-    // The 5etools data first: it covers every entry the importer lists, across
+    // The rules data first: it covers every entry the importer lists, across
     // every book, which the compendiums cannot - they hold what was imported
     // into this world, and the importer offers 352 entries from all of them.
     // A player hovering Path of the Battlerager wants to know what it is, not
@@ -263,10 +263,10 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         return;
       }
     } catch (err) {
-      console.warn(`${MODULE_ID} | Could not read "${row.name}" from the 5etools data`, err);
+      console.warn(`${MODULE_ID} | Could not read "${row.name}" from the importer's rules data`, err);
     }
 
-    // Falls back to the compendiums, which still work when Plutonium is not
+    // Falls back to the compendiums, which still work when the importer is not
     // loaded at all - the panel can be opened on its own.
     const match = matchImporterEntry(this.entries, row);
 

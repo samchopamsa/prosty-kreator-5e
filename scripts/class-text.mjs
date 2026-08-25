@@ -1,13 +1,13 @@
 /**
  * class-text.mjs
  * ---------------------------------------------------------------------------
- * The text of a class or subclass, built from the 5etools data.
+ * The text of a class or subclass, built from the importer's rules data.
  *
  * WHY NOT THE COMPENDIUMS
  * -----------------------
  * The panel used to read descriptions out of world.xphb and world.efa, which
  * worked for what was in them and said "not in your compendiums" for everything
- * else. The importer lists 352 entries across every book Plutonium knows, so a
+ * else. The importer lists 352 entries across every book the importer knows, so a
  * player looking at Path of the Battlerager (SCAG) or College of Spirits (RHW)
  * got a shrug - and those are exactly the entries a player is least likely to
  * recognise and most likely to want explained.
@@ -36,7 +36,7 @@ import {
   subclassIntro,
   renderEntries,
   isAvailable
-} from "./fivetools.mjs";
+} from "./rules-data.mjs";
 
 /** Fluff lives in its own files, one per kind. Loaded on demand, then kept. */
 const fluffCache = new Map();
@@ -99,9 +99,9 @@ const same = (a, b) => String(a ?? "").toLowerCase() === String(b ?? "").toLower
 /**
  * The descriptive text, as HTML.
  *
- * Images are skipped. Their paths are internal to 5etools ("classes/XPHB/
+ * Images are skipped. Their paths are internal to the importer ("classes/XPHB/
  * Barbarian.webp") with no base address attached, so what they resolve to
- * depends on how Plutonium is configured - and a broken image is worse than
+ * depends on how the importer is configured - and a broken image is worse than
  * none.
  */
 function fluffHtml(entry) {

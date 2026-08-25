@@ -97,7 +97,7 @@ export async function debugActor(actorId = null) {
   console.log("items:", data.items);
   console.log("spells:", data.spells, "| inventory:", data.inventory);
   console.log("skipped advancement choices:", data.skippedChoices.length ? data.skippedChoices : "(none)");
-  console.log("skipped Plutonium options:", data.skippedOptions.length ? data.skippedOptions : "(none)");
+  console.log("skipped importer options:", data.skippedOptions.length ? data.skippedOptions : "(none)");
   console.log("multiclass:", data.multiclass.length ? data.multiclass : "(ok)");
   console.log("checklist failures:", data.checklist.length ? data.checklist : "(none)");
 

@@ -34,7 +34,7 @@ function packOrigin(pack) {
  * so the window is useful before anything has been configured.
  */
 export function referencePackIds() {
-  // The GM can be exempt from the restriction, mirroring Plutonium's separate
+  // The GM can be exempt from the restriction, mirroring the importer's separate
   // switches for players and GMs: players read a curated set, the GM sees
   // everything installed.
   if (game.user?.isGM && game.settings.get(MODULE_ID, "referenceGmSeesAll")) {

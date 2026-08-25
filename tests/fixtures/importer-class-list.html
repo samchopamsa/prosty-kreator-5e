@@ -1,11 +1,11 @@
 <!--
-  Okno "Import Classes" Plutonium, w postaci, ktora czyta importer-watch.mjs.
+  Okno "Import Classes" the importer, w postaci, ktora czyta importer-watch.mjs.
 
   UWAGA, I JEST TO ISTOTNE
   ------------------------
   Ten plik zostal ODTWORZONY z opisu w naglowku scripts/importer-watch.mjs,
   a nie skopiowany z zywego okna. Znaczy to tyle: test na nim oparty wykryje,
-  ze ktos zepsul readRow(). NIE wykryje, ze 5etools zmienilo markup - bo
+  ze ktos zepsul readRow(). NIE wykryje, ze importer zmienil markup - bo
   wtedy zmieni sie zywe okno, a ten plik zostanie taki, jaki byl.
 
   Zeby wart byl tyle, ile obiecuje, nalezy go PODMIENIC NA PRAWDZIWY. W swiecie
@@ -14,7 +14,7 @@
       copy(document.querySelector(".ve-app").outerHTML)
 
   i wkleic tutaj w miejsce wszystkiego ponizej tego komentarza. Wtedy kazda
-  aktualizacja Plutonium, po ktorej ktos powtorzy te czynnosc, konfrontuje
+  aktualizacja the importer, po ktorej ktos powtorzy te czynnosc, konfrontuje
   nasze selektory z rzeczywistoscia.
 
   Wiersze celowo zawieraja przypadki, ktore juz raz cos zlamaly:
@@ -24,7 +24,7 @@
     - wiersz bez kodu zrodla
     - wiersz, ktory nie jest wierszem listy
 -->
-<div class="ve-app app window-app" data-fixture="plutonium-import-classes">
+<div class="ve-app app window-app" data-fixture="importer-class-list">
   <header class="window-header flexrow">
     <h1 class="window-title">Import Classes</h1>
     <a class="header-button close"><i class="fas fa-times"></i>Close</a>

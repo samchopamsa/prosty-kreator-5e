@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * Checks the parts of the module that can be reasoned about without Foundry:
  * matching compendium entries, spotting skipped advancement choices, reading
- * Plutonium's dialogs, and multiclass requirements.
+ * the importer's dialogs, and multiclass requirements.
  *
  * These are the rules that were worked out by inspecting real data, and each
  * one has a case here taken from that data - including the ones that caught me
@@ -53,7 +53,7 @@ const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
-  await import("../scripts/fivetools.mjs");
+  await import("../scripts/rules-data.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -265,9 +265,9 @@ group("validate: multiclass requirements", () => {
   );
 });
 
-// --- Plutonium's dialogs -----------------------------------------------------
+// --- the importer's dialogs -----------------------------------------------------
 
-group("option-watch: reading Plutonium's dialogs", () => {
+group("option-watch: reading the importer's dialogs", () => {
   /** Stands in for a dialog element. Only what the rules actually touch. */
   const dialog = ({ text = "", selects = [], heading = "" } = {}) => ({
     textContent: text,
@@ -604,9 +604,9 @@ group("import-end: only signals raised after the wait began", () => {
   check("an unrelated toast is ignored", accepts([], [{ text: "Rest complete" }]).length, 0);
 });
 
-// --- reading the rules from 5etools -----------------------------------------
+// --- reading the rules from the importer data -----------------------------------------
 
-group("fivetools: picking the right book", () => {
+group("rules-data: picking the right book", () => {
   // Both editions are in the data at once. Asking for "Fighter" without saying
   // which one is how you quietly get the 2014 class.
   const classes = [
@@ -626,7 +626,7 @@ group("fivetools: picking the right book", () => {
   check("insisting on a book it is not in gives null", selectClass(classes, "Artificer", "XPHB"), null);
 });
 
-group("fivetools: subclasses belong to a class, not a name", () => {
+group("rules-data: subclasses belong to a class, not a name", () => {
   const subclasses = [
     { name: "College of Swords", className: "Bard", classSource: "XPHB", source: "XPHB" },
     { name: "Path of the Berserker", className: "Barbarian", source: "XPHB" },
@@ -652,7 +652,7 @@ group("fivetools: subclasses belong to a class, not a name", () => {
   );
 });
 
-group("fivetools: features come from the level field, not the array position", () => {
+group("rules-data: features come from the level field, not the array position", () => {
   // Shaped like the real reading: an array per level, each feature carrying its
   // own level. Here the two disagree, which is exactly what the field is for.
   const fighter = {
@@ -684,7 +684,7 @@ group("fivetools: features come from the level field, not the array position", (
   check("a level given as a string still matches", featuresAtLevel(fighter, "1").length, 3);
 });
 
-group("fivetools: starting equipment", () => {
+group("rules-data: starting equipment", () => {
   // Taken verbatim from the Fighter reading, including the coin values, which
   // are in copper: 400 is the 4 GP the printed text quotes.
   const fighter = {
@@ -716,7 +716,7 @@ group("fivetools: starting equipment", () => {
   check("a class without the field gives no options", equipmentOptions({}), []);
 });
 
-group("fivetools: stripping 5etools markup", () => {
+group("rules-data: stripping the importer's markup", () => {
   check(
     "a plain tag leaves its display text",
     stripTags("gain a {@feat Defense|XPHB} of your choice"),
@@ -738,7 +738,7 @@ group("fivetools: stripping 5etools markup", () => {
   check("nothing at all is empty, not a crash", stripTags(null), "");
 });
 
-group("fivetools: subclass features hide one level down", () => {
+group("rules-data: subclass features hide one level down", () => {
   // Taken from the Battle Master reading. Level 3 wraps its features in an
   // object named after the subclass; level 7's wrapper has no name at all.
   const battleMaster = {
@@ -840,7 +840,7 @@ group("fivetools: subclass features hide one level down", () => {
   check("a subclass with no features does not throw", subclassFeaturesAtLevel({}, 3), []);
 });
 
-group("fivetools: a subclass introduces itself inside its first level", () => {
+group("rules-data: a subclass introduces itself inside its first level", () => {
   // The description of what a subclass is about has no entry of its own - it
   // sits in the wrapper for the level the subclass arrives at, ahead of the
   // features. Taken from the Battle Master reading.
@@ -883,7 +883,7 @@ group("fivetools: a subclass introduces itself inside its first level", () => {
   check("a subclass with no features gives nothing", subclassIntro({}), []);
 });
 
-group("fivetools: the level that grants a subclass is marked", () => {
+group("rules-data: the level that grants a subclass is marked", () => {
   // Fighter level 3 in the class data: the point where a subclass is chosen.
   const fighter = {
     classFeatures: [
@@ -904,8 +904,8 @@ group("fivetools: the level that grants a subclass is marked", () => {
   check("an ordinary feature is not flagged", featuresAtLevel(fighter, 1)[0].isGainSubclass, false);
 });
 
-group("fivetools: the hash that links a rule to a sheet item", () => {
-  // Both strings below were read off a live character's flags.plutonium.hash.
+group("rules-data: the hash that links a rule to a sheet item", () => {
+  // Both strings below were read off a live character's the importer's hash flag.
   // They are the whole point of this function, so they are pinned exactly.
   const bardicInspiration = {
     name: "Bardic Inspiration",
@@ -927,7 +927,7 @@ group("fivetools: the hash that links a rule to a sheet item", () => {
   };
 
   check(
-    "a class feature hashes as Plutonium stamped it",
+    "a class feature hashes as the importer stamped it",
     featureHash(bardicInspiration),
     "bardic%20inspiration_bard_xphb_1_xphb"
   );
@@ -945,7 +945,7 @@ group("fivetools: the hash that links a rule to a sheet item", () => {
   check("nothing at all is null", featureHash(null), null);
 });
 
-group("fivetools: comparing the rules against the sheet", () => {
+group("rules-data: comparing the rules against the sheet", () => {
   const expected = [
     { name: "Rage", hash: "rage_barbarian_xphb_1_xphb" },
     { name: "Unarmored Defense", hash: "unarmored%20defense_barbarian_xphb_1_xphb" },
@@ -960,7 +960,7 @@ group("fivetools: comparing the rules against the sheet", () => {
   check("and how each match was made", byHash.matched.map((m) => m.by), ["hash", "hash"]);
 
   // The case that made this necessary: a character built from the system's own
-  // compendium has features with no Plutonium flag, so no hash to match on.
+  // compendium has features with no importer flag, so no hash to match on.
   const byName = missingFeatures(expected, [
     { name: "Rage", hash: null },
     { name: "Unarmored Defense", hash: null },
@@ -982,7 +982,7 @@ group("fivetools: comparing the rules against the sheet", () => {
   check("nothing expected is nothing missing", missingFeatures([], []).missing, []);
 });
 
-group("fivetools: choices are counted, not looked for", () => {
+group("rules-data: choices are counted, not looked for", () => {
   // "Maneuver Options" is twenty maneuvers and an instruction to take three.
   // No character ever holds an item by that name, so expecting one would mean
   // reporting a permanent gap on every Battle Master.
@@ -1060,7 +1060,7 @@ group("fivetools: choices are counted, not looked for", () => {
   );
 });
 
-group("fivetools: features that never reach the sheet", () => {
+group("rules-data: features that never reach the sheet", () => {
   const asi = { name: "Ability Score Improvement", level: 4, entries: ["Increase one score..."] };
   const ordinary = { name: "Action Surge", level: 2, entries: ["Push yourself..."] };
 

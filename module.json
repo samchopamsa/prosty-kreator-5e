@@ -32,13 +32,6 @@
         }
       }
     ],
-    "recommends": [
-      {
-        "id": "plutonium",
-        "type": "module",
-        "reason": "Importer 5etools. Bez niego kroki gatunku, pochodzenia i klasy korzystaja z Compendium Browser."
-      }
-    ],
     "optional": [
       {
         "id": "tidy5e-sheet",

@@ -14,13 +14,13 @@
  * It lived in guide.mjs, which had grown to 1476 lines and was doing this
  * alongside laying out the panel and holding the window's state. Split out so
  * that the panel can be read without wading through DOM plumbing, and so this
- * plumbing - the part most likely to break when dnd5e or Plutonium changes -
+ * plumbing - the part most likely to break when dnd5e or the importer changes -
  * can be found in one place.
  *
  * Nothing here knows about the panel. It takes an actor and does a thing.
  */
 
-import { MODULE_ID } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_ID, IMPORTER_BUTTON_LABEL } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,7 +33,7 @@ export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export function importFlowNote() {
   const setting = game.settings.get(MODULE_ID, "autoAdvance");
   const clickingThrough = setting === "everyone" || (setting === "players" && !game.user?.isGM);
-  if (clickingThrough || plutoniumAnswersItself()) return t("flow.plutonium");
+  if (clickingThrough || importerAnswersItself()) return t("flow.importer");
   return t("flow.prompt");
 }
 
@@ -160,7 +160,7 @@ export function findKeepOpenCheckbox() {
 }
 
 /**
- * Optionally clicks through the "Use Plutonium / Use Compendium Browser" choice
+ * Optionally clicks through the importer-or-browser choice
  * and the importer's own "Open Importer" button, so the player lands straight
  * on the list of options. Off by default: it takes a real choice away, and it
  * leans on the wording of another package.
@@ -172,17 +172,17 @@ export function findKeepOpenCheckbox() {
  * only if we can actually see it.
  */
 /**
- * Whether Plutonium has been configured to skip its own importer question.
+ * Whether the importer has been configured to skip its own importer question.
  * Read through its public config API; if that is unavailable we assume it still
  * asks, which is the safe direction - at worst we wait a moment for nothing.
  */
-export function plutoniumAnswersItself() {
+export function importerAnswersItself() {
   try {
-    const value = globalThis.plutonium?.config?.getValue?.("actor", "addButtonMode");
+    const value = globalThis[IMPORTER_ID]?.config?.getValue?.("actor", "addButtonMode");
     // 0 Never, 1 Prompt, 2 Always - anything other than Prompt means no dialog.
     return value !== undefined && value !== 1;
   } catch (err) {
-    console.warn(`${MODULE_ID} | Could not read Plutonium's addButtonMode`, err);
+    console.warn(`${MODULE_ID} | Could not read the importer's addButtonMode`, err);
     return false;
   }
 }
@@ -192,7 +192,7 @@ export function plutoniumAnswersItself() {
  *
  * This was five settings - a mode and a source-screen toggle for players, the
  * same pair again for the GM, and a switch for the Keep Window Open checkbox.
- * Five, for something whose own help text told you to configure Plutonium
+ * Five, for something whose own help text told you to configure the importer
  * instead. Now one, with a choice of who it applies to; the Keep Window Open
  * handling is simply part of what clicking through means.
  */
@@ -205,16 +205,16 @@ function autoAdvanceApplies() {
 
 export async function autoAdvance() {
   if (!autoAdvanceApplies()) return;
-  const mode = "plutonium";
+  const mode = "importer";
   const skipSources = true;
 
-  // Step one: the "Use Plutonium / Use Compendium Browser" choice.
+  // Step one: the importer-or-browser choice.
   //
-  // Plutonium can be told to stop asking, via its own "Use Importer when Using
+  // The importer can be told to stop asking, via its own "Use Importer when Using
   // ADD ... Button on Actor" setting. When it is, waiting for a window that will
-  // never appear just adds four seconds to every step, so we ask Plutonium first.
-  if (mode && mode !== "off" && !plutoniumAnswersItself()) {
-    const label = mode === "plutonium" ? "use plutonium" : "use compendium browser";
+  // never appear just adds four seconds to every step, so we ask the importer first.
+  if (mode && mode !== "off" && !importerAnswersItself()) {
+    const label = mode === "importer" ? IMPORTER_BUTTON_LABEL : "use compendium browser";
     const chooser = await waitForButton([label], 4000);
     if (chooser) chooser.click();
     // The compendium browser opens straight onto its list; nothing else to skip.
@@ -298,7 +298,7 @@ export async function ensureEditMode(actor) {
  * edit mode when the button is not visible in play mode.
  */
 /**
- * Plutonium's own level-up button on the character sheet. It carries no text and
+ * the importer's own level-up button on the character sheet. It carries no text and
  * no data-action, so it is matched on a fragment of its class name - the same
  * approach as everywhere else here: recognise what a person would point at, and
  * do nothing if it is not there.
@@ -328,7 +328,7 @@ export function experienceTable() {
 /**
  * Asks which level the character should reach and tops up experience to match.
  *
- * Plutonium's level-up button refuses to advance a character that has not earned
+ * the importer's level-up button refuses to advance a character that has not earned
  * the experience, which is correct for play but pointless when building a
  * character that is meant to start at level five. Experience is only ever raised,
  * never lowered, so nothing already earned is thrown away.
@@ -409,7 +409,7 @@ export async function pressLevelUp(actor) {
   }
 
   // A disabled button looks identical to a missing one when clicked: nothing
-  // happens. Plutonium disables it while the character lacks the experience for
+  // happens. The importer disables it while the character lacks the experience for
   // the next level, so we tell the two cases apart and say which it is.
   const isDisabled = (el) =>
     el.disabled ||
@@ -426,7 +426,7 @@ export async function pressLevelUp(actor) {
 
   const find = () => findAll().find((el) => !isDisabled(el)) ?? null;
 
-  // Plutonium injects this button after the sheet has rendered, so a single
+  // The importer injects this button after the sheet has rendered, so a single
   // look straight away finds nothing. Poll for a few seconds instead.
   let button = null;
   const deadline = Date.now() + 3000;
@@ -455,12 +455,12 @@ export async function pressLevelUp(actor) {
 
     console.warn(`${MODULE_ID} | No level-up button matched`, LEVEL_UP_SELECTORS);
     ui.notifications.warn(
-      "Could not find the level-up button on the sheet. It comes from Plutonium, so it appears only while Plutonium is active."
+      "Could not find the level-up button on the sheet. It comes from the importer, so it appears only while the importer is active."
     );
     return false;
   }
 
-  console.log(`${MODULE_ID} | Pressing Plutonium's level-up button.`);
+  console.log(`${MODULE_ID} | Pressing the importer's level-up button.`);
   button.click();
   return true;
 }

@@ -2,8 +2,7 @@
  * module.mjs - module entry point.
  *
  * The module guides character creation through the tools already installed:
- * the dnd5e character sheet, its Advancement system, and importers such as
- * Plutonium. It adds the ordering and the one thing importers skip - ability
+ * the dnd5e character sheet, its Advancement system, and importers. It adds the ordering and the one thing importers skip - ability
  * scores - rather than reimplementing anything.
  */
 
@@ -20,7 +19,7 @@ import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { startHostWatch } from "./dock.mjs";
 import { debugActor, debugCompendiums } from "./debug.mjs";
-import { debugRules, debugVerify } from "./fivetools.mjs";
+import { debugRules, debugVerify } from "./rules-data.mjs";
 import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
@@ -73,14 +72,14 @@ Hooks.once("init", () => {
 
   // Was five settings: a mode and a source-screen toggle for players, the same
   // pair for the GM, and a switch for the Keep Window Open checkbox. Their own
-  // help text pointed at Plutonium's "Use Importer when Using ADD ... Button"
+  // help text pointed at the importer's "Use Importer when Using ADD ... Button"
   // as the better answer, which it is - so what remains is the fallback for
   // tables that have not set it.
   game.settings.register(MODULE_ID, "autoAdvance", {
     name: "Click through the importer's opening screens",
     hint:
       "The importer asks which tool to use and which books to read before it shows anything. " +
-      "This answers both, so a step goes straight to the list. Better still, set Plutonium's " +
+      "This answers both, so a step goes straight to the list. Better still, set the importer's " +
       "'Use Importer when Using ADD ... Button on Actor' to Always - then it never asks and " +
       "this is unnecessary.",
     scope: "world",
@@ -263,7 +262,7 @@ Hooks.once("ready", () => {
   game.settings.register(MODULE_ID, "dockImporterPanel", {
     name: "Put the description panel inside the importer",
     hint:
-      "The class description panel normally floats beside Plutonium's importer as a second " +
+      "The class description panel normally floats beside the importer's importer as a second " +
       "window, which can end up behind something and reads as a separate tool. With this on it " +
       "sits inside the importer, to the right of the list. Turn it off to go back to a movable " +
       "window - useful on a small screen, where two columns leave the list too narrow.",
@@ -277,13 +276,13 @@ Hooks.once("ready", () => {
     }
   });
 
-  game.settings.register(MODULE_ID, "hidePlutoniumLevelUp", {
-    name: "Hide Plutonium's own level-up button",
+  game.settings.register(MODULE_ID, "hideImporterLevelUp", {
+    name: "Hide the importer's own level-up button",
     hint:
-      "Plutonium's button flashes for attention and players follow it instead of this module's, " +
+      "the importer's button flashes for attention and players follow it instead of this module's, " +
       "which then cannot report what changed. This hides it with styling only - it stays on the " +
       "sheet where this module can still press it, which is how the level-up window works. Do " +
-      "not remove it in Plutonium's own settings: then there is nothing left to press.",
+      "not remove it in the importer's own settings: then there is nothing left to press.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -291,8 +290,8 @@ Hooks.once("ready", () => {
     onChange: () => {
       for (const app of Object.values(ui.windows ?? {})) app.render?.(false);
       document.body.classList.toggle(
-        "pk5e-hide-plutonium-levelup",
-        game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")
+        "pk5e-hide-importer-levelup",
+        game.settings.get(MODULE_ID, "hideImporterLevelUp")
       );
     }
   });
@@ -307,11 +306,11 @@ Hooks.once("ready", () => {
   });
 
   document.body.classList.toggle(
-    "pk5e-hide-plutonium-levelup",
-    game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")
+    "pk5e-hide-importer-levelup",
+    game.settings.get(MODULE_ID, "hideImporterLevelUp")
   );
 
-  // The panel belongs to Plutonium's class importer, so it appears with it
+  // The panel belongs to the importer's class importer, so it appears with it
   // rather than only when the creation panel's class step opened it.
   if (game.settings.get(MODULE_ID, "dockImporterPanel")) startHostWatch(openImporterPanel);
 

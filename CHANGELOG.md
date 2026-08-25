@@ -140,7 +140,7 @@ diagnostyki.
   schodzi do najglebszych nazwanych cech i po drodze go gubil, co jest sluszne
   przy sprawdzaniu postaci i niesluszne przy opisywaniu dwunastu podklas
   graczowi, ktory miedzy nimi wybiera.
-- `subclassIntro()` w `fivetools.mjs` wyciaga te linie. Bierze wylacznie zwykle
+- `subclassIntro()` w `rules-data.mjs` wyciaga te linie. Bierze wylacznie zwykle
   lancuchy z najwczesniejszego opakowania: cokolwiek ma `__prop` jest cecha i
   ma wlasne miejsce nizej.
 - Cztery testy, przypiete do odczytu Battle Mastera.
@@ -157,7 +157,7 @@ diagnostyki.
 
 To byla czwarta proba tego ukladu. Trzy poprzednie - waga selektora, `!important`
 w arkuszu, `setProperty` na rodzicu - nie dzialaly nie dlatego, ze przegrywaly
-z Plutonium, tylko dlatego, ze celowaly w niewlasciwy element.
+z the importer, tylko dlatego, ze celowaly w niewlasciwy element.
 
 ## 1.56.4
 
@@ -176,17 +176,17 @@ z Plutonium, tylko dlatego, ze celowaly w niewlasciwy element.
 
 - Uklad dwoch kolumn ustawiany wprost na elementach, przez `setProperty` z flaga
   `important`, zamiast z arkusza. Regula w arkuszu byla poprawna - wyzsza waga
-  niz `ve-flex-col` Plutonium i `!important` na wierzchu - a kontener i tak
+  niz `ve-flex-col` the importer i `!important` na wierzchu - a kontener i tak
   wyliczal sie na `column`. Zamiast dalej zgadywac dlaczego, uklad jest teraz
   pisany tam, gdzie nic go nie przebije. To samo rozwiazanie co przy ukrywaniu
-  przycisku awansu Plutonium.
+  przycisku awansu the importer.
 - Style sa jawnie zdejmowane przy oddokowaniu: nie znikaja razem z klasa, a
   panel zostawiony na `position: static` poza rzedem wyladowalby gdziekolwiek.
 
 ## 1.56.2
 
 - Usunieta ramka "Przegladaj kompendium klas" z kroku Klasa. Panel czyta teraz
-  wprost z danych 5etools, wiec kompendium przestalo byc droga do opisow -
+  wprost z danych importer, wiec kompendium przestalo byc droga do opisow -
   a odsylanie do niego bylo odsylaniem do gorszego zrodla.
 - Razem z nia poszly: nieuzywana juz akcja `openReference`, trzy klucze
   tlumaczen i dwie reguly stylow bez wlasciciela.
@@ -196,10 +196,10 @@ z Plutonium, tylko dlatego, ze celowaly w niewlasciwy element.
 
 - **Brew i prerelease dociagane razem z danymi podstawowymi.** `loadJSON()`
   zwraca tylko oficjalne dane, wiec Path of the Titan z NWB czy inne pozycje
-  z listy zrodel Plutonium nie mialy opisu - czyli akurat te, ktorych gracz
+  z listy zrodel the importer nie mialy opisu - czyli akurat te, ktorych gracz
   najpewniej nie zna. Doszly `loadBrew()` i `loadPrerelease()`, kazde osobno
   zabezpieczone, wiec brak jednego nie psuje reszty.
-- Panel ladowal pod lista mimo `!important`. Plutonium tez uzywa `!important`,
+- Panel ladowal pod lista mimo `!important`. the importer tez uzywa `!important`,
   a przy remisie decyduje waga selektora - podbita.
 - Panel otwiera sie razem z oknem importera, niezaleznie od tego, jak zostalo
   otwarte. Dotad wolal go tylko krok "Klasa" w kreatorze, wiec dojscie do
@@ -208,7 +208,7 @@ z Plutonium, tylko dlatego, ze celowaly w niewlasciwy element.
 
 ## 1.56.0
 
-Opisy klas czytane wprost z danych 5etools, nie z kompendiow.
+Opisy klas czytane wprost z danych importer, nie z kompendiow.
 
 - `scripts/class-text.mjs` - pelny tekst klasy albo podklasy: opis z pliku
   fluffu, tabela poziomow z `classTableGroups` i cechy wszystkich dwudziestu
@@ -223,13 +223,13 @@ Opisy klas czytane wprost z danych 5etools, nie z kompendiow.
   zapytanie o "Barbarian" bez podania ksiazki zwraca tekst z 2014 - to nie
   brak opisu, tylko opis nieprawdziwy, trudniejszy do zauwazenia i gorszy
   w skutkach.
-- Kompendia zostaja jako zapas, gdy Plutonium nie jest zaladowane.
-- Obrazy pominiete: ich sciezki sa wewnetrzne dla 5etools, bez adresu
+- Kompendia zostaja jako zapas, gdy the importer nie jest zaladowane.
+- Obrazy pominiete: ich sciezki sa wewnetrzne dla importer, bez adresu
   bazowego, wiec to, na co sie rozwina, zalezy od konfiguracji.
 
 ## 1.55.2
 
-- Panel czeka na swoje okno, zamiast wisiec obok. Plutonium otwiera najpierw
+- Panel czeka na swoje okno, zamiast wisiec obok. the importer otwiera najpierw
   okno wyboru zrodel danych, a liste klas dopiero po nim - panel byl proszony
   o otwarcie, zanim bylo gdzie go wstawic, i pokazywal sie jako osobne okno
   obok okna, z ktorym nie ma nic wspolnego. Teraz jest ukryty do czasu, az
@@ -246,10 +246,10 @@ Opisy klas czytane wprost z danych 5etools, nie z kompendiow.
 Poprawki dokowania, obie z podgladu na zywo.
 
 - Panel ladowal pod lista zamiast obok niej. Rodzic listy ma klase
-  `ve-flex-col` od Plutonium, ktora ustawia kolumne z ta sama waga co nasza
+  `ve-flex-col` od the importer, ktora ustawia kolumne z ta sama waga co nasza
   regula - wygrywal arkusz zaladowany pozniej. Kierunek wymuszony.
 - Dokowanie bywalo pomijane i panel zostawal osobnym oknem. Obserwator reaguje
-  tylko na zmiane, a okno Plutonium czesto jest juz otwarte, gdy panel sie
+  tylko na zmiane, a okno the importer czesto jest juz otwarte, gdy panel sie
   renderuje. Dolozone kilka przebiegow w ciagu pierwszego polsekundy.
 - Ponizej 1100 px panel wraca pod liste zamiast obok - dwie kolumny zostawialy
   liste nieczytelna.
@@ -258,7 +258,7 @@ Poprawki dokowania, obie z podgladu na zywo.
 
 ## 1.55.0
 
-Panel opisow wchodzi do srodka okna Plutonium, zamiast obok niego wisiec.
+Panel opisow wchodzi do srodka okna the importer, zamiast obok niego wisiec.
 
 - `scripts/dock.mjs` - przenosi element panelu do okna "Import Classes &
   Subclasses", po prawej stronie listy. Panel dziala dokladnie jak dotad:
@@ -266,7 +266,7 @@ Panel opisow wchodzi do srodka okna Plutonium, zamiast obok niego wisiec.
   to, gdzie jego element siedzi na stronie.
 - Wlasny pasek tytulu, uchwyt przeciagania i rog zmiany rozmiaru sa ukryte -
   w cudzym oknie nic nie znacza.
-- Przy zamknieciu okna Plutonium albo panelu element wraca na strone, zeby nie
+- Przy zamknieciu okna the importer albo panelu element wraca na strone, zeby nie
   zostal zniszczony razem z gospodarzem.
 - Ustawienie "Put the description panel inside the importer", per uzytkownik,
   domyslnie wlaczone. Wylaczenie przywraca ruchome okno - przydatne na malym
@@ -295,7 +295,7 @@ ktora widzi gracz, a nie tylko konsola.
 - Linia "cechy zgadzaja sie z regulami" przy braku uwag. Bez niej ciche
   przejscie jest nie do odroznienia od tego, ze sprawdzenie sie nie odbylo.
 
-**Podsluch okien Plutonium zostaje.** Obie metody sa slepe gdzie indziej:
+**Podsluch okien the importer zostaje.** Obie metody sa slepe gdzie indziej:
 porownanie widzi tylko to, co zostawia przedmiot na karcie (nie ASI, nie wybor
 zaklec, nie jezyki), a podsluch dziala tylko przy otwartym panelu. Zamiana
 jednego na drugie oznaczalaby utrate zasiegu.
@@ -304,7 +304,7 @@ jednego na drugie oznaczalaby utrate zasiegu.
 
 Poprawki liczenia wyborow, obie wykryte na postaciach wzorcowych.
 
-- Wybory liczone po konwencji nazewniczej Plutonium ("Nazwa: Opcja"), a nie po
+- Wybory liczone po konwencji nazewniczej the importer ("Nazwa: Opcja"), a nie po
   liscie opcji z danych. Manewr `Brace` pochodzi z TCE i nie ma go na liscie
   `Maneuver Options` z XPHB, przez co kompletny wybor pokazywal sie jako 2 z 3.
 - `Divine Order` wybor trafia na karte z `page: "classFeature"`, nie jako
@@ -343,17 +343,17 @@ poprawnie.
 
 Dopasowanie regul do karty postaci kluczem, a nie nazwa.
 
-- `featureHash()` buduje ten sam identyfikator, ktorym Plutonium stempluje
-  importowane cechy (`flags.plutonium.hash`). Format odczytany z zywej postaci:
+- `featureHash()` buduje ten sam identyfikator, ktorym the importer stempluje
+  importowane cechy (`flags.importer.hash`). Format odczytany z zywej postaci:
   `nazwa_klasa_zrodloKlasy_poziom_zrodlo`, a dla podklas dodatkowo
   `krotkaNazwaPodklasy_zrodloPodklasy` przed poziomem. Testy sa przypiete do
   dwoch prawdziwych hashy.
 - `missingFeatures()` porownuje najpierw po hashu, potem po nazwie, i mowi
   ktora droga poszlo dopasowanie. Nazwa jest potrzebna, bo postac zbudowana
-  czesciowo z kompendium systemowego ma cechy bez flagi Plutonium.
+  czesciowo z kompendium systemowego ma cechy bez flagi the importer.
 - `verifyLevel()` i `characterCreator.verify(postac, klasa, poziom)` -
   porownanie prawdziwej karty z regulami. Tylko raport, nic nie zmienia.
-- `docs/plutonium-internals.md` - notatki z lektury kodu Plutonium.
+- `docs/importer-internals.md` - notatki z lektury kodu the importer.
 
 ## 1.51.0
 
@@ -380,8 +380,8 @@ Wersjonowanie releasów. Bez zmian w działaniu modułu.
 
 ## 1.50.0
 
-- `scripts/fivetools.mjs` — odczyt reguł wprost z danych 5etools, które
-  Plutonium ładuje do strony. `gainsForLevel(klasa, poziom)` mówi, co dany
+- `scripts/rules-data.mjs` — odczyt reguł wprost z danych importer, które
+  the importer ładuje do strony. `gainsForLevel(klasa, poziom)` mówi, co dany
   poziom powinien dać: cechy, kość życia, ekwipunek startowy. Odczyt, bez
   zmieniania czegokolwiek na karcie.
 - Źródło jest zawsze jawne (`XPHB` przed `EFA`, `TCE`, `PHB`), bo dane
@@ -390,7 +390,7 @@ Wersjonowanie releasów. Bez zmian w działaniu modułu.
 
 ## 1.49.2
 
-- Ukrywanie przycisku awansu Plutonium przez `setProperty` z `important`,
+- Ukrywanie przycisku awansu the importer przez `setProperty` z `important`,
   wywoływane przy każdym renderowaniu.
 - Przycisk na karcie celuje w `div.sheet-header-buttons`.
 

@@ -22,11 +22,11 @@
  * ------------
  * system.source.book holds a human label ("PHB 2024", "TCoE") that does not
  * line up with the codes the importer shows ("XPHB", "TCE"). The canonical code
- * is in flags.plutonium.source, and that is what we compare. It is only ever a
+ * is in the importer's source flag, and that is what we compare. It is only ever a
  * tie-breaker: the name is the key.
  */
 
-import { MODULE_ID } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_FLAG } from "./constants.mjs";
 import { referencePackIds } from "./reference-config.mjs";
 
 const WANTED_TYPES = ["class", "subclass"];
@@ -59,7 +59,7 @@ export async function loadClassIndex() {
           "system.identifier",
           "system.classIdentifier",
           "system.source",
-          "flags.plutonium.source",
+          `flags.${IMPORTER_FLAG}.source`,
           "folder"
         ]
       });
@@ -84,7 +84,7 @@ export async function loadClassIndex() {
           ? entry.system?.identifier || normalise(entry.name)
           : entry.system?.classIdentifier || "",
         // Canonical book code, comparable with the importer's.
-        code: entry.flags?.plutonium?.source ?? "",
+        code: entry.flags?.[IMPORTER_FLAG]?.source ?? "",
         // Human label, for showing the reader where this came from.
         origin: source.book || source.custom || pack.metadata.label,
         packId: pack.collection,

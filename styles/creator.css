@@ -990,7 +990,7 @@
    their buttons, so it carries its own values.
 
    It used to copy the rest buttons' styling exactly and sat quietly among them.
-   Players were finding Plutonium's Level Up button instead - which flashes gold
+   Players were finding the importer's Level Up button instead - which flashes gold
    for attention - and going through that. So this one is marked out: a standing
    accent, and while the character is unfinished, a slow pulse and a count. */
 
@@ -1109,13 +1109,13 @@
 .pk5e-change.is-newClass { font-weight: 700; }
 .pk5e-change.is-hp { color: var(--pk5e-accent); }
 
-/* Plutonium's own level-up button, hidden by setting.
+/* the importer's own level-up button, hidden by setting.
    Hidden, not removed: this module levels a character by pressing that very
-   button, so it has to stay in the page. Turning it off in Plutonium's own
+   button, so it has to stay in the page. Turning it off in the importer's own
    settings takes it out of the document and leaves nothing to press. */
-body.pk5e-hide-plutonium-levelup button.imp-cls__btn-sheet-level-up,
-body.pk5e-hide-plutonium-levelup button[class*="btn-sheet-level-up"],
-body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-button) {
+body.pk5e-hide-importer-levelup button.imp-cls__btn-sheet-level-up,
+body.pk5e-hide-importer-levelup button[class*="btn-sheet-level-up"],
+body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button) {
   display: none !important;
 }
 
@@ -1173,9 +1173,9 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
 
 
 /* ---------------------------------------------------------------------------
-   The description panel, docked inside Plutonium's class importer.
+   The description panel, docked inside the importer's class window.
 
-   Everything here is scoped to classes dock.mjs adds. If Plutonium changes its
+   Everything here is scoped to classes dock.mjs adds. If the importer changes its
    markup the panel stays a floating window rather than breaking anything.
    --------------------------------------------------------------------------- */
 
@@ -1187,13 +1187,13 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
    and stood every one of those on end.
 
    The measurements live in dock.mjs as inline properties, because they compete
-   with Plutonium's own layout classes. What is left here is the appearance. */
+   with the importer's own layout classes. What is left here is the appearance. */
 .pk5e-dock-row > .veapp__list {
   overflow-y: auto;
 }
 
 /* Foundry writes position, width, height and z-index inline on every render,
-   so these have to be forced. This is the same problem as Plutonium's own
+   so these have to be forced. This is the same problem as the importer's own
    !important on display, solved the same way. */
 .application.ve-app .application.pk5e-docked,
 .application.pk5e-docked {
@@ -1250,7 +1250,7 @@ body.pk5e-hide-plutonium-levelup button[class*="level-up"]:not(.pk5e-sheet-butto
   display: none !important;
 }
 
-/* Class and subclass text built from the 5etools data. */
+/* Class and subclass text built from the importer's rules data. */
 .pk5e-text-head {
   margin-bottom: 0.5rem;
   padding-bottom: 0.3rem;

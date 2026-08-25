@@ -1,13 +1,13 @@
 /**
  * option-watch.mjs
  * ---------------------------------------------------------------------------
- * Records choices the player skipped inside Plutonium's own dialogs.
+ * Records choices the player skipped inside the importer's own dialogs.
  *
  * WHY THIS EXISTS AS A SEPARATE MECHANISM
  * ---------------------------------------
  * validate.mjs catches skipped choices by reading what landed on the character:
  * an empty Trait, an unassigned ability increase. That works because the system
- * records those choices. Plutonium's own dialogs record nothing at all - a
+ * records those choices. the importer's own dialogs record nothing at all - a
  * Fighter who skipped Fighting Style is, as far as the data goes, complete. The
  * only moment the information exists is while the dialog is on screen.
  *
@@ -41,7 +41,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
 
 /**
- * One entry per kind of dialog Plutonium can put up.
+ * One entry per kind of dialog the importer can put up.
  *
  * A list rather than a chain of conditions, because each new dialog turned out
  * to need its own idea of "finished": one counts spells learned, another counts
@@ -162,7 +162,7 @@ function labelFor(title, app, fallback) {
 /**
  * How long to wait before deciding a dialog really closed.
  *
- * Long enough for Plutonium to have rejected the click and kept the window up,
+ * Long enough for the importer to have rejected the click and kept the window up,
  * short enough that the panel is not visibly behind.
  */
 const CLOSE_GRACE_MS = 400;
@@ -170,7 +170,7 @@ const CLOSE_GRACE_MS = 400;
 const COMPLETE_TITLE = /^import complete/i;
 
 /**
- * Plutonium names the character in its wizard title:
+ * The importer names the character in its wizard title:
  *   Import Wizard: Importing to Actor "Barosław"
  *
  * Needed because two open panels mean two listeners on the document, and both
@@ -203,7 +203,7 @@ function titleOf(app) {
 }
 
 /**
- * Watches Plutonium's dialogs for as long as the guide is open.
+ * Watches the importer's dialogs for as long as the guide is open.
  *
  * @param {Actor}    actor
  * @param {Function} onChange  Called after the flag changes, to redraw.
@@ -302,7 +302,7 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
       return;
     }
 
-    // Plutonium guards some of these itself: press Confirm on an ability score
+    // The importer guards some of these itself: press Confirm on an ability score
     // increase with points left and it refuses, leaving the window open. Rather
     // than keeping a list of which dialogs do that - which would go stale, and
     // differs between versions - we simply look at whether the window actually
@@ -318,7 +318,7 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
     timers.add(timer);
   };
 
-  // Capture phase: Plutonium's own handler closes the dialog, and by the time a
+  // Capture phase: the importer's own handler closes the dialog, and by the time a
   // bubbled event arrived the window would be gone along with its title.
   // Wrapped, because this runs inside someone else's click handling: an
   // exception here would take their dialog down with it. A broken watcher is a

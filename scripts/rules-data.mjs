@@ -1,5 +1,5 @@
 /**
- * fivetools.mjs
+ * rules-data.mjs
  * ---------------------------------------------------------------------------
  * Reading the rules themselves, rather than watching what the importer does.
  *
@@ -10,7 +10,7 @@
  * readings. That works, but only while a window of ours is open, and it can only
  * ever report what already happened.
  *
- * Plutonium loads the 5etools data libraries into the page, and they are the
+ * The importer loads its rules data libraries into the page, and they are the
  * same libraries the importer itself reads. So we can ask the rules directly:
  * what is a Fighter meant to gain at level 1? Then compare that against the
  * character, at any moment, whether or not anybody was watching at the time.
@@ -49,7 +49,7 @@
  * question separate from "what should I do about it".
  */
 
-import { MODULE_ID } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_FLAG } from "./constants.mjs";
 import { trace } from "./trace.mjs";
 
 /**
@@ -65,7 +65,7 @@ export const SOURCE_PREFERENCE = ["XPHB", "EFA", "TCE", "PHB"];
 let cache = null;
 let pending = null;
 
-/** Whether the 5etools libraries are on the page at all. */
+/** Whether the importer's rules libraries are on the page at all. */
 export function isAvailable() {
   return typeof globalThis.DataUtil?.class?.loadJSON === "function";
 }
@@ -73,7 +73,7 @@ export function isAvailable() {
 /**
  * The class and subclass data, or null if the libraries are not there.
  *
- * Never throws: without Plutonium this module simply has nothing to say, and
+ * Never throws: without the importer this module simply has nothing to say, and
  * every caller is an extra on top of something that already works.
  */
 export async function loadRules() {
@@ -104,12 +104,12 @@ export async function loadRules() {
       };
 
       trace(
-        `5etools: ${cache.classes.length} classes, ${cache.subclasses.length} subclasses ` +
+        `rules data: ${cache.classes.length} classes, ${cache.subclasses.length} subclasses ` +
           `from ${parts.length} source set(s)`
       );
       return cache;
     } catch (err) {
-      console.warn(`${MODULE_ID} | Could not read the 5etools class data`, err);
+      console.warn(`${MODULE_ID} | Could not read the importer's class data`, err);
       return null;
     } finally {
       pending = null;
@@ -293,7 +293,7 @@ function isPhantomFeature(f) {
  * "Maneuver Options" is not something a character can hold - it is twenty
  * maneuvers with an instruction to take three. In the data that is a nested
  * block of `type: "options"` carrying a `count`. On the sheet it appears as
- * that many separate items, tagged by Plutonium as `optionalfeatures.html`.
+ * that many separate items, tagged by the importer as `optionalfeatures.html`.
  *
  * So the useful question is not "is Maneuver Options present" - it never can
  * be - but "were three of them chosen".
@@ -429,7 +429,7 @@ function titleCase(text) {
 // --- turning entries into something readable --------------------------------
 
 /**
- * Strips 5etools markup down to plain text.
+ * Strips the importer's markup down to plain text.
  *
  * The fallback for when Renderer is unavailable or throws. Tags are
  * {@tag display|source|displayText}: the third part overrides the first where
@@ -452,10 +452,10 @@ export function stripTags(text) {
 }
 
 /**
- * A feature's text as HTML, via 5etools' own renderer where possible.
+ * A feature's text as HTML, via the importer's own renderer where possible.
  *
  * The renderer is what produces the links and dice buttons the rest of
- * Plutonium's windows show, so using it keeps the panel looking like its
+ * the importer's windows show, so using it keeps the panel looking like its
  * surroundings. When it is missing or unhappy, plain paragraphs of stripped
  * text still say the same thing.
  */
@@ -492,8 +492,8 @@ function escapeHtml(text) {
 /**
  * The identifier that links a rule to an item on a character.
  *
- * Plutonium stamps every feature it imports with `flags.plutonium.hash`, and
- * that hash is computed from the same 5etools data we are reading. So the two
+ * The importer stamps every feature it imports with `the importer's hash flag`, and
+ * that hash is computed from the same rules data we are reading. So the two
  * sides can be matched on a key rather than on names, which otherwise differ by
  * source suffixes, punctuation and the occasional rename.
  *
@@ -508,7 +508,7 @@ function escapeHtml(text) {
  * Lowercased throughout, spaces as %20. Note the subclass appears by its
  * shortName ("world tree"), not its full name ("Path of the World Tree").
  *
- * 5etools' own UrlUtil is used when present, since it is the thing that
+ * the importer's own UrlUtil is used when present, since it is the thing that
  * actually defines this format; the hand-built version below is the fallback,
  * and the tests pin it against both examples above.
  */
@@ -560,7 +560,7 @@ const normaliseName = (name) =>
  *   present   - [{ name, hash }] read off the sheet's items
  *
  * Hash first, name second. The hash is exact, but it is only there on items
- * Plutonium imported: a character built partly from the system's own
+ * the importer imported: a character built partly from the system's own
  * compendium has features carrying no flag at all, and those would otherwise
  * all be reported missing. Falling back to the name is less certain, so the
  * result says which way each match was made rather than pretending they are
@@ -595,14 +595,14 @@ export function missingFeatures(expected, present) {
 /**
  * How many of a choice were actually taken.
  *
- * Matched on Plutonium's naming convention rather than on the list of options,
+ * Matched on the importer's naming convention rather than on the list of options,
  * because the list is per-book and the player is not. A Battle Master whose
  * third maneuver is Brace (from TCE) has made a complete choice, but Brace does
  * not appear in the XPHB "Maneuver Options" list, so checking membership
  * reported 2 of 3 on a finished character.
  *
  * The convention is "<feature name>: <chosen option>", and it holds across the
- * two namespaces Plutonium uses:
+ * two namespaces the importer uses:
  *
  *   Maneuvers: Ambush            page: optionalfeatures.html
  *   Divine Order: Protector      page: classFeature
@@ -673,7 +673,7 @@ export async function gainsForLevel(className, level, options = {}) {
 
   const cls = selectClass(rules.classes, className, options.source);
   if (!cls) {
-    trace(`5etools has no class named "${className}"`);
+    trace(`the rules data has no class named "${className}"`);
     return null;
   }
 
@@ -684,7 +684,7 @@ export async function gainsForLevel(className, level, options = {}) {
   if (options.subclass) {
     subclass = selectSubclass(rules.subclasses, cls.name, options.subclass, options.source);
     if (subclass) subclassFeatures = subclassFeaturesAtLevel(subclass, level);
-    else trace(`5etools has no subclass "${options.subclass}" for ${cls.name}`);
+    else trace(`the rules data has no subclass "${options.subclass}" for ${cls.name}`);
   }
 
   return {
@@ -716,7 +716,7 @@ export async function debugRules(className, level = 1, options = {}) {
   if (!gains) {
     console.warn(
       `${MODULE_ID} | Nothing to report - ` +
-        (isAvailable() ? `no class "${className}" in the 5etools data` : "5etools is not loaded")
+        (isAvailable() ? `no class "${className}" in the importer's rules data` : "the importer's rules data is not loaded")
     );
     return null;
   }
@@ -750,7 +750,7 @@ export async function debugRules(className, level = 1, options = {}) {
 /**
  * The two kinds of item a character carries, as far as this comparison cares.
  *
- * Plutonium tags granted features `classFeature`/`subclassFeature`/`raceFeature`
+ * The importer tags granted features `classFeature`/`subclassFeature`/`raceFeature`
  * and chosen options `optionalfeatures.html`/`feats.html` - note the extension,
  * which makes the two namespaces impossible to confuse. Items with no flag at
  * all (a character built partly from the system compendium, or a resource like
@@ -763,10 +763,10 @@ function readSheet(actor) {
 
   for (const item of actor.items) {
     if (item.type !== "feat") continue;
-    const page = item.flags?.plutonium?.page ?? "";
+    const page = item.flags?.[IMPORTER_FLAG]?.page ?? "";
     const entry = {
       name: item.name,
-      hash: item.flags?.plutonium?.hash ?? null,
+      hash: item.flags?.[IMPORTER_FLAG]?.hash ?? null,
       subtype: item.system?.type?.subtype ?? ""
     };
     if (page.endsWith(".html")) chosen.push(entry);

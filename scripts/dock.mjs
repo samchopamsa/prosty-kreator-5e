@@ -1,7 +1,7 @@
 /**
  * dock.mjs
  * ---------------------------------------------------------------------------
- * Puts the importer panel inside Plutonium's window rather than beside it.
+ * Puts the importer panel inside the importer's window rather than beside it.
  *
  * WHAT CHANGES AND WHAT DOES NOT
  * ------------------------------
@@ -28,7 +28,7 @@
  *
  * WHEN THE HOST GOES AWAY
  * -----------------------
- * If Plutonium's window closes with our element inside it, that element would
+ * If the importer's window closes with our element inside it, that element would
  * be removed from the page along with it and the panel would be left rendered
  * into nothing. So the element is returned to the body first, and the panel
  * goes back to being an ordinary window - which is also what happens if the
@@ -57,7 +57,7 @@ function hostWindow() {
  *
  * The list is wrapped in a column; making that column a row and putting the
  * panel after the list gives the two-column layout without moving anything
- * Plutonium put there.
+ * the importer put there.
  */
 export function dockPanel(panel) {
   const element = panel?.element;
@@ -88,7 +88,7 @@ export function dockPanel(panel) {
   element.classList.add("pk5e-docked");
   host.classList.add("pk5e-dock-host");
 
-  // Written inline and flagged important: this competes with Plutonium's own
+  // Written inline and flagged important: this competes with the importer's own
   // layout classes, and losing quietly is how the last three attempts failed.
   const force = (node, styles) => {
     for (const [name, value] of Object.entries(styles)) {
@@ -162,7 +162,7 @@ export function undockPanel(panel) {
 /**
  * Keeps the panel docked while the host window exists.
  *
- * An observer rather than a one-off: Plutonium's window opens after the panel
+ * An observer rather than a one-off: the importer's window opens after the panel
  * in some flows and before it in others, and rebuilds parts of itself when the
  * filter changes.
  */
@@ -182,7 +182,7 @@ export function watchForHost(panel) {
 
     if (element.classList.contains("pk5e-docked")) undockPanel(panel);
 
-    // Plutonium opens a data-source window first and the class list only after
+    // The importer opens a data-source window first and the class list only after
     // it, so the panel is asked for before there is anywhere to put it. Left
     // visible it appears as a stray window next to a window it has nothing to
     // do with, which is exactly what docking was meant to stop. So it waits,

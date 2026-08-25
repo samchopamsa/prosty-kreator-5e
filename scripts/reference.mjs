@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * A reading window for classes and subclasses.
  *
- * Plutonium's picker shows names with nothing to read, which leaves a new player
+ * the importer's picker shows names with nothing to read, which leaves a new player
  * choosing a class blind. This window fills that gap from the compendiums.
  *
  * The tree mirrors the folder structure, MERGED BY FOLDER NAME across every
@@ -11,7 +11,7 @@
  * "Barbarian" folder in another become one branch, so the player sees a single
  * Barbarian with all its subclasses rather than one entry per book.
  *
- * IMPORTANT: this reads COMPENDIUMS. Plutonium fetches its own data at run time
+ * IMPORTANT: this reads COMPENDIUMS. The importer fetches its own data at run time
  * and cannot be queried, so the two lists agree only as far as the enabled books
  * agree.
  */

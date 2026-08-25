@@ -29,9 +29,9 @@ https://github.com/samchopamsa/prosty-kreator-5e/releases/latest/download/module
 | Foundry VTT | 13 lub nowszy (sprawdzone na 14) |
 | system dnd5e | 5.0.0 lub nowszy (sprawdzone na 5.3.3) |
 
-**Importer 5etools** — zalecany, nie wymagany. Bez niego kroki gatunku, pochodzenia
+**Importer zewnętrzny** — zalecany, nie wymagany. Bez niego kroki gatunku, pochodzenia
 i klasy korzystają z systemowej przeglądarki kompendiów, a opisy klas i
-porównanie z regułami są niedostępne (te dane pochodzą z bibliotek 5etools,
+porównanie z regułami są niedostępne (te dane pochodzą z bibliotek reguł,
 które ładuje importer).
 
 **Tidy 5e Sheets** — obsługiwane. Przyciski rejestrują się przez API Tidy, a nie

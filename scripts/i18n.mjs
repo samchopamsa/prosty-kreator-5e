@@ -32,7 +32,7 @@ const STRINGS = {
     "levelup.groupLevel": "Level {0}",
     "levelup.finish": "Done",
     "levelup.atMax": "This character is already at level 20.",
-    "levelup.noButton": "Could not find the level-up button on the sheet. This module levels a character by pressing Plutonium's own button, so it has to be present. If you switched it off in Plutonium's settings, switch it back on and use this module's setting instead - that hides it without removing it.",
+    "levelup.noButton": "Could not find the level-up button on the sheet. This module levels a character by pressing the importer's own button, so it has to be present. If you switched it off in the importer's settings, switch it back on and use this module's setting instead - that hides it without removing it.",
     "levelup.nothingChanged": "One or more levels finished without anything changing. The import may have been cancelled, or a dialog closed before it was done - check the character sheet.",
     "levelup.failed": "The level-up did not complete. The console (F12) has the details.",
     "levelup.changeLevel": "{0}: level {1}",
@@ -150,8 +150,8 @@ const STRINGS = {
       "Optional. A picture for your character, shown on the sheet and on the token.",
 
     "flow.prompt":
-      " After you press the button, a small window asks where to take the entry from. Choose Use Plutonium, then press Open Importer in the window that follows - only then do you see the list to pick from.",
-    "flow.plutonium": " After you press the button, the list of options opens by itself.",
+      " After you press the button, a small window asks where to take the entry from. Choose to use the importer, then press Open Importer in the window that follows - only then do you see the list to pick from.",
+    "flow.importer": " After you press the button, the list of options opens by itself.",
 
     "method.standard": "Standard array",
     "method.pointbuy": "Point buy",
@@ -302,7 +302,7 @@ const STRINGS = {
     "levelup.groupLevel": "Poziom {0}",
     "levelup.finish": "Gotowe",
     "levelup.atMax": "Ta postać jest już na dwudziestym poziomie.",
-    "levelup.noButton": "Nie znalazłem przycisku awansu na karcie. Moduł awansuje postać, naciskając przycisk Plutonium, więc musi on tam być. Jeśli wyłączyłeś go w ustawieniach Plutonium, włącz z powrotem i użyj ustawienia modułu - ono ukrywa go bez usuwania.",
+    "levelup.noButton": "Nie znalazłem przycisku awansu na karcie. Moduł awansuje postać, naciskając przycisk importera, więc musi on tam być. Jeśli wyłączyłeś go w ustawieniach importera, włącz z powrotem i użyj ustawienia modułu - ono ukrywa go bez usuwania.",
     "levelup.nothingChanged": "Przy co najmniej jednym poziomie nic się nie zmieniło. Import mógł zostać anulowany albo któreś okno zamknięto przed czasem - sprawdź kartę postaci.",
     "levelup.failed": "Awans się nie dokończył. Szczegóły są w konsoli (F12).",
     "levelup.changeLevel": "{0}: poziom {1}",
@@ -415,8 +415,8 @@ const STRINGS = {
     "blurb.portrait": "Nieobowiązkowy. Obrazek widoczny na karcie i na żetonie.",
 
     "flow.prompt":
-      " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz Use Plutonium, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
-    "flow.plutonium": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
+      " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz użycie importera, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
+    "flow.importer": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
 
     "method.standard": "Zestaw standardowy",
     "method.pointbuy": "Zakup punktowy",

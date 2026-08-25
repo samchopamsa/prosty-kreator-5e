@@ -113,14 +113,14 @@ function inject(app, html) {
   // One button that asks, rather than one button per errand.
   //
   // Two buttons made five in that row alongside the rest buttons and
-  // Plutonium's, and it wrapped - the experience bar dropped onto the ability
+  // the importer's, and it wrapped - the experience bar dropped onto the ability
   // scores. Picking one by the character's state instead meant the level-up was
   // simply absent from a character that was playable but still carrying its
   // default name. A short menu costs one click and neither problem.
   const button = make("fa-hat-wizard", label, () => openChooser(actor));
 
   // A count of what is still outstanding, the way unread messages are counted.
-  // Plutonium's own Level Up button flashes gold for attention, and players
+  // the importer's own Level Up button flashes gold for attention, and players
   // were following it instead of this one; a number says something that a
   // flashing button cannot, and says it without competing animation.
   if (blocking > 0) {
@@ -143,28 +143,28 @@ function inject(app, html) {
     }
 
     // Same selectors used to press it. The narrower pair missed whichever
-    // variant this Plutonium build actually renders, so the button stayed
+    // variant this importer build actually renders, so the button stayed
     // visible even with the setting on.
-    const plutonium = LEVEL_UP_SELECTORS.map((sel) => root.querySelector(sel)).find(
+    const importerLevelUp = LEVEL_UP_SELECTORS.map((sel) => root.querySelector(sel)).find(
       (el) => el && !el.classList.contains("pk5e-sheet-button")
     );
 
     // Hidden here as well as by the stylesheet. The body class arrives when the
     // setting is read at startup, but a sheet rendered before that - or one
-    // Plutonium adds its button to afterwards - kept showing it.
-    if (plutonium && game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")) {
-      // setProperty with "important", not style.display: Plutonium sets its own
+    // The importer adds its button to afterwards - kept showing it.
+    if (importerLevelUp && game.settings.get(MODULE_ID, "hideImporterLevelUp")) {
+      // setProperty with "important", not style.display: the importer sets its own
       // display through a class that carries !important, and a plain inline
       // value loses to it.
-      plutonium.style.setProperty("display", "none", "important");
+      importerLevelUp.style.setProperty("display", "none", "important");
     }
     // Into the container that already holds the rest buttons.
     //
     // Measured on a real sheet: div.sheet-header-buttons is 68px wide inside a
     // parent of 232, so a third 30px button fits with room to spare. Every
-    // other placement tried - a row of our own, Plutonium's row - wrapped the
+    // other placement tried - a row of our own, the importer's row - wrapped the
     // header and dropped the experience bar onto the ability scores.
-    hidePlutoniumButton(root);
+    hideImporterLevelUpButton(root);
 
     const container = restButton.parentElement;
     if (container) {
@@ -228,25 +228,25 @@ function maybeAutoOpen(actor) {
  * played.
  */
 /**
- * Hides Plutonium's own level-up button, if the GM asked for that.
+ * Hides the importer's own level-up button, if the GM asked for that.
  *
  * Hidden rather than removed: this module levels a character by pressing that
  * button, so it has to stay in the page. A hidden element still receives a
  * programmatic click.
  *
- * setProperty with "important" rather than style.display, because Plutonium
+ * setProperty with "important" rather than style.display, because the importer
  * sets its display through a class that carries !important, and a plain inline
  * value loses to it.
  */
-function hidePlutoniumButton(root) {
+function hideImporterLevelUpButton(root) {
   try {
-    if (!game.settings.get(MODULE_ID, "hidePlutoniumLevelUp")) return;
+    if (!game.settings.get(MODULE_ID, "hideImporterLevelUp")) return;
     const found = LEVEL_UP_SELECTORS.map((sel) => root.querySelector(sel)).find(
       (el) => el && !el.classList.contains("pk5e-sheet-button")
     );
     found?.style.setProperty("display", "none", "important");
   } catch (err) {
-    console.warn(`${MODULE_ID} | Could not hide Plutonium's button`, err);
+    console.warn(`${MODULE_ID} | Could not hide the importer's button`, err);
   }
 }
 

@@ -1,9 +1,7 @@
-# Jak Plutonium mapuje dane 5etools na dnd5e
+# Jak importer mapuje swoje dane na dnd5e
 
-Notatki z lektury `Bundle.js` z paczki dystrybucyjnej
-(`github.com/TheGiddyLimit/plutonium-next`, plik `plutonium-foundry14.zip`,
-katalog `plutonium/js/`). Bundle nie jest zminifikowany — ~189 tys. linii
-z komentarzami autora.
+Notatki z lektury pakietu dystrybucyjnego importera — jednego wielkiego,
+niezminifikowanego pliku JS (~189 tys. linii) z komentarzami autora.
 
 Numerów linii tu nie ma, bo zmieniają się z każdą wersją. Są nazwy — te są
 stabilne i wystarczą do `grep`.
@@ -12,7 +10,7 @@ stabilne i wystarczą do `grep`.
 
 ## Skąd biorą się wpisy Advancement
 
-Plutonium **nie** czyta Advancement z kompendium. Importuje cechy jako osobne
+Importer **nie** czyta Advancement z kompendium. Importuje cechy jako osobne
 przedmioty, a dopiero potem dopina je do przedmiotu nadrzędnego, tworząc wpisy
 `ItemGrant` — po jednym na poziom, żeby nie mnożyć wierszy.
 
@@ -26,7 +24,7 @@ która trzyma dwie osobne listy — `importedClassFeatureLevelledEmbeddedDocumen
 i `importedSubclassFeatureLevelledEmbeddedDocuments`. O tym, do której trafi
 cecha, decyduje pole `ancestorSubclassName` na cesze.
 
-Po dopięciu każda cecha dostaje flagę `plutonium.advancementOrigin` w formacie
+Po dopięciu każda cecha dostaje flagę `advancementOrigin` we własnej przestrzeni nazw w formacie
 `"<id rodzica>.<id wpisu Advancement>"`, czyli powiązanie działa w obie strony.
 
 ## Dlaczego detekcja pominiętych wyborów z Advancement nie zadziała
@@ -36,7 +34,7 @@ komentarzem, że wszystkie wybory cech *udają* statyczne. Powtórzonym dwa razy
 w tej samej funkcji.
 
 Skutkiem jest to, że dla dnd5e taki wpis nie zawiera żadnego wyboru — jest
-listą rzeczy nadanych wprost. Wpis `ItemGrant` pochodzący z Plutonium nigdy
+listą rzeczy nadanych wprost. Wpis `ItemGrant` pochodzący z importera nigdy
 więc nie będzie wyglądał na pominięty, choćby gracz zamknął okno wyboru od
 razu. To ograniczenie strukturalne, nie błąd do obejścia.
 
@@ -50,12 +48,12 @@ porównać z regułami.
   w komentarzu nazywa „somewhat nonsensical" i rozważa usunięcie. Nie warto
   opierać niczego na tych UUID-ach.
 - Ustawienie o krótkim wyłączaniu domyślnego przepływu Advancement przy
-  upuszczaniu przedmiotu na kartę — to ono sprawia, że importer Plutonium
+  upuszczaniu przedmiotu na kartę — to ono sprawia, że importer
   przejmuje kontrolę zamiast systemowego mechanizmu.
 
 ## Ekwipunek startowy
 
-Plutonium czyta `startingEquipment.defaultData` wprost — tę samą strukturę,
+Importer czyta `startingEquipment.defaultData` wprost — tę samą strukturę,
 którą parsuje nasze `equipmentOptions()`. Blokada źródeł świata **jest** tu
 stosowana: `getBlocklistFiltered({compEquipmentAvailable,
 startingEquipmentData})` odsiewa pozycje przed pokazaniem ich graczowi.

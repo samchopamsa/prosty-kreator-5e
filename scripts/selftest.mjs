@@ -19,7 +19,7 @@
  *
  * tests/markup.mjs pilnuje tego z drugiej strony - ale na fixture, czyli na
  * markupie, ktory MY zapisalismy. Wykryje wiec nasza regresje i nigdy nie
- * wykryje, ze 5etools zmienilo swoj. Jedynym miejscem, gdzie widac prawde,
+ * wykryje, ze importer zmienil swoj. Jedynym miejscem, gdzie widac prawde,
  * jest zywy swiat, i stad ten plik.
  *
  *   characterCreator.selfTest()
@@ -32,8 +32,8 @@
  * czytaloby sie jak sukces, czyli dokladnie tak, jak awaria, ktorej szukamy.
  */
 
-import { MODULE_ID } from "./constants.mjs";
-import { isAvailable as rulesAvailable } from "./fivetools.mjs";
+import { MODULE_ID, IMPORTER_ID } from "./constants.mjs";
+import { isAvailable as rulesAvailable } from "./rules-data.mjs";
 import { tidyHandlesCharacters, tidyControlsRegistered } from "./tidy.mjs";
 import { LEVEL_UP_SELECTORS } from "./sheet-actions.mjs";
 
@@ -94,7 +94,7 @@ export function selfTest() {
   );
   checks.push(result("Foundry", OK, game.version ?? game.data?.version ?? "?"));
 
-  const importer = game.modules.get("plutonium");
+  const importer = game.modules.get(IMPORTER_ID);
   checks.push(
     result(
       "modul importera",
@@ -105,7 +105,7 @@ export function selfTest() {
     )
   );
 
-  // Biblioteki 5etools sa tym, z czego czytamy reguly. Bez nich checkup.mjs
+  // Biblioteki regul importera sa tym, z czego czytamy reguly. Bez nich checkup.mjs
   // i opisy klas nie maja o czym mowic, ale reszta modulu dziala.
   checks.push(
     result(
@@ -291,9 +291,9 @@ export function selfTest() {
  *
  * DLACZEGO TO ISTNIEJE
  * --------------------
- * tests/fixtures/plutonium-import-classes.html zostal ODTWORZONY z opisu
+ * tests/fixtures/importer-class-list.html zostal ODTWORZONY z opisu
  * w naglowku importer-watch.mjs, nie zgrany z zywego okna. Wykrywa wiec nasze
- * regresje i nie wykryje zmiany po stronie 5etools. Zeby to naprawic, ktos
+ * regresje i nie wykryje zmiany po stronie importera. Zeby to naprawic, ktos
  * musi po kazdej aktualizacji importera wkleic swiezy markup - a czynnosc,
  * ktora ma sie powtarzac, musi byc jednym poleceniem, bo inaczej nie powtorzy
  * sie nigdy.
@@ -378,7 +378,7 @@ export async function captureImporter({ rows = 12, full = false } = {}) {
     `${(markup.length / 1024).toFixed(1)} kB${full ? " (calosc)" : ", probka - pelny zrzut: { full: true }"}`
   );
   console.log(
-    "Wklej w miejsce zawartosci tests/fixtures/plutonium-import-classes.html, PONIZEJ komentarza\n" +
+    "Wklej w miejsce zawartosci tests/fixtures/importer-class-list.html, PONIZEJ komentarza\n" +
       "naglowkowego, i zostaw ten komentarz - opisuje, czym plik jest. Potem:\n" +
       "  npm install --no-save handlebars jsdom && node tests/markup.mjs\n" +
       "Czerwone testy po podmianie na prawdziwy markup sa dobra wiadomoscia: znaczy, ze fixture\n" +

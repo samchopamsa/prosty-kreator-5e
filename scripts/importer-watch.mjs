@@ -1,10 +1,10 @@
 /**
  * importer-watch.mjs
  * ---------------------------------------------------------------------------
- * Reads what the player has highlighted in Plutonium's import window.
+ * Reads what the player has highlighted in the importer's import window.
  *
  * This reaches into another package's markup, so it is written to fail quietly:
- * if 5etools changes its classes, nothing is found, the panel stays empty, and
+ * if the importer changes its classes, nothing is found, the panel stays empty, and
  * character creation is unaffected. That is the whole reason this approach was
  * chosen over moving the importer's window into ours.
  *
@@ -51,7 +51,7 @@ const SETTLE_MS = 60;
  * How long the panel waits for a recognisable importer before saying so.
  *
  * This reaches into another package's markup, so it will eventually break: a
- * 5etools release renames a class and the panel quietly shows nothing. Silent
+ * importer release renames a class and the panel quietly shows nothing. Silent
  * is the worst way for that to happen - the GM would hear about it from a
  * confused player, weeks later. So we say it out loud, once, to the GM only,
  * naming what we looked for.
@@ -81,8 +81,8 @@ function warnMarkup(stage, detail = {}) {
   if (warned || !game.user?.isGM) return;
   warned = true;
   console.warn(
-    `${MODULE_ID} | The importer panel could not read Plutonium's window (${stage}).\n` +
-      "The panel reads another package's markup, so a Plutonium or 5etools update can " +
+    `${MODULE_ID} | The importer panel could not read the importer's window (${stage}).\n` +
+      "The panel reads another package's markup, so an importer update can " +
       "break it without breaking anything else. Character creation is unaffected: the " +
       "panel simply stays empty, and the wide reference window still works.\n" +
       "Looked for:",

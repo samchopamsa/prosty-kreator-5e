@@ -153,7 +153,7 @@ export function buildSteps(actor, { importing = false } = {}) {
   // per render and attached to the entry itself: collected at the bottom of
   // the panel the warning sat a long way from the thing it was about, and
   // with two classes there was no telling which one it meant.
-  // Not while an import is running. Plutonium sometimes puts its choice dialog
+  // Not while an import is running. The importer sometimes puts its choice dialog
   // up a moment after the item lands, so checking straight away reports a
   // character as having skipped something they are about to be asked.
   const skippedIds = importing

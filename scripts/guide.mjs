@@ -5,7 +5,7 @@
  *
  * We do not reimplement anything. Each step clicks the real "Add Species",
  * "Add Background" or "Add Class" button on the character sheet, so whatever
- * the system and Plutonium have attached to it runs exactly as it would if the
+ * the system and the importer have attached to it runs exactly as it would if the
  * player had clicked it themselves.
  *
  * We never try to detect when someone else's window closes. Those windows sit
@@ -343,7 +343,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Rules comparison, folded into the same list. Awaited here rather than
     // rendered separately so the player reads one checklist, not two, and so a
-    // slow or absent 5etools simply contributes nothing.
+    // slow or absent rules data simply contributes nothing.
     const fromRules = await rulesChecks(actor);
     if (fromRules.length) {
       report.checks.push(...fromRules);
@@ -376,7 +376,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
-      // Choices skipped inside Plutonium's dialogs. Kept apart from the
+      // Choices skipped inside the importer's dialogs. Kept apart from the
       // checklist because each one carries its own fix.
       skippedOptions: skippedOptions(actor).map((entry) => ({
         ...entry,
@@ -442,7 +442,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     if (!this._hooks.length) this.registerWatchers();
 
-    // Plutonium's own dialogs leave no trace in the data, so they have to be
+    // the importer's own dialogs leave no trace in the data, so they have to be
     // watched live. Only while this panel is open, which is the whole scope the
     // creator claims responsibility for.
     if (!this._stopOptionWatch) {
@@ -688,7 +688,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!pressed) return;
 
     // Marks the step as running until the importer says otherwise. This also
-    // holds back the skipped-choice check: Plutonium puts its dialogs up a
+    // holds back the skipped-choice check: the importer puts its dialogs up a
     // moment after the item lands, so checking straight away accuses the player
     // of skipping something they are about to be asked.
     //
@@ -734,7 +734,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /** Remembers the folder currently chosen as the destination for new characters. */
-  /** Opens Plutonium's level-up window, which also offers multiclassing. */
+  /** Opens the importer's level-up window, which also offers multiclassing. */
   static async onLevelUp() {
     const actor = this.actor;
     if (!actor) return;
@@ -762,7 +762,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    // Marked as importing for the same reason the other steps are: Plutonium
+    // Marked as importing for the same reason the other steps are: the importer
     // puts its choice dialogs up a moment after the class lands, and without
     // this the panel announced a skipped choice while the dialog asking for it
     // was still on its way. Adding a second class went through here, not

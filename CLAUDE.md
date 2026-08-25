@@ -64,8 +64,7 @@ Versioning: `1.X.0` = feature, `1.0.X` = fix; git tags are `vX.Y.Z`.
 
 The governing rule, stated in `module.mjs` and `guide.mjs`: **the module does not
 reimplement anything.** It clicks the character sheet's own "Add Species", "Add
-Background" and "Add Class" buttons, so the dnd5e Advancement system and importers
-(Plutonium) run exactly as they would by hand. It adds the ordering, the parts
+Background" and "Add Class" buttons, so the dnd5e Advancement system and importers run exactly as they would by hand. It adds the ordering, the parts
 importers skip (ability scores, languages), and detection of what was missed.
 
 Layers, roughly outward-in:
@@ -88,7 +87,7 @@ Layers, roughly outward-in:
   `reference-config.mjs`.
 - **`sheet-actions.mjs`** — all DOM plumbing: finding sheet markup, waiting for
   windows, clicking. Timing-dependent and the most likely thing to break when
-  dnd5e or Plutonium changes; keep it here rather than spreading it around.
+  dnd5e or the importer changes; keep it here rather than spreading it around.
 - **Entry points onto the sheet**: `sheet-button.mjs` (default dnd5e sheet, markup
   anchors) and `tidy.mjs` (Tidy 5e Sheets, via its `registerCharacterHeaderControls`
   API — an element injected into Tidy's Svelte markup silently disappears). Both
@@ -103,13 +102,13 @@ They are blind in different places and all are kept on purpose (see the header o
 - **Reading the sheet** — `validate.mjs` (synchronous, needs nothing beyond
   Foundry): hit points at zero, unassigned ability increases, empty Traits,
   multiclass prerequisites read from `system.primaryAbility`.
-- **Reading the rules** — `fivetools.mjs` + `checkup.mjs` (async, only when
-  Plutonium has loaded the 5etools libraries into the page): compare the character
+- **Reading the rules** — `rules-data.mjs` + `checkup.mjs` (async, only when
+  the importer has loaded its rules libraries into the page): compare the character
   against what the class actually grants at that level. `class-text.mjs` builds
   class and subclass descriptions from the same data — source codes (`XPHB` vs
   `PHB`) are always passed explicitly, since asking without a book returns the 2014
   text, which is a wrong description rather than a missing one.
-- **Watching dialogs** — `option-watch.mjs` catches the choices Plutonium's own
+- **Watching dialogs** — `option-watch.mjs` catches the choices the importer's own
   dialogs record nowhere (Fighting Style, cantrips): a skipped one leaves no trace
   in the data, so what was seen is written to an actor flag. Deliberately a second
   source of truth. `import-end.mjs` watches the same "Import Complete" window for a
@@ -122,22 +121,22 @@ be wrong for homebrew). Plain values only, no document references.
 ### Reaching into other packages
 
 `importer-watch.mjs`, `dock.mjs`, `browser-tweaks.mjs` and `sheet-actions.mjs` all
-read or manipulate markup owned by Plutonium, the Compendium Browser or the dnd5e
+read or manipulate markup owned by the importer, the Compendium Browser or the dnd5e
 sheet. The convention is **fail quietly**: if the selectors stop matching, the
 feature does nothing and character creation is unaffected. Preserve that when
 editing — nothing throws, nothing assumes an element exists.
 
 `tests/markup.mjs` covers `importer-watch.mjs` against
-`tests/fixtures/plutonium-import-classes.html`. Know what that fixture is worth:
+`tests/fixtures/importer-class-list.html`. Know what that fixture is worth:
 it was **reconstructed from the file header, not captured from a live window**, so
-it catches regressions in our parsing and cannot catch 5etools changing its markup.
+it catches regressions in our parsing and cannot catch the importer changing its markup.
 Replacing it with a real capture is a one-line job in a live world
 (`copy(document.querySelector(".ve-app").outerHTML)`) and is the thing actually
-worth doing after a Plutonium update. The fixture's own header says so too.
+worth doing after an importer update. The fixture's own header says so too.
 
 The observed markup and the reasoning behind each selector are in the file headers,
 and
-`docs/plutonium-internals.md` records how Plutonium maps 5etools data onto dnd5e
+`docs/importer-internals.md` records how the importer maps its data onto dnd5e
 (notably: its generated `ItemGrant` advancements set `optional: false`, which is
 why skipped choices cannot be detected from Advancement data at all).
 
@@ -154,7 +153,7 @@ character is still at that version and needs every step from there to here.
 `compendium.mjs` matches an importer entry to a compendium entry on **exact name
 plus parent class only** — measured against a real library of 127 entries.
 Substring matching misfires ("Twilight Domain" contains "Light Domain"); the source
-code (`flags.plutonium.source`, not `system.source.book`) is only ever a
+code (`flags.importer.source`, not `system.source.book`) is only ever a
 tie-breaker. `tests/run.mjs` keeps those exact cases.
 
 ## Console API

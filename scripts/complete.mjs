@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * "Complete character" mode.
  *
- * Importers such as Plutonium build a nearly finished sheet - class, species,
+ * Importers build a nearly finished sheet - class, species,
  * background, features, equipment, hit points - but never ask for ability
  * scores. This screen fills that gap on an existing actor.
  *

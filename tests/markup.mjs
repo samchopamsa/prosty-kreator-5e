@@ -1,7 +1,7 @@
 /**
  * tests/markup.mjs
  * ---------------------------------------------------------------------------
- * Testy tego, co czyta CUDZY markup - dzis okna importera Plutonium.
+ * Testy tego, co czyta CUDZY markup - dzis okna importera the importer.
  *
  * DLACZEGO OSOBNY PLIK
  * --------------------
@@ -21,9 +21,9 @@
  * -------------------------
  * Fixture jest odtworzony z opisu w naglowku importer-watch.mjs, nie zgrany
  * z zywego okna. Wykryja wiec regresje w NASZYM kodzie, a nie zmiane markupu
- * po stronie 5etools. Instrukcja podmiany na prawdziwy zrzut jest w naglowku
- * tests/fixtures/plutonium-import-classes.html i to jest ta czynnosc, ktora
- * naprawde warto powtorzyc po aktualizacji Plutonium.
+ * po stronie importera. Instrukcja podmiany na prawdziwy zrzut jest w naglowku
+ * tests/fixtures/importer-class-list.html i to jest ta czynnosc, ktora
+ * naprawde warto powtorzyc po aktualizacji the importer.
  */
 
 import { readFileSync } from "node:fs";
@@ -55,7 +55,7 @@ try {
 
 // --- DOM z fixture, plus tyle Foundry, ile potrzebuje modul ------------------
 
-const html = readFileSync(join(here, "fixtures", "plutonium-import-classes.html"), "utf8");
+const html = readFileSync(join(here, "fixtures", "importer-class-list.html"), "utf8");
 const dom = new JSDOM(`<!doctype html><html><body>${html}</body></html>`);
 
 globalThis.window = dom.window;
@@ -144,7 +144,7 @@ group("importer: rozpoznanie okna", () => {
   other.innerHTML = '<h1 class="window-title">Select Sources</h1>';
   document.body.appendChild(other);
   check("inne okno ve-app nie udaje importera", importerRect() !== null, true);
-  document.querySelector('[data-fixture="plutonium-import-classes"]').remove();
+  document.querySelector('[data-fixture="importer-class-list"]').remove();
   check("po usunieciu importera zostaje samo Select Sources i nie jest brane", importerRect(), null);
 });
 

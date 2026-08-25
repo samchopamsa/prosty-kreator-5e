@@ -3,7 +3,7 @@
  * ---------------------------------------------------------------------------
  * Waits for the importer to say it has finished.
  *
- * The one dependable signal is Plutonium's own "Import Complete" window. Items
+ * The one dependable signal is the importer's own "Import Complete" window. Items
  * land on the character part-way through the chain of dialogs, so watching the
  * sheet says "done" while there are still choices to make; watching for a quiet
  * spell either gives up too early or hangs long after the work is over. The
@@ -42,7 +42,7 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
     //
     // Foundry's toasts linger for several seconds, so levelling twice in a row
     // meant the second wait matched the first level's "Level up complete!" and
-    // returned at once - we then read the character before Plutonium had
+    // returned at once - we then read the character before the importer had
     // touched it, found nothing changed, and stopped. Two levels worked; three
     // did not, which is exactly the shape a stale signal gives.
     const alreadyThere = new Set([

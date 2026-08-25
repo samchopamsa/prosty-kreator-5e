@@ -24,7 +24,7 @@
  * 3. It levels more than once. The importer works a level at a time; a player
  *    coming back after two sessions away wants three of them.
  *
- * The class is not chosen here. Plutonium's own Level Up dialog lists the
+ * The class is not chosen here. the importer's own Level Up dialog lists the
  * character's classes with a button each, and offers multiclassing - it does
  * that job well, and duplicating it would only be another thing to keep in step.
  */
@@ -285,7 +285,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
       if (!changes.length) {
         // Nothing moved. Either the import was cancelled, or the character was
-        // read before Plutonium had finished with it. Reported, but the run is
+        // read before the importer had finished with it. Reported, but the run is
         // not abandoned: the level may simply have been slow, and stopping
         // would leave a multi-level run half done with no way to tell.
         trace("no changes detected for this level");

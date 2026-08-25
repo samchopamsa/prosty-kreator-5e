@@ -10,9 +10,9 @@
  * choice. It is synchronous and needs nothing beyond Foundry.
  *
  * This asks a different question - "does the sheet match what the rules say" -
- * and to answer it has to load the 5etools data, which is asynchronous and may
+ * and to answer it has to load the importer's rules data, which is asynchronous and may
  * not be there at all. Keeping the two apart means the checklist still works
- * exactly as before when Plutonium is absent; this simply adds nothing.
+ * exactly as before when the importer is absent; this simply adds nothing.
  *
  * WHY BOTH, RATHER THAN ONE REPLACING THE OTHER
  * ---------------------------------------------
@@ -36,7 +36,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { trace } from "./trace.mjs";
-import { verifyCharacter, isAvailable } from "./fivetools.mjs";
+import { verifyCharacter, isAvailable } from "./rules-data.mjs";
 
 const WARNING = "warning";
 
@@ -49,7 +49,7 @@ const WARNING = "warning";
  * and a feature can legitimately be absent because the GM removed it.
  *
  * Returns an empty list rather than throwing whenever it cannot tell - no
- * 5etools data, no class on the sheet, an unreadable class name. Silence is
+ * rules data, no class on the sheet, an unreadable class name. Silence is
  * the right failure here, because this runs on a panel that has to keep
  * working without it.
  */
@@ -115,7 +115,7 @@ export async function previewLevel(className, level, subclassName = null) {
   if (!isAvailable()) return null;
 
   try {
-    const { gainsForLevel } = await import("./fivetools.mjs");
+    const { gainsForLevel } = await import("./rules-data.mjs");
     const gains = await gainsForLevel(className, level, { subclass: subclassName });
     if (!gains) return null;
 

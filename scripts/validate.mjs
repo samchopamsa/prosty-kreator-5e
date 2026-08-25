@@ -11,7 +11,7 @@
  * builds, so they never claim the character is broken.
  */
 
-import { MODULE_ID } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_FLAG } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 
 const ERROR = "error";
@@ -103,7 +103,7 @@ export function choiceWasSkipped(advancement, secondaryClass = false) {
   // The obvious fix was configuration.classRestriction, which dnd5e uses to
   // mark entries that only apply to a first class. On a real character it is
   // undefined on every entry, so it decided nothing. What is actually there is
-  // flags.plutonium.isPrimaryClass, and it only says which class came first.
+  // the importer's isPrimaryClass flag, and it only says which class came first.
   //
   // So every Trait on a secondary class goes unchecked. Blunt, and it means a
   // genuinely skipped proficiency choice on a multiclass goes unreported - but
@@ -146,10 +146,10 @@ export function itemsWithSkippedChoices(actor) {
       item.advancement?.byId?.values?.() ?? item.system?.advancement ?? []
     );
 
-    // Plutonium records which class was taken first; anything else is a
+    // The importer records which class was taken first; anything else is a
     // multiclass and gets less.
     const secondary =
-      item.type === "class" && item.flags?.plutonium?.isPrimaryClass === false;
+      item.type === "class" && item.flags?.[IMPORTER_FLAG]?.isPrimaryClass === false;
 
     if (!advancements.some((adv) => choiceWasSkipped(adv, secondary))) continue;
 
