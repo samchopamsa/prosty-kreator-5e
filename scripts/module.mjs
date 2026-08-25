@@ -18,7 +18,7 @@ import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { startHostWatch } from "./dock.mjs";
-import { debugActor, debugCompendiums } from "./debug.mjs";
+import { debugActor, debugCompendiums, debugStamps } from "./debug.mjs";
 import { debugRules, debugVerify } from "./rules-data.mjs";
 import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
@@ -329,6 +329,9 @@ Hooks.once("ready", () => {
     levelUp: (actorId) => openLevelUp(actorId),
     debug: (actorId) => debugActor(actorId),
     debugCompendiums: () => debugCompendiums(),
+    // Czy przedmioty na karcie nosza stemple importera - od tego zalezy, czy
+    // porownanie z regulami dopasowuje po hashu, czy schodzi do nazw.
+    stamps: (actorId) => debugStamps(actorId),
     rules: (className, level, options) => debugRules(className, level, options),
     fluff: (kind, name) => debugFluff(kind, name),
     tidy: () => debugTidy(),

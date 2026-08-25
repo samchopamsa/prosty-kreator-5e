@@ -15,7 +15,7 @@
  * Prints; returns the same data so it can be picked apart in the console.
  */
 
-import { MODULE_ID } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_FLAG } from "./constants.mjs";
 import { isDebug, trace } from "./trace.mjs";
 import { itemsWithSkippedChoices, multiclassProblems, checkCharacter } from "./validate.mjs";
 import { skippedOptions } from "./option-watch.mjs";
@@ -149,4 +149,78 @@ export async function debugCompendiums() {
   console.groupEnd();
 
   return entries;
+}
+
+/**
+ * Czy przedmioty na karcie noszą stemple importera - i czy porównanie z regułami
+ * ma po czym je dopasować.
+ *
+ * DLACZEGO TO JEST PYTANIE
+ * ------------------------
+ * missingFeatures() dopasowuje cechy z reguł do cech na karcie po `hash`, który
+ * importer zapisuje na każdym tworzonym przedmiocie. Hash niesie nazwę, klasę,
+ * źródło klasy, poziom i źródło cechy naraz, więc rozstrzyga przypadki, na
+ * których samo imię zawodzi - dwie cechy o tej samej nazwie z różnych
+ * podręczników są nie do rozróżnienia po nazwie.
+ *
+ * Gdy stempla brak, dopasowanie schodzi do nazw. Nadal działa, ale słabiej,
+ * i warto o tym wiedzieć, a nie odkrywać to przy dziwnym ostrzeżeniu.
+ *
+ * Pytanie robi się praktyczne, gdy postać powstała innym narzędziem niż zwykły
+ * importer - wtedy nie wiadomo z góry, czy stempluje tak samo.
+ *
+ *   characterCreator.stamps()
+ *   characterCreator.stamps("Barosław")
+ *
+ * Drukuje i zwraca to samo, żeby dało się grzebać dalej w konsoli.
+ */
+export function debugStamps(actorId = null) {
+  const actor = resolveActor(actorId);
+  if (!actor) {
+    console.warn(`${MODULE_ID} | Nie znalazłem postaci. Podaj nazwę: characterCreator.stamps("Imię")`);
+    return null;
+  }
+
+  const items = Array.from(actor.items ?? []);
+  const rows = items.map((item) => {
+    const f = item.flags?.[IMPORTER_FLAG] ?? {};
+    return {
+      nazwa: item.name,
+      typ: item.type,
+      page: f.page ?? "-",
+      hash: f.hash ?? "-",
+      origin: item.flags?.[IMPORTER_FLAG]?.advancementOrigin ?? "-"
+    };
+  });
+
+  // Cechy są tym, co porównujemy z regułami - na nich zależy nam najbardziej.
+  const feats = rows.filter((r) => r.typ === "feat");
+  const zHashem = feats.filter((r) => r.hash !== "-").length;
+
+  console.group(`%c${MODULE_ID} | stemple importera: ${actor.name}`, "color:#7fb069;font-weight:bold");
+  console.log(
+    `cechy: ${zHashem} z ${feats.length} ma hash` +
+      (feats.length === 0
+        ? " (brak cech na karcie)"
+        : zHashem === feats.length
+          ? " - dopasowanie po hashu dziala w pelni"
+          : zHashem === 0
+            ? " - dopasowanie zejdzie do porownywania nazw"
+            : " - czesc cech dopasuje sie po nazwie, nie po hashu")
+  );
+  if (feats.length) console.table(feats);
+
+  const przyklad = feats.find((r) => r.hash !== "-")?.hash;
+  if (przyklad) console.log("przykladowy hash:", przyklad);
+
+  console.log(
+    "wpisy Advancement:",
+    items
+      .filter((i) => ["class", "subclass"].includes(i.type))
+      .map((i) => `${i.name}: ${Array.from(i.system?.advancement ?? []).length}`)
+      .join(" | ") || "(brak klasy)"
+  );
+  console.groupEnd();
+
+  return { rows, feats, zHashem, wszystkieCechy: feats.length };
 }

@@ -125,6 +125,7 @@ characterCreator.levelUp(actorId)
 
 characterCreator.debug(actorId)             // wszystko, co moduł sądzi o postaci
 characterCreator.debugCompendiums()
+characterCreator.stamps(actorId)             // czy przedmioty niosą stemple importera
 characterCreator.rules("Fighter", 3)        // co reguły przewidują
 characterCreator.verify(actor, "Fighter", 3)// postać kontra reguły
 characterCreator.tidy()                     // czy Tidy jest wykryte
