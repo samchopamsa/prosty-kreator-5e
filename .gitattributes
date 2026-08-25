@@ -1,0 +1,12 @@
+# Zakonczenia linii nie moga zalezec od ustawien maszyny, na ktorej ktos
+# akurat commituje. Skrypt powloki z CRLF nie uruchomi sie na runnerze
+# Linuksa - i to sie nie zglasza jako blad zakonczen linii, tylko jako
+# "/usr/bin/env: bash\r: No such file or directory", co juz nikomu nie
+# przypomina o CRLF.
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.hbs   text eol=lf
+*.css   text eol=lf
+*.md    text eol=lf
