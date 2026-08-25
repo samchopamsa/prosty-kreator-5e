@@ -9,7 +9,7 @@ zbudowane. Kreator dokłada trzy rzeczy, których brakuje: **kolejność**, **to
 o co importery nigdy nie pytają** (punktacja cech, języki) i **wykrywanie tego,
 co zostało pominięte**.
 
-Wersja **1.59.0**.
+Wersja **1.60.0**.
 
 ---
 

@@ -12,6 +12,34 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.60.0
+
+Diagnostyka cudzego markupu i wydawanie przez tag.
+
+- **Ustawienie ukrywania awansu importera zmienilo klucz** na
+  `hideImporterLevelUp`. Kto mial je wlaczone, musi zaznaczyc je ponownie -
+  migracji celowo nie ma, bo dotyczy jednego przelacznika na swiat.
+- **Okno ekwipunku startowego przestalo byc niewidzialne.** `option-watch.mjs`
+  obserwuje je tak samo jak Fighting Style i cantripy, wiec pominiety wybor
+  zostawia slad w fladze zamiast znikac bez sladu. Rozpoznawane wylacznie po
+  tytule - dopasowanie po klasie okna okazalo sie zawodne.
+- `characterCreator.selfTest()` - czy widzimy okna importera, czy panel sie
+  dokowal, czy kontrolki karty sa na miejscu.
+- `characterCreator.captureImporter()` - zrzut zywego okna do pliku testowego.
+  `captureDialog()` - opis otwartego okna wyboru i odpowiedz, czy w ogole je
+  widzimy. `characterCreator.stamps(actorId)` - ile cech postaci nosi stempel
+  importera.
+- **Testy czytania cudzego markupu** (`tests/markup.mjs`) na zrzucie z zywego
+  okna, nie na odtworzeniu z opisu. Odtworzenie przechodzilo wszystko, milczac
+  o tym, ze okno nazywa sie "Import Classes & Subclasses" - zawezony wzorzec
+  tytulu przeszedlby niezauwazony. Teraz wywala piec testow.
+- Wydawanie przez tag `vX.Y.Z` zamiast recznego rytualu; CI sprawdza kazdy
+  push. Pominiety test jest w CI porazka, nie pominieciem - inaczej brak
+  zaleznosci cicho zmniejsza zakres kontroli.
+- `README.md` mial 0 bajtow. Teraz opisuje instalacje, kroki, ustawienia i API.
+- Nazwa importera zniknela z repozytorium poza jednym miejscem
+  (`constants.mjs`), gdzie jest potrzebna technicznie.
+
 ## 1.59.0
 
 Zgodnosc z Tidy 5e Sheets.
