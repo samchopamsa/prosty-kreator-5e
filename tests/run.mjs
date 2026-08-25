@@ -269,10 +269,12 @@ group("validate: multiclass requirements", () => {
 
 group("option-watch: reading the importer's dialogs", () => {
   /** Stands in for a dialog element. Only what the rules actually touch. */
-  const dialog = ({ text = "", selects = [], heading = "" } = {}) => ({
+  const dialog = ({ text = "", selects = [], heading = "", has = [] } = {}) => ({
     textContent: text,
     querySelectorAll: (sel) => (sel === "select" ? selects.map((value) => ({ value })) : []),
-    querySelector: () => (heading ? { textContent: heading } : null)
+    // "has" pozwala udawac obecnosc konkretnego elementu w ciele okna - potrzebne
+    // do przypadku, w ktorym cudzy pelny kreator niesie te sama klase CSS.
+    querySelector: (sel) => (has.includes(sel) ? {} : heading ? { textContent: heading } : null)
   });
   const button = (text, primary = false) => ({
     textContent: text,
@@ -404,6 +406,19 @@ group("option-watch: reading the importer's dialogs", () => {
     "plain hyphen in the title reads the same",
     verdict('Equipment-Fighter (Actor "X")', dialog(), button("Confirm")),
     "done:Starting Equipment: Fighter"
+  );
+  // Okno pelnego kreatora postaci NIESIE TE SAMA KLASE co przyciski (A)/(B)
+  // w oknie ekwipunku - sprawdzone w zywym swiecie. Dopasowanie po ciele okna
+  // braloby wiec kazde przejscie zakladka za pominiety wybor i zapisywalo
+  // ostrzezenie na postaci. Tytul jest jedynym bezpiecznym rozroznieniem.
+  check(
+    "pelny kreator postaci nie jest brany za okno ekwipunku",
+    verdict(
+      'Charactermancer (Actor "Player Character")',
+      dialog({ has: [".imp-cls__disp-equi-choice-key"] }),
+      button("Next")
+    ),
+    "ignored"
   );
   // "Remaining: 15" in this window is gold left unspent in the shop, NOT an
   // unfinished choice. Every other entry treats a "Remaining" counter as points

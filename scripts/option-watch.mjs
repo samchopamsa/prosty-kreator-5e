@@ -121,12 +121,23 @@ export const DIALOGS = [
   {
     id: "equipment",
     // "Equipment—Barbarian (Actor "New Character")" - myslnik jest dlugi (—),
-    // wiec dopuszczamy oba, a dla pewnosci sprawdzamy tez cialo: przyciski
-    // (A)/(B) niosa klase imp-cls__disp-equi-choice-key, ktora nie wystepuje
-    // nigdzie indziej.
-    match: (title, app) =>
-      /^equipment\s*[—–-]/i.test(title) ||
-      !!app.querySelector?.(".imp-cls__disp-equi-choice-key"),
+    // wiec dopuszczamy oba warianty.
+    //
+    // WYLACZNIE PO TYTULE, i to jest poprawka po dowodach.
+    //
+    // Pierwsza wersja tego wpisu sprawdzala takze cialo okna: przyciski (A)/(B)
+    // niosa klase imp-cls__disp-equi-choice-key, ktora wygladala na unikalna.
+    // Nie jest. Pelny kreator postaci - osobne, zakladkowe okno pod tytulem
+    // "Charactermancer (Actor "...")" - uzywa tego samego komponentu ekwipunku,
+    // co widac w jego markupie.
+    //
+    // Skutek byloby taki, ze kazde przejscie zakladka dalej w tamtym oknie
+    // liczyloby sie jako pominiety wybor i zapisywalo na postaci ostrzezenie,
+    // ktorego nie ma o czym. Falszywy alarm jest gorszy od braku ostrzezenia:
+    // uczy ignorowac wszystkie.
+    //
+    // Tytuly rozdzielaja te okna czysto, wiec tytul wystarczy.
+    match: (title) => /^equipment\s*[—–-]/i.test(title),
     // W tym oknie ZADEN przycisk nie ma ve-btn-primary - sprawdzone na zywym.
     // Poleganie na tej klasie, jak robia pozostale wpisy, nie rozpoznaloby
     // potwierdzenia w ogole i kazde zamkniecie liczyloby sie jako pominiecie.
