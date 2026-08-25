@@ -1,74 +1,134 @@
 <!--
-  Okno "Import Classes" the importer, w postaci, ktora czyta importer-watch.mjs.
+  Okno "Import Classes & Subclasses" importera - ZGRANE Z ZYWEGO OKNA.
 
-  UWAGA, I JEST TO ISTOTNE
-  ------------------------
-  Ten plik zostal ODTWORZONY z opisu w naglowku scripts/importer-watch.mjs,
-  a nie skopiowany z zywego okna. Znaczy to tyle: test na nim oparty wykryje,
-  ze ktos zepsul readRow(). NIE wykryje, ze importer zmienil markup - bo
-  wtedy zmieni sie zywe okno, a ten plik zostanie taki, jaki byl.
+  Zrzut z 2026-08-25, przez characterCreator.captureImporter(), na buildzie
+  2.17.2.v14 / Foundry 14.367 / dnd5e 5.3.3. Probka: 12 wierszy z 142
+  widocznych (6 klas, 6 podklas), reszta przycieta - kazdy kolejny wiersz ma
+  ten sam ksztalt, a fixture ma byc czytelny w diffie.
 
-  Zeby wart byl tyle, ile obiecuje, nalezy go PODMIENIC NA PRAWDZIWY. W swiecie
-  z otwartym importerem klas, w konsoli przegladarki:
+  POPRZEDNIA WERSJA TEGO PLIKU BYLA ODTWORZONA z opisu w naglowku
+  importer-watch.mjs i dlatego nie mogla wykryc niczego, czego ten opis nie
+  mowil. Trzy rzeczy wyszly dopiero przy podmianie na prawdziwy:
 
-      copy(document.querySelector(".ve-app").outerHTML)
+    - tytul brzmi "Import Classes & Subclasses", nie "Import Classes"
+    - myslnik przed nazwa podklasy jest dlugi (—), nie krotki
+    - wiersze niosa draggable="true"
 
-  i wkleic tutaj w miejsce wszystkiego ponizej tego komentarza. Wtedy kazda
-  aktualizacja the importer, po ktorej ktos powtorzy te czynnosc, konfrontuje
-  nasze selektory z rzeczywistoscia.
+  Zaden z tych szczegolow nie zlamal naszego czytania, ale zgadywanie ich
+  bylo warte dokladnie tyle, ile zgadywanie zwykle jest warte.
 
-  Wiersze celowo zawieraja przypadki, ktore juz raz cos zlamaly:
-    - podklasa, ktorej nazwa zawiera nazwe innej podklasy (Twilight/Light)
-    - myslnik przed nazwa podklasy we wlasnym span.ve-mx-3
-    - kod ksiazki jako sufiks klasy CSS, nie jako tresc etykiety
-    - wiersz bez kodu zrodla
-    - wiersz, ktory nie jest wierszem listy
+  NASZ WLASNY PANEL JEST W SRODKU. div#pk5e-importer-panel siedzi w
+  div.pk5e-dock-row wewnatrz okna importera, bo dock.mjs przenosi tam nasz
+  element. Zostawiony celowo: to prawdziwy stan strony i dowod, ze dokowanie
+  dziala. Zaden test nie opiera sie na jego tresci, wiec zmiany w naszym
+  panelu nie wymagaja odswiezania tego pliku.
+
+  ZEBY GO ODSWIEZYC po aktualizacji importera, w swiecie z otwartym oknem
+  importu klas:
+
+      characterCreator.captureImporter()
+
+  i wkleic zawartosc schowka w miejsce wszystkiego ponizej tego komentarza.
 -->
-<div class="ve-app app window-app" data-fixture="importer-class-list">
-  <header class="window-header flexrow">
-    <h1 class="window-title">Import Classes</h1>
-    <a class="header-button close"><i class="fas fa-times"></i>Close</a>
-  </header>
-
-  <section class="window-content">
-    <div class="veapp__wrp-list ve-flex-col">
-      <div class="veapp__list ve-flex-col">
-
-        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="class-artificer">
-          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
-          <span class="ve-col-9 ve-bold">Artificer</span>
-          <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Rising from the Last War">EFA</span>
-        </label>
-
-        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="class-cleric">
-          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
-          <span class="ve-col-9 ve-bold">Cleric</span>
-          <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player's Handbook (2024)">PHB'24</span>
-        </label>
-
-        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-light">
-          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
-          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Light Domain</span>
-          <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player's Handbook (2024)">PHB'24</span>
-        </label>
-
-        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-twilight">
-          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
-          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Twilight Domain</span>
-          <span class="ve-col-2 ve-text-center ve-source__TCE" title="Tasha's Cauldron of Everything">TCE</span>
-        </label>
-
-        <label class="ve-flex ve-w-100 veapp__list-row-hoverable" data-case="subclass-no-source">
-          <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
-          <span class="ve-col-9" title="Class: Cleric"><span class="ve-mx-3">&ndash;</span>Homebrew Domain</span>
-          <span class="ve-col-2 ve-text-center">HB</span>
-        </label>
-
-        <label class="ve-flex ve-w-100" data-case="not-a-row">
-          <div class="ve-col-12">Nothing here looks like a name cell.</div>
-        </label>
-
-      </div>
+<div id="app-61" class="application ve-app pk5e-dock-host" style="z-index: 129; width: 937px; height: 1113px; left: 0px; top: 80px;"><header class="window-header">
+      <i class="window-icon fa-fw hidden" inert=""></i>
+      <h1 class="window-title">Import Classes &amp; Subclasses</h1>
+      <button type="button" class="header-control icon fa-solid fa-ellipsis-vertical" data-tooltip="Toggle Controls" aria-label="Toggle Controls" data-action="toggleControls"></button>
+      <button type="button" class="header-control icon fa-solid fa-xmark" data-tooltip="Close Window" aria-label="Close Window" data-action="close" style=""></button>
+    </header><section class="window-content ve-app-window"><div class="ve-flex-col ve-h-100 ve-window ve-min-h-0" data-application-part="main">
+    <div class="ve-flex-v-stretch ve-input-group ve-input-group--top ve-no-shrink">
+        <button class="ve-btn ve-btn-5et veapp__btn-filter" name="btn-filter">Filter</button>
+        <button class="ve-btn ve-btn-5et" title="Toggle Filter Summary Display" name="btn-toggle-summary"><span class="glyphicon glyphicon-resize-small"></span></button>
+        <div class="ve-w-100 ve-relative">
+            <input type="search" autocomplete="off" autocapitalize="off" spellcheck="false" class="ve-h-100 search ve-form-control ve-lst__search ve-lst__search--no-border-h" placeholder="Find entry...">
+            <div class="ve-lst__wrp-search-glass ve-no-events ve-flex-vh-center"><span class="glyphicon glyphicon-search"></span></div>
+            <div class="ve-lst__wrp-search-visible ve-no-events ve-flex-vh-center">142/352</div>
+        </div>
+        <button class="ve-btn ve-btn-5et veapp__btn-list-feeling-lucky ve-flex-vh-center" name="btn-feeling-lucky" title="Feeling Lucky?"><span class="glyphicon glyphicon-random"></span></button>
+        <button class="ve-btn ve-btn-5et veapp__btn-list-reset" name="btn-reset" title="Reset filters. SHIFT to reset everything.">Reset</button>
     </div>
-  </section>
-</div>
+
+    <div class="ve-fltr__mini-view ve-btn-group"><div class="ve-fltr__mini-pill   ve-fltr__mini-pill--default-sel" title="Eberron: Forge of the Artificer (Filter: Source)" data-state="yes"><span class="glyphicon glyphicon-book"></span> EFA</div><div class="ve-fltr__mini-pill   ve-fltr__mini-pill--default-sel" title="Player’s Handbook (2014) (Filter: Source)" data-state="yes"><span class="glyphicon glyphicon-book"></span> PHB'14</div><div class="ve-fltr__mini-pill   ve-fltr__mini-pill--default-sel" title="Player’s Handbook (2024) (Filter: Source)" data-state="yes"><span class="glyphicon glyphicon-book"></span> PHB'24</div><div class="ve-fltr__mini-pill   ve-fltr__mini-pill--default-sel" title="Ravenloft: The Horrors Within (Filter: Source)" data-state="yes"><span class="glyphicon glyphicon-book"></span> RHW</div><div class="ve-fltr__mini-pill   ve-fltr__mini-pill--default-sel" title="Tasha’s Cauldron of Everything (Filter: Source)" data-state="yes"><span class="glyphicon glyphicon-book"></span> TCE</div><div class="ve-fltr__mini-pill  ve-fltr__mini-pill--default-desel " title="Reprinted (Filter: Miscellaneous)" data-state="no">Repr.</div><div class="ve-fltr__mini-pill " data-state="ignore" title="Display Class if Any Subclass is Visible (Filter: Other/Text Options)">Sc&gt;C</div></div>
+
+    <div class="ve-flex-v-stretch ve-input-group ve-input-group--bottom ve-mb-1 ve-no-shrink" data-name="wrp-btns-sort">
+            <button class="ve-btn ve-btn-5et ve-col-1 ve-flex-vh-center" disabled=""></button>
+        <button class="ve-btn ve-btn-5et ve-col-9 sort name" data-sort="sortName">Name<span class="ve-lst__caret ve-lst__caret--active ve-lst__caret--reverse"></span></button>
+        <button class="ve-btn ve-btn-5et ve-col-2" disabled="">Source</button>
+    </div>
+
+    <div class="pk5e-dock-row" style="display: flex !important; flex-flow: row !important; gap: 0.5rem !important; flex: 1 1 auto !important; min-height: 0px !important; overflow: hidden !important;"><div class="veapp__list ve-mb-1 ve-h-100" style="flex: 1 1 40% !important; width: auto !important; min-width: 0px !important; max-width: none !important; height: auto !important;"><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Artificer</span>
+                <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+            </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Alchemist</span>
+                    <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Armorer</span>
+                    <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Artillerist</span>
+                    <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Battle Smith</span>
+                    <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Cartographer</span>
+                    <span class="ve-col-2 ve-text-center ve-source__EFA" title="Eberron: Forge of the Artificer">EFA</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                    <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                    <span class="ve-col-9" title="Class: Artificer"><span class="ve-mx-3">—</span>Reanimator</span>
+                    <span class="ve-col-2 ve-text-center ve-source__RHW" title="Ravenloft: The Horrors Within">RHW</span>
+                </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Barbarian</span>
+                <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player’s Handbook (2024)">PHB'24</span>
+            </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Bard</span>
+                <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player’s Handbook (2024)">PHB'24</span>
+            </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Cleric</span>
+                <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player’s Handbook (2024)">PHB'24</span>
+            </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Druid</span>
+                <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player’s Handbook (2024)">PHB'24</span>
+            </label><label class="ve-flex ve-w-100 veapp__list-row-hoverable" draggable="true">
+                <div class="ve-col-1 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>
+                <span class="ve-col-9 ve-bold">Fighter</span>
+                <span class="ve-col-2 ve-text-center ve-source__XPHB" title="Player’s Handbook (2024)">PHB'24</span>
+            </label><!-- przyciete: 130 wierszy pominieto, zostawiono 12 (6 klas, 6 podklas). Pelny zrzut: characterCreator.captureImporter({ full: true }) --></div><div id="pk5e-importer-panel" class="application pk5e-creator pk5e-importer-panel pk5e-docked" style="z-index: 130; width: 340px; height: 1153px; left: 12px; top: 0px; flex: 1 1 60% !important; position: static !important; max-height: none !important; min-width: 16rem !important; min-height: 0px !important;"><header class="window-header">
+      <i class="window-icon fa-fw fa-solid fa-book-open" inert=""></i>
+      <h1 class="window-title">Class descriptions</h1>
+      <button type="button" class="header-control icon fa-solid fa-ellipsis-vertical" data-tooltip="Toggle Controls" aria-label="Toggle Controls" data-action="toggleControls"></button>
+      <button type="button" class="header-control icon fa-solid fa-xmark" data-tooltip="Close Window" aria-label="Close Window" data-action="close"></button>
+    </header><section class="window-content"><div class="pk5e-root pk5e-panel-root" data-application-part="main">
+
+  <div class="pk5e-panel-picker">
+    <input type="search" data-panel-search="" value="" placeholder="Search classes and subclasses" autocomplete="off">
+    <button type="button" class="pk5e-panel-caret" data-action="toggleList" aria-label="Show the list">
+      <i class="fa-solid fa-chevron-down"></i>
+    </button>
+  </div>
+
+
+
+  <div class="pk5e-panel-detail">
+
+
+      <p class="pk5e-empty">Pick a name in the importer, or choose one above, to read what it does.</p>
+  </div>
+
+</div></section><div class="window-resize-handle"></div></div></div>
+
+    <div class="ve-no-shrink">
+        <button class="ve-btn ve-btn-5et ve-btn-primary ve-w-100" name="btn-run">Import</button>
+    </div>
+</div></section><div class="window-resize-handle"></div></div>

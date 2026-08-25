@@ -1,7 +1,7 @@
 /**
  * tests/markup.mjs
  * ---------------------------------------------------------------------------
- * Testy tego, co czyta CUDZY markup - dzis okna importera the importer.
+ * Testy tego, co czyta CUDZY markup - dzis okna importera klas.
  *
  * DLACZEGO OSOBNY PLIK
  * --------------------
@@ -17,13 +17,20 @@
  *
  *   npm install --no-save handlebars jsdom && node tests/markup.mjs
  *
- * CZEGO TE TESTY NIE ZROBIA
- * -------------------------
- * Fixture jest odtworzony z opisu w naglowku importer-watch.mjs, nie zgrany
- * z zywego okna. Wykryja wiec regresje w NASZYM kodzie, a nie zmiane markupu
- * po stronie importera. Instrukcja podmiany na prawdziwy zrzut jest w naglowku
- * tests/fixtures/importer-class-list.html i to jest ta czynnosc, ktora
- * naprawde warto powtorzyc po aktualizacji the importer.
+ * NA CZYM STOJA
+ * -------------
+ * Fixture jest ZGRANY Z ZYWEGO OKNA (2026-08-25), a nie odtworzony z opisu -
+ * wczesniejsza wersja byla odtworzona i wlasnie dlatego nie wykrywala niczego,
+ * czego ten opis nie mowil. Podmiana na prawdziwy zrzut od razu pokazala trzy
+ * rozbieznosci; szczegoly w naglowku samego fixture.
+ *
+ * Przypadki brzegowe, ktorych w zrzucie nie bylo - wiersz bez zrodla, wiersz
+ * nie bedacy wierszem listy, dwie nazwy zawierajace sie nawzajem - buduje
+ * syntheticRow() w tym pliku. Zrzut zostaje nietkniety, zeby dalej mowil, jak
+ * wyglada rzeczywistosc, a nie jak ja sobie wyobrazamy.
+ *
+ * Odswiezenie po aktualizacji importera: characterCreator.captureImporter()
+ * i wklejenie schowka do fixture, ponizej jego komentarza naglowkowego.
  */
 
 import { readFileSync } from "node:fs";
@@ -92,41 +99,101 @@ function group(title, body) {
   return body();
 }
 
-const row = (kase) => document.querySelector(`[data-case="${kase}"]`);
+// Fixture jest teraz ZGRANY Z ZYWEGO OKNA, wiec nie ma w nim zadnych atrybutow
+// dolozonych na potrzeby testow - wiersze znajdujemy tak, jak znalazlby je
+// czlowiek: po nazwie w komorce nazwy.
+const allRows = () => Array.from(document.querySelectorAll(".veapp__list label"));
+
+const row = (name) =>
+  allRows().find((el) => {
+    const cell = el.querySelector(".ve-col-9");
+    if (!cell) return false;
+    const clone = cell.cloneNode(true);
+    clone.querySelectorAll(".ve-mx-3").forEach((e) => e.remove());
+    return clone.textContent.trim() === name;
+  });
+
+/**
+ * Wiersz zbudowany na potrzeby przypadku, ktorego w zrzucie nie bylo.
+ *
+ * Podzial jest celowy: fixture zostaje nietkniety i mowi, jak wyglada
+ * rzeczywistosc, a przypadki brzegowe - wiersz bez zrodla, wiersz ktory nie
+ * jest wierszem listy, dwie nazwy zawierajace sie nawzajem - powstaja tutaj.
+ * Doklejanie ich do zrzutu zamienialoby dowod w nasza wlasna wyobraznie.
+ */
+const syntheticRow = ({ name, bold = false, parent = null, source = null }) => {
+  const label = document.createElement("label");
+  label.className = "ve-flex ve-w-100 veapp__list-row-hoverable";
+  const cell = document.createElement("span");
+  cell.className = bold ? "ve-col-9 ve-bold" : "ve-col-9";
+  if (parent) {
+    cell.setAttribute("title", `Class: ${parent}`);
+    const dash = document.createElement("span");
+    dash.className = "ve-mx-3";
+    dash.textContent = "—";
+    cell.appendChild(dash);
+  }
+  cell.appendChild(document.createTextNode(name));
+  label.appendChild(cell);
+  if (source) {
+    const src = document.createElement("span");
+    src.className = `ve-col-2 ve-text-center ve-source__${source}`;
+    src.textContent = source;
+    label.appendChild(src);
+  }
+  document.querySelector(".veapp__list").appendChild(label);
+  return label;
+};
 
 // --- czytanie pojedynczego wiersza ------------------------------------------
 
 group("importer: czytanie wiersza listy", () => {
-  check("klasa: nazwa, typ, kod zrodla z klasy CSS", readRow(row("class-artificer")), {
+  check("klasa: nazwa, typ, kod zrodla z klasy CSS", readRow(row("Artificer")), {
     name: "Artificer",
     type: "class",
     parentName: "Artificer",
     code: "EFA"
   });
 
-  // Etykieta obok mowi "PHB'24", kod w klasie CSS mowi XPHB. Liczy sie kod:
-  // to jego uzywa kompendium do rozstrzygania remisow.
-  check("klasa: kod bierze sie z klasy CSS, nie z tresci etykiety", readRow(row("class-cleric")).code, "XPHB");
+  // W zrzucie etykieta tego wiersza brzmi doslownie "PHB'24", a klasa CSS mowi
+  // ve-source__XPHB. Liczy sie kod - i dopiero na prawdziwym markupie ten test
+  // naprawde cos znaczy.
+  check("klasa: kod bierze sie z klasy CSS, nie z tresci etykiety", readRow(row("Cleric")).code, "XPHB");
 
-  check("podklasa: myslnik odciety, rodzic z atrybutu title", readRow(row("subclass-light")), {
-    name: "Light Domain",
+  check("podklasa: myslnik odciety, rodzic z atrybutu title", readRow(row("Alchemist")), {
+    name: "Alchemist",
     type: "subclass",
-    parentName: "Cleric",
-    code: "XPHB"
+    parentName: "Artificer",
+    code: "EFA"
+  });
+
+  // Podklasa z innego podrecznika niz jej klasa - przypadek, ktorego nie bylo
+  // w moim odtworzonym fixture, bo nie przyszedl mi do glowy. W prawdziwym
+  // oknie znalazl sie sam.
+  check("podklasa moze miec inne zrodlo niz jej klasa", readRow(row("Reanimator")), {
+    name: "Reanimator",
+    type: "subclass",
+    parentName: "Artificer",
+    code: "RHW"
   });
 
   // Ten przypadek zlamal juz dopasowywanie w compendium.mjs: jedna nazwa
   // zawiera druga. Tutaj pilnujemy tylko, ze czytanie ich nie skleja.
-  check("podklasa, ktorej nazwa zawiera nazwe innej", readRow(row("subclass-twilight")), {
+  syntheticRow({ name: "Light Domain", parent: "Cleric", source: "XPHB" });
+  const twilight = syntheticRow({ name: "Twilight Domain", parent: "Cleric", source: "TCE" });
+  check("podklasa, ktorej nazwa zawiera nazwe innej", readRow(twilight), {
     name: "Twilight Domain",
     type: "subclass",
     parentName: "Cleric",
     code: "TCE"
   });
 
-  check("brak komorki zrodla to pusty kod, nie blad", readRow(row("subclass-no-source")).code, "");
+  const bezZrodla = syntheticRow({ name: "Homebrew Domain", parent: "Cleric" });
+  check("brak komorki zrodla to pusty kod, nie blad", readRow(bezZrodla).code, "");
 
-  check("wiersz bez komorki nazwy to null", readRow(row("not-a-row")), null);
+  const nieWiersz = document.createElement("label");
+  nieWiersz.innerHTML = '<div class="ve-col-12">Nothing here looks like a name cell.</div>';
+  check("wiersz bez komorki nazwy to null", readRow(nieWiersz), null);
   check("null nie wywraca readRow", readRow(null), null);
   check("obiekt bez querySelector nie wywraca readRow", readRow({}), null);
 });
@@ -144,7 +211,9 @@ group("importer: rozpoznanie okna", () => {
   other.innerHTML = '<h1 class="window-title">Select Sources</h1>';
   document.body.appendChild(other);
   check("inne okno ve-app nie udaje importera", importerRect() !== null, true);
-  document.querySelector('[data-fixture="importer-class-list"]').remove();
+  // Panel opisow tez nosi klase "application", ale nie "ve-app" - to okno
+  // importera znika, nasz panel zostaje.
+  document.querySelector(".ve-app").remove();
   check("po usunieciu importera zostaje samo Select Sources i nie jest brane", importerRect(), null);
 });
 
@@ -164,7 +233,7 @@ await group("importer: co trafia do panelu po kliknieciu", async () => {
 
   const select = (kase) => row(kase).classList.add("list-multi-selected");
 
-  select("class-cleric");
+  select("Cleric");
   await wait(SETTLED);
   check("klikniecie klasy podaje ta klase", seen.at(-1)?.name, "Cleric");
 
@@ -178,13 +247,13 @@ await group("importer: co trafia do panelu po kliknieciu", async () => {
   // klasa NA KONCU partii rozroznia jedno od drugiego - a tego, ktora bedzie
   // ostatnia, nie kontrolujemy, wiec liczy sie wlasnie ten przypadek.
   seen.length = 0;
-  select("subclass-twilight");
-  select("class-artificer");
+  select("Alchemist");
+  select("Artificer");
   await wait(SETTLED);
   check(
     "podklasa wygrywa, nawet gdy klasa przyszla po niej",
     seen.map((r) => r.name),
-    ["Twilight Domain"]
+    ["Alchemist"]
   );
 
   // I ten sam uklad w druga strone, zeby nie zalezalo od kolejnosci wcale.
@@ -194,18 +263,19 @@ await group("importer: co trafia do panelu po kliknieciu", async () => {
   }
   await wait(SETTLED);
   seen.length = 0;
-  select("class-cleric");
-  select("subclass-light");
+  select("Cleric");
+  select("Barbarian");
+  select("Armorer");
   await wait(SETTLED);
   check(
     "podklasa wygrywa takze, gdy przyszla po klasie",
     seen.map((r) => r.name),
-    ["Light Domain"]
+    ["Armorer"]
   );
 
   // Odznaczenie nie czysci panelu: czytajacy prawdopodobnie wciaz czyta.
   seen.length = 0;
-  row("subclass-twilight").classList.remove("list-multi-selected");
+  row("Alchemist").classList.remove("list-multi-selected");
   await wait(SETTLED);
   check("odznaczenie niczego nie zglasza", seen, []);
 
@@ -229,7 +299,7 @@ await group("importer: co trafia do panelu po kliknieciu", async () => {
   // Po zatrzymaniu obserwator ma milczec - inaczej panel zyje dluzej niz okno,
   // ktore obsluguje.
   seen.length = 0;
-  select("subclass-light");
+  select("Battle Smith");
   await wait(SETTLED);
   check("po stop() nic wiecej nie przychodzi", seen, []);
 });

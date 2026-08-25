@@ -127,12 +127,17 @@ feature does nothing and character creation is unaffected. Preserve that when
 editing — nothing throws, nothing assumes an element exists.
 
 `tests/markup.mjs` covers `importer-watch.mjs` against
-`tests/fixtures/importer-class-list.html`. Know what that fixture is worth:
-it was **reconstructed from the file header, not captured from a live window**, so
-it catches regressions in our parsing and cannot catch the importer changing its markup.
-Replacing it with a real capture is a one-line job in a live world
-(`copy(document.querySelector(".ve-app").outerHTML)`) and is the thing actually
-worth doing after an importer update. The fixture's own header says so too.
+`tests/fixtures/importer-class-list.html`, which is a **real capture from a live
+window** (2026-08-25), not a reconstruction. The earlier reconstructed version
+passed everything while silently missing that the window is titled "Import Classes
+& Subclasses" — a tightened title regex would have gone unnoticed. Refresh it after
+an importer update with `characterCreator.captureImporter()`, which trims the
+300-plus rows to a readable sample while keeping both class and subclass rows.
+
+Edge cases absent from the capture — a row with no source cell, a row that is not a
+list row, two names containing one another — are built by `syntheticRow()` in the
+test. Keep that split: the capture stays untouched so it keeps saying what reality
+looks like rather than what we imagine it looks like.
 
 The observed markup and the reasoning behind each selector are in the file headers,
 and
