@@ -1,0 +1,33 @@
+# check.sh, uruchamiane przy kazdym push i pull requescie.
+#
+# Ten sam skrypt, ktory uruchamia sie lokalnie przed wypchnieciem - zeby
+# "zapomnialem uruchomic check.sh" przestalo byc mozliwym stanem repozytorium.
+
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Handlebars nie jest zalezoscia modulu. Gdy jest dostepny, check.sh
+      # naprawde kompiluje szablony zamiast tylko liczyc bloki - wiec warto go
+      # miec, ale awaria rejestru npm nie moze zatrzymac calej kontroli.
+      # check.sh sam schodzi wtedy do wersji bez kompilatora.
+      - name: handlebars (opcjonalnie)
+        continue-on-error: true
+        run: npm install --no-save --no-audit --no-fund handlebars
+
+      - run: ./check.sh

@@ -1,0 +1,8 @@
+# Handlebars jest instalowany doraznie, zeby check.sh naprawde kompilowal
+# szablony. Nie jest zalezoscia modulu i nie ma go w repozytorium.
+node_modules/
+package-lock.json
+
+# Paczka wydania powstaje w workflow, nie w drzewie roboczym.
+module.zip
+release-notes.md

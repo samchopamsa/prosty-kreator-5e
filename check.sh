@@ -173,7 +173,19 @@ node -e '
     console.log("  FAIL CHANGELOG.md has no \"## " + version + "\" section");
     process.exit(1);
   }
-  console.log("  ok   " + version + " everywhere, changelog written");
+
+  // The download URL carries the version by hand, and points at a tag that
+  // does not exist yet at the moment it is written. Left behind, it serves the
+  // previous release under the new manifest - which installs, and installs the
+  // wrong thing, so nothing looks broken. The release workflow refuses a tag
+  // that disagrees with the manifest; this is the same check, before pushing.
+  const manifest = JSON.parse(fs.readFileSync("module.json", "utf8"));
+  if (!manifest.download.includes("/v" + version + "/")) {
+    console.log("  FAIL module.json download does not point at v" + version + ":");
+    console.log("       " + manifest.download);
+    process.exit(1);
+  }
+  console.log("  ok   " + version + " everywhere, changelog written, download tagged");
 ' || fail=1
 
 # --- 6. tests --------------------------------------------------------------

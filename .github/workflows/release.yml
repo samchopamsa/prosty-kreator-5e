@@ -1,0 +1,93 @@
+# Wydanie, wyzwalane tagiem vX.Y.Z.
+#
+#   git tag v1.60.0 && git push origin v1.60.0
+#
+# Reszta dzieje sie tutaj: kontrola, spakowanie modulu i utworzenie release'u
+# z module.zip i module.json. Foundry czyta manifest spod
+# releases/latest/download/module.json, wiec zaden adres nie wymaga recznej
+# aktualizacji po wydaniu - poza polem "download" w samym module.json, ktorego
+# pilnuje check.sh.
+#
+# gh jest preinstalowany na runnerach GitHuba, wiec nie ma tu zadnej akcji
+# spoza actions/*.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Tag i manifest musza mowic to samo. Rozjazd oznacza paczke, ktorej
+      # Foundry nie zainstaluje, i jest to jedyny blad tego wydania, ktorego
+      # nie da sie poprawic bez usuniecia release'u.
+      - name: tag zgadza sie z module.json
+        run: |
+          manifest=$(node -p "require('./module.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$manifest" != "$tag" ]; then
+            echo "module.json mowi $manifest, tag mowi $tag"
+            exit 1
+          fi
+          echo "$manifest"
+
+      - name: handlebars (opcjonalnie)
+        continue-on-error: true
+        run: npm install --no-save --no-audit --no-fund handlebars
+
+      - run: ./check.sh
+
+      # Zawartosc paczki to dokladnie to, co Foundry ma rozpakowac do
+      # Data/modules/prosty-kreator-5e. Testy, skrypt kontrolny, workflow i
+      # CLAUDE.md sa narzedziami repozytorium i nie maja tam czego szukac.
+      - name: module.zip
+        run: |
+          zip -r module.zip \
+            module.json \
+            scripts \
+            styles \
+            templates \
+            docs \
+            README.md \
+            CHANGELOG.md
+          unzip -l module.zip
+
+      # Opis wydania to sekcja z CHANGELOG.md - ta sama tresc, ktora i tak
+      # powstala przy zmianie wersji, zamiast drugiej pisanej osobno.
+      - name: opis wydania z CHANGELOG.md
+        run: |
+          node -e '
+            const fs = require("fs");
+            const version = JSON.parse(fs.readFileSync("module.json", "utf8")).version;
+            const changelog = fs.readFileSync("CHANGELOG.md", "utf8");
+            const start = changelog.search(new RegExp("^## " + version.replace(/\./g, "\\.") + "\\s*$", "m"));
+            if (start < 0) { console.error("brak sekcji ## " + version); process.exit(1); }
+            const rest = changelog.slice(start);
+            const next = rest.slice(1).search(/^## /m);
+            const body = next < 0 ? rest : rest.slice(0, next + 1);
+            fs.writeFileSync("release-notes.md", body.trim() + "\n");
+          '
+          cat release-notes.md
+
+      - name: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            module.zip \
+            module.json \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-notes.md
