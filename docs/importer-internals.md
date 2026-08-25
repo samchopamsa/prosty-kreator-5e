@@ -71,3 +71,54 @@ albo w kwotę wpisywaną ręcznie.
 | filtrowanie ekwipunku blokadą źródeł | `getBlocklistFiltered` |
 | odczyt danych klas | `DataUtil.class.loadJSON` |
 | konfiguracja | `Config.get("import", ...)` |
+
+---
+
+## Pełny kreator postaci a nasze dopasowywanie (pomiar 2026-08-25)
+
+Importer w wydaniu dla patronów niesie **pełny kreator postaci** — jedno
+zakładkowe okno pod tytułem `Charactermancer (Actor "<nazwa>")`, robiące całe
+tworzenie postaci naraz. Zmierzone na buildzie `3.17.2.noble-prerelease-25-83`,
+Foundry 14.367, dnd5e 5.3.3.
+
+### Zastępuje, nie współistnieje
+
+Przycisk „Dodaj klasę" na karcie otwiera **jego**, a nie okno `Import Classes`.
+Przy aktywnym buildzie patronów nasz panel opisów klas i obserwator okien
+wyboru nie mają więc odbiorcy — te okna przestają się otwierać.
+
+Nasz moduł znosi to bez zmian i to jest zasługa reguły założycielskiej:
+naciskamy przycisk karty, a co się za nim otworzy, to nie nasza sprawa.
+Kroki panelu nadal się zaliczają, bo czytają, co wylądowało na karcie.
+
+### Stempluje IDENTYCZNIE — i to jest dobra wiadomość
+
+Postać zbudowana w pełnym kreatorze, po „Finalize":
+
+```
+cechy: 9 z 9 ma hash
+
+Spellcasting            classFeature   spellcasting_cleric_xphb_1_xphb
+Divine Order            classFeature   divine%20order_cleric_xphb_1_xphb
+Divine Order: Protector classFeature   protector_cleric_xphb_1_xphb
+Celestial Resistance    raceFeature    celestial%20resistance_aasimar_xphb_xphb
+Magic Initiate; Cleric  feats.html     magic%20initiate%3b%20cleric_xphb
+```
+
+Format cech klasowych to `name_className_classSource_level_source` — dokładnie
+to, co buduje `featureHash()` w `rules-data.mjs`. Znaczy to, że
+`verifyCharacter()` i `missingFeatures()` działają na postaciach z pełnego
+kreatora **bez żadnej zmiany**, dopasowując po hashu, a nie po nazwach.
+
+Cechy gatunku mają własny, krótszy kształt (`name_race_raceSource_source`), ale
+ich z regułami klasy nie porównujemy, więc to bez znaczenia.
+
+Flaga `advancementOrigin` była w tej próbce pusta na wszystkich przedmiotach,
+mimo że klasa niosła 9 wpisów Advancement. Nie badane dalej — nasze
+dopasowywanie z niej nie korzysta.
+
+### Czego stąd NIE wolno wywnioskować
+
+Że panel opisów i praca przy oknach wyboru straciły sens. Tracą go wyłącznie
+na czas, w którym aktywny jest build dla patronów. Na buildzie zwykłym te okna
+wracają i wracają z nimi wszyscy, którzy za dostęp nie płacą.
