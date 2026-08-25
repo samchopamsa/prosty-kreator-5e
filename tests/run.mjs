@@ -374,12 +374,49 @@ group("option-watch: reading the importer's dialogs", () => {
     verdict("Feats", dialog({ text: "Select a Feat", selects: ["alert"] }), button("OK", true)),
     "done:Feats"
   );
-  // The equipment dialog confirms with a button that is NOT primary. Treating
-  // primary as the only confirmation everywhere would report it every time.
+  // --- starting equipment ---------------------------------------------------
+  //
+  // This dialog was deliberately ignored until we could read it, and the reason
+  // is still true and still load-bearing: NOTHING in it carries ve-btn-primary.
+  // Every other entry treats that class as "this is the confirm button"; here
+  // that reading finds no confirmation at all, so every close would count as a
+  // skip. The entry matches on the word "Confirm" instead, and this pair of
+  // cases is what stops anyone reinstating the primary-only rule.
   check(
-    "the equipment dialog is none of our business",
+    "equipment confirmed, though its Confirm button is not primary",
+    verdict('Equipment—Barbarian (Actor "New Character")', dialog(), button("Confirm")),
+    "done:Starting Equipment: Barbarian"
+  );
+  check(
+    "equipment skipped",
+    verdict('Equipment—Barbarian (Actor "New Character")', dialog(), button("Skip")),
+    "skipped:Starting Equipment: Barbarian"
+  );
+  // The class name is part of the label because a multiclass character meets
+  // this window again, and two entries must not overwrite each other.
+  check(
+    "a second class gets its own entry",
+    verdict('Equipment—Rogue (Actor "X")', dialog(), button("Skip")),
+    "skipped:Starting Equipment: Rogue"
+  );
+  // Long dash in the real title, plain one in older builds - both read.
+  check(
+    "plain hyphen in the title reads the same",
     verdict('Equipment-Fighter (Actor "X")', dialog(), button("Confirm")),
-    "ignored"
+    "done:Starting Equipment: Fighter"
+  );
+  // "Remaining: 15" in this window is gold left unspent in the shop, NOT an
+  // unfinished choice. Every other entry treats a "Remaining" counter as points
+  // left to assign, so the temptation to reuse that rule here is real - and it
+  // would warn about every character who kept a few coins.
+  check(
+    "unspent gold is not an unfinished choice",
+    verdict(
+      'Equipment—Barbarian (Actor "X")',
+      dialog({ text: "Starting Equipment Shop Remaining: 15" }),
+      button("Confirm")
+    ),
+    "done:Starting Equipment: Barbarian"
   );
 });
 

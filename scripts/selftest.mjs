@@ -198,15 +198,27 @@ export function selfTest() {
       (a, b) => a + b,
       0
     );
+
+    // Przycisk awansu pojawia sie tylko tam, gdzie awans ma sens: na postaci
+    // z klasa. Zglaszanie jego braku na pustej karcie bylo falszywym alarmem -
+    // pierwszy przebieg selfTest w prawdziwym swiecie zlapal wlasnie to, na
+    // postaci "New Character" w trakcie importu pierwszej klasy.
+    //
+    // Narzedzie, ktore krzyczy o rzeczy dzialajacej poprawnie, uczy ignorowac
+    // swoje wyniki - a wtedy przestaje byc warte uruchamiania.
+    const hasClass = !!sheetApp.actor?.items?.some?.((i) => i.type === "class");
     checks.push(
       result(
         "przycisk awansu importera",
-        importer?.active ? (levelUp ? OK : MISSING) : SKIPPED,
-        importer?.active
-          ? levelUp
-            ? `${levelUp} dopasowan`
-            : "importer aktywny, a przycisku nie ma - okno awansu nie bedzie mialo czego nacisnac"
-          : "importer nieaktywny"
+        !importer?.active ? SKIPPED : !hasClass ? SKIPPED : levelUp ? OK : MISSING,
+        !importer?.active
+          ? "importer nieaktywny"
+          : !hasClass
+            ? "postac nie ma jeszcze klasy - przycisk awansu pojawia sie dopiero z nia"
+            : levelUp
+              ? `${levelUp} dopasowan`
+              : "importer aktywny, postac ma klase, a przycisku nie ma - okno awansu " +
+                "nie bedzie mialo czego nacisnac"
       )
     );
   }

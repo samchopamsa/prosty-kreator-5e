@@ -119,6 +119,39 @@ export const DIALOGS = [
     describe: (title, app) => ({ label: labelFor(title, app, "Additional Spells"), level: null })
   },
   {
+    id: "equipment",
+    // "Equipment—Barbarian (Actor "New Character")" - myslnik jest dlugi (—),
+    // wiec dopuszczamy oba, a dla pewnosci sprawdzamy tez cialo: przyciski
+    // (A)/(B) niosa klase imp-cls__disp-equi-choice-key, ktora nie wystepuje
+    // nigdzie indziej.
+    match: (title, app) =>
+      /^equipment\s*[—–-]/i.test(title) ||
+      !!app.querySelector?.(".imp-cls__disp-equi-choice-key"),
+    // W tym oknie ZADEN przycisk nie ma ve-btn-primary - sprawdzone na zywym.
+    // Poleganie na tej klasie, jak robia pozostale wpisy, nie rozpoznaloby
+    // potwierdzenia w ogole i kazde zamkniecie liczyloby sie jako pominiecie.
+    confirms: (button, text) => /^confirm$/i.test(text),
+    // Zawsze skonczone, i to jest decyzja, nie niedbalstwo.
+    //
+    // Okno ma licznik "Remaining: 15", ale to zloto pozostale w sklepie, a nie
+    // niedokonczony wybor - nikt nie musi wydac wszystkiego. Uzycie go jako
+    // miary kompletnosci robiloby ostrzezenie z kazdej postaci, ktora zostawila
+    // sobie troche monet.
+    //
+    // Wybor (A)/(B) jest za to zaznaczony od poczatku - A jest aktywne przy
+    // otwarciu - wiec dojscie do Confirm zawsze oznacza, ze cos wybrano.
+    // Zostaje wiec regula co przy "choose option": liczy sie, ktorym przyciskiem
+    // wyszedles.
+    complete: () => true,
+    describe: (title) => {
+      // "Equipment—Barbarian (Actor "...")" -> "Starting Equipment: Barbarian".
+      // Nazwa klasy ma znaczenie, bo przy wieloklasowosci okno pojawia sie
+      // ponownie i dwa wpisy nie moga sie nadpisac.
+      const name = title.match(/^equipment\s*[—–-]\s*([^(]+)/i)?.[1]?.trim();
+      return { label: name ? `Starting Equipment: ${name}` : "Starting Equipment", level: null };
+    }
+  },
+  {
     id: "feats",
     // "Feats" / "Select a Feat (Category: Dark Gift)"
     match: (title, app) =>
