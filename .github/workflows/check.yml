@@ -24,12 +24,20 @@ jobs:
 
       # Zadne z tych dwoch nie jest zalezoscia modulu, obu uzywa tylko kontrola.
       # Handlebars daje prawdziwa kompilacje szablonow zamiast liczenia blokow,
-      # jsdom - prawdziwy DOM dla testow cudzego markupu. Awaria rejestru npm
-      # nie moze zatrzymac calej kontroli: bez handlebars check.sh schodzi do
-      # wersji bez kompilatora, bez jsdom testy markupu koncza sie pominieciem.
-      # Cena jest taka, ze wtedy CI sprawdza mniej, nie mniej dokladnie.
+      # jsdom - prawdziwy DOM dla testow cudzego markupu.
+      #
+      # continue-on-error jest tu po to, zeby awaria rejestru npm dala czytelny
+      # blad w nastepnym kroku ("brak jsdom, a PK5E_TESTS_REQUIRE_DEPS jest
+      # ustawione") zamiast szorstkiego bledu npm. Przebieg i tak bedzie
+      # czerwony - patrz zmienna nizej. Lokalnie, bez tej zmiennej, brak
+      # ktoregokolwiek z nich jest dopuszczalny i konczy sie pominieciem.
       - name: handlebars i jsdom (opcjonalne)
         continue-on-error: true
         run: npm install --no-save --no-audit --no-fund handlebars jsdom
 
+      # Zaleznosci sa tu instalowane, wiec ich brak to awaria instalacji,
+      # a nie srodowisko bez nich. Bez tego zielony przebieg moglby oznaczac,
+      # ze polowa kontroli po cichu sie nie odbyla.
       - run: ./check.sh
+        env:
+          PK5E_TESTS_REQUIRE_DEPS: "1"

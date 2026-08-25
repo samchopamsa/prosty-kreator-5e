@@ -51,6 +51,11 @@ if node -e 'require("handlebars")' 2>/dev/null; then
     }
     process.exit(bad);
   ' || fail=1
+elif [ -n "${PK5E_TESTS_REQUIRE_DEPS:-}" ]; then
+  # Ta sama zasada co przy jsdom: w CI handlebars jest instalowany, wiec jego
+  # brak oznacza nieudana instalacje, a nie maszyne bez kompilatora. Zejscie do
+  # liczenia blokow byloby wtedy cicha utrata pokrycia.
+  bad "handlebars niedostepny, a PK5E_TESTS_REQUIRE_DEPS jest ustawione"
 else
   node -e '
     const fs = require("fs");

@@ -15,7 +15,7 @@
  * gdy go nie ma, ten plik konczy sie zielono i mowi, ze pominal. W CI jest
  * instalowany, wiec tam testy naprawde chodza.
  *
- *   npm install --no-save jsdom && node tests/markup.mjs
+ *   npm install --no-save handlebars jsdom && node tests/markup.mjs
  *
  * CZEGO TE TESTY NIE ZROBIA
  * -------------------------
@@ -36,9 +36,20 @@ let JSDOM;
 try {
   ({ JSDOM } = await import("jsdom"));
 } catch {
+  // Na maszynie bez jsdom pominiecie jest w porzadku - to zwykly klon repo.
+  // W CI nie jest: tam jsdom jest instalowany, wiec jego brak znaczy, ze
+  // instalacja padla i CI wlasnie sprawdza mniej, nie wiedzac o tym. Zielony
+  // przebieg, ktory po cichu przestal cokolwiek testowac, jest gorszy od
+  // czerwonego, bo nikt go nie oglada.
+  if (process.env.PK5E_TESTS_REQUIRE_DEPS) {
+    console.log("  FAIL brak jsdom, a PK5E_TESTS_REQUIRE_DEPS jest ustawione");
+    console.log("       instalacja zaleznosci nie powiodla sie - testy markupu nie zostaly wykonane");
+    process.exit(1);
+  }
+
   // "SKIP" jest tu po to, zeby check.sh odroznil pominiecie od zaliczenia.
   // Pominiety test, ktory czyta sie jak zielony, jest gorszy od jego braku.
-  console.log("SKIP brak jsdom - testy markupu pominiete (npm install --no-save jsdom)");
+  console.log("SKIP brak jsdom - testy markupu pominiete (npm install --no-save handlebars jsdom)");
   process.exit(0);
 }
 

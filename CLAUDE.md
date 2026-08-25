@@ -23,9 +23,22 @@ node --check scripts/foo.mjs  # syntax only
 Two dev-only packages are **optional by design**, mirroring each other:
 `handlebars` gives `check.sh` a real template compile instead of a block-balance
 count, and `jsdom` gives `tests/markup.mjs` a real DOM. Neither is a dependency of
-the module. Install them with `npm install --no-save handlebars jsdom` (CI does the
-same); without them those checks degrade to a skip rather than a failure, and
+the module. Without them those checks degrade to a skip rather than a failure, and
 `check.sh` prints `--` rather than `ok` so a skip never reads as a pass.
+
+```bash
+npm install --no-save handlebars jsdom    # both, in ONE command
+```
+
+**Install them in a single command.** There is no `package.json`, so npm treats each
+install as defining the whole tree and prunes everything else: running
+`npm install --no-save handlebars` after `npm install --no-save jsdom` silently
+removes jsdom, and the markup tests go back to skipping.
+
+`PK5E_TESTS_REQUIRE_DEPS=1` turns those skips into failures, and both workflows set
+it. CI installs the packages, so a skip there means the install failed and the run
+is quietly checking less — which is the exact failure mode this repo works hardest
+to avoid. Locally, leave it unset.
 
 `check.sh` runs, in order: syntax of every `.mjs` + `module.json`, Handlebars block
 balance (a real compile only if `handlebars` happens to be installed), `i18n.mjs`

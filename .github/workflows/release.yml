@@ -48,7 +48,12 @@ jobs:
         continue-on-error: true
         run: npm install --no-save --no-audit --no-fund handlebars jsdom
 
+      # Zaleznosci sa tu instalowane, wiec ich brak to awaria instalacji,
+      # a nie srodowisko bez nich. Bez tego zielony przebieg moglby oznaczac,
+      # ze polowa kontroli po cichu sie nie odbyla.
       - run: ./check.sh
+        env:
+          PK5E_TESTS_REQUIRE_DEPS: "1"
 
       # Zawartosc paczki to dokladnie to, co Foundry ma rozpakowac do
       # Data/modules/prosty-kreator-5e. Testy, skrypt kontrolny, workflow i
