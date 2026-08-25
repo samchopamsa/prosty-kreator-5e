@@ -4,7 +4,7 @@ Prowadzony krok po kroku kreator postaci dla Foundry VTT i systemu **dnd5e**.
 
 Moduł **niczego nie reimplementuje**. Każdy krok klika prawdziwy przycisk karty
 postaci — „Dodaj gatunek", „Dodaj pochodzenie", „Dodaj klasę" — więc system
-Advancement i importery takie jak Plutonium działają dokładnie tak, jak zostały
+Advancement i importery działają dokładnie tak, jak zostały
 zbudowane. Kreator dokłada trzy rzeczy, których brakuje: **kolejność**, **to,
 o co importery nigdy nie pytają** (punktacja cech, języki) i **wykrywanie tego,
 co zostało pominięte**.
@@ -29,10 +29,10 @@ https://github.com/samchopamsa/prosty-kreator-5e/releases/latest/download/module
 | Foundry VTT | 13 lub nowszy (sprawdzone na 14) |
 | system dnd5e | 5.0.0 lub nowszy (sprawdzone na 5.3.3) |
 
-**Plutonium** — zalecany, nie wymagany. Bez niego kroki gatunku, pochodzenia
+**Importer 5etools** — zalecany, nie wymagany. Bez niego kroki gatunku, pochodzenia
 i klasy korzystają z systemowej przeglądarki kompendiów, a opisy klas i
 porównanie z regułami są niedostępne (te dane pochodzą z bibliotek 5etools,
-które ładuje Plutonium).
+które ładuje importer).
 
 **Tidy 5e Sheets** — obsługiwane. Przyciski rejestrują się przez API Tidy, a nie
 przez wstrzykiwanie do jego markupu.
@@ -82,8 +82,8 @@ Są ślepe w różnych miejscach i **żaden nie zastępuje pozostałych**:
 - **czytanie karty** — zero punktów życia, zerowa szybkość, nieprzypisane
   premie do cech, puste wpisy Trait, wymagania wieloklasowości
 - **czytanie reguł** — porównanie postaci z tym, co klasa faktycznie daje na
-  danym poziomie (wymaga Plutonium)
-- **obserwowanie okien** — wybory, których dialogi Plutonium **nie zapisują
+  danym poziomie (wymaga importera)
+- **obserwowanie okien** — wybory, których dialogi importera **nie zapisują
   nigdzie**: styl walki, sztuczki. Pominięty wybór nie zostawia w danych żadnego
   śladu; jedyny moment, w którym ta informacja istnieje, to czas wyświetlania
   okna
@@ -105,10 +105,10 @@ Najważniejsze (pełna lista w *Konfiguracja modułu*):
 |---|---|---|
 | Język panelu | `en` | gracz może nadpisać dla siebie; ustawienia i treści z kompendiów zostają po angielsku |
 | Jak rozpoznawane są istniejące premie do cech | z advancementów | najodporniejsze — czyta deklaracje z przedmiotów postaci, ignoruje to, co jest na karcie |
-| Klikanie przez ekrany startowe importera | wyłączone | **lepiej ustawić w Plutonium** *Use Importer when Using ADD… Button* na *Always* — wtedy importer w ogóle nie pyta |
+| Klikanie przez ekrany startowe importera | wyłączone | **lepiej ustawić w samym importerze** *Use Importer when Using ADD… Button* na *Always* — wtedy w ogóle nie pyta |
 | Opisy klas obok importera | włączone | |
 | Panel opisów wewnątrz okna importera | włączone | wyłącz na małym ekranie, gdzie dwie kolumny zwężają listę |
-| Ukryj przycisk awansu Plutonium | wyłączone | tylko stylowanie — przycisk zostaje na karcie, moduł nadal go naciska |
+| Ukryj przycisk awansu importera | wyłączone | tylko stylowanie — przycisk zostaje na karcie, moduł nadal go naciska |
 | Gracze mogą zakładać postacie | | wymaga też uprawnienia `ACTOR_CREATE` |
 
 ---
@@ -129,9 +129,21 @@ characterCreator.rules("Fighter", 3)        // co reguły przewidują
 characterCreator.verify(actor, "Fighter", 3)// postać kontra reguły
 characterCreator.tidy()                     // czy Tidy jest wykryte
 characterCreator.setDebug(true)             // logowanie na bieżąco
+
+characterCreator.selfTest()                 // czy zaczepienia w cudzym markupie trzymają
+characterCreator.captureImporter()          // zgranie okna importera na fixture testowy
 ```
 
 `debug()` bez argumentu bierze zaznaczony żeton albo Twoją postać.
+
+`selfTest()` warto uruchomić po aktualizacji systemu dnd5e albo importera. Moduł
+sięga do markupu, którego nie jest właścicielem, i robi to tak, żeby zawodzić
+cicho — zepsuty selektor zostawia tworzenie postaci w spokoju, zamiast wywracać
+je błędem. Ceną jest awaria wyglądająca jak „jakoś nic się nie dzieje", a to
+polecenie zamienia ją w listę. Wynik ma trzy stany, nie dwa: `ok`,
+`NIE ZNALEZIONO` i `pominięto` — to ostatnie znaczy, że odpowiednie okno było
+zamknięte i **nic nie zostało sprawdzone**. Otwórz kartę postaci i okno
+importera, żeby zobaczyć pełny obraz.
 
 ---
 
@@ -145,6 +157,7 @@ wprost przez Foundry.
                              # zgodność wersji, testy - wszystko przed wypchnięciem
 node tests/run.mjs           # testy jednostkowe (globalne Foundry zaślepione)
 node tests/steps-smoke.mjs
+node tests/markup.mjs        # testy cudzego markupu (wymaga jsdom)
 ```
 
 Ten sam `check.sh` chodzi w CI przy każdym push i pull requeście.
@@ -159,8 +172,8 @@ git tag v1.60.0 && git push origin main v1.60.0
 
 Paczkę, opis wydania z changeloga i sam release tworzy workflow.
 
-Wskazówki dla pracujących nad kodem — w [CLAUDE.md](CLAUDE.md). Notatki
-z lektury wnętrzności Plutonium — w [docs/plutonium-internals.md](docs/plutonium-internals.md).
+Wskazówki dla pracujących nad kodem — w [CLAUDE.md](CLAUDE.md); tam też
+wskazane notatki techniczne z katalogu `docs/`.
 
 ---
 

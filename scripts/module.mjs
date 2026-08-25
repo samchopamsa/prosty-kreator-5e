@@ -25,6 +25,7 @@ import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
+import { selfTest, captureImporter } from "./selftest.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "defaultLanguage", {
@@ -332,6 +333,12 @@ Hooks.once("ready", () => {
     rules: (className, level, options) => debugRules(className, level, options),
     fluff: (kind, name) => debugFluff(kind, name),
     tidy: () => debugTidy(),
+    // Diagnostyka cudzego markupu. selfTest() mowi, czy nasze zaczepienia
+    // jeszcze trzymaja; captureImporter() zgrywa okno importera na fixture,
+    // zeby tests/markup.mjs opieral sie na prawdziwym markupie, a nie na
+    // naszym wyobrazeniu o nim.
+    selfTest: () => selfTest(),
+    captureImporter: (options) => captureImporter(options),
     verify: (actorRef, className, level, options) => debugVerify(actorRef, className, level, options),
     setDebug: (on = true) => {
       game.settings.set(MODULE_ID, "debug", !!on);

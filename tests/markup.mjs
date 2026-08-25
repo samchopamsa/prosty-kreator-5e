@@ -234,6 +234,124 @@ await group("importer: co trafia do panelu po kliknieciu", async () => {
   check("po stop() nic wiecej nie przychodzi", seen, []);
 });
 
+// --- zgrywanie fixture i samokontrola ----------------------------------------
+//
+// selfTest() i captureImporter() sa narzedziami do zywego swiata i wiekszosci
+// z nich tutaj nie sprawdzimy. Ale logika przycinania listy jest zwyklym kodem,
+// a jej awaria jest podstepna: produkuje fixture, ktory WYGLADA dobrze i nie
+// zawiera podklas, czyli polowy tego, co czytamy.
+
+await group("captureImporter: przycinanie listy do probki", async () => {
+  dom.window.document.body.innerHTML = html;
+
+  // Tyle Foundry, ile wola selftest.mjs po drodze.
+  globalThis.game = {
+    user: { isGM: true },
+    settings: { get: () => false },
+    system: { id: "dnd5e", version: "5.3.3" },
+    version: "14",
+    modules: { get: () => null }
+  };
+  // selftest.mjs siega po tidy.mjs, a ten przez guide.mjs po cala reszte okien,
+  // wiec potrzebny jest pelny zestaw zaslepek ApplicationV2 - nie sama mapa
+  // instancji.
+  globalThis.foundry = {
+    applications: {
+      api: {
+        ApplicationV2: class {},
+        HandlebarsApplicationMixin: (Base) => class extends Base {},
+        DialogV2: { confirm: async () => false }
+      },
+      instances: new Map(),
+      ux: { TextEditor: { implementation: { enrichHTML: async (h) => h } } }
+    }
+  };
+  globalThis.ui = { windows: {}, notifications: { warn: () => {} } };
+  globalThis.CONFIG = { Actor: { sheetClasses: { character: {} } }, DND5E: {} };
+
+  // Schowek w jsdom nie istnieje; captureImporter ma sobie z tym poradzic
+  // i mimo wszystko zwrocic markup, bo to on jest celem, nie schowek.
+  // Node ma wlasne globalThis.navigator wylacznie z getterem, wiec podmiana
+  // przez przypisanie konczy sie TypeError. defineProperty dziala i na nowym
+  // node, i na starym, gdzie navigator moze w ogole nie istniec.
+  let clipboard = null;
+  Object.defineProperty(globalThis, "navigator", {
+    value: { clipboard: { writeText: async (t) => { clipboard = t; } } },
+    configurable: true,
+    writable: true
+  });
+
+  const { captureImporter, selfTest } = await import("../scripts/selftest.mjs");
+
+  const quiet = { log: console.log, group: console.group, groupEnd: console.groupEnd,
+    table: console.table, info: console.info, warn: console.warn };
+  const silence = () => { for (const k of Object.keys(quiet)) console[k] = () => {}; };
+  const restore = () => { for (const [k, fn] of Object.entries(quiet)) console[k] = fn; };
+
+  // Lista ustawiona wrogo: najpierw wszystkie klasy, potem wszystkie podklasy,
+  // i probka na tyle waska (rows: 2), zeby naiwne "wez pierwsze N" nie moglo
+  // przypadkiem zlapac podklasy.
+  // Bez tego pierwsze cztery wiersze fixture'a to przypadkiem dwie klasy i dwie
+  // podklasy, wiec naiwne "wez pierwsze N" tez by przeszlo - i test sprawdzalby
+  // zbieg okolicznosci zamiast gwarancji, ktora ma dawac probkowanie.
+  const listEl = document.querySelector(".veapp__list");
+  const isSub = (el) => {
+    const cell = el.querySelector?.(".ve-col-9");
+    return cell && !cell.classList.contains("ve-bold");
+  };
+  for (const el of Array.from(listEl.children).filter(isSub)) listEl.appendChild(el);
+
+  silence();
+  const markup = await captureImporter({ rows: 2 });
+  restore();
+
+  const parse = (s) => new JSDOM(`<!doctype html><body>${s}</body>`).window.document;
+  const cut = parse(markup);
+  const kept = Array.from(cut.querySelectorAll(".veapp__list label"));
+  const bold = kept.filter((el) => el.querySelector(".ve-col-9.ve-bold")).length;
+  const plain = kept.filter((el) => {
+    const cell = el.querySelector(".ve-col-9");
+    return cell && !cell.classList.contains("ve-bold");
+  }).length;
+
+  check("probka nie jest cala lista", kept.length < 6, true);
+
+  // To jest ten test, dla ktorego ta grupa istnieje. Fixture zlozony z samych
+  // klas przechodzilby wszystkie pozostale testy tego pliku i nie sprawdzalby
+  // ani odciecia myslnika, ani czytania rodzica z title.
+  check("probka zawiera oba rodzaje wiersza", { klasy: bold > 0, podklasy: plain > 0 }, {
+    klasy: true,
+    podklasy: true
+  });
+
+  check("markup wrocil do schowka", clipboard === markup, true);
+  check("zrzut zaczyna sie od okna importera, nie od listy", markup.startsWith("<div"), true);
+
+  // Przyciety zrzut musi zostac zrozumialy dla tego, kto go potem znajdzie
+  // w repozytorium i nie bedzie pamietal, skad ma tylko cztery wiersze.
+  check("przyciecie zostawia po sobie notatke", /przyciete: \d+ wierszy/.test(markup), true);
+
+  silence();
+  const full = await captureImporter({ full: true });
+  restore();
+  const all = parse(full).querySelectorAll(".veapp__list label").length;
+  check("full: true nie przycina", all, document.querySelectorAll(".veapp__list label").length);
+
+  // selfTest ma dzialac takze wtedy, gdy prawie nic nie jest otwarte - i mowic
+  // "pominieto", a nie udawac, ze sprawdzil.
+  silence();
+  const checksOut = selfTest();
+  restore();
+  const byStatus = (s) => checksOut.filter((c) => c.status === s).length;
+  check("selfTest cos zwraca", checksOut.length > 0, true);
+  check("bez otwartej karty selfTest raportuje pominiecia", byStatus("pominieto") > 0, true);
+  check(
+    "otwarte okno importera jest rozpoznane, nie pominiete",
+    checksOut.find((c) => c.name === "okno importera klas")?.status,
+    "ok"
+  );
+});
+
 // --- wynik -------------------------------------------------------------------
 
 console.log("");

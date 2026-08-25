@@ -125,6 +125,17 @@ export function tidyHandlesCharacters() {
   return Object.entries(sheets).some(([id, config]) => config?.default && id.includes("Tidy5e"));
 }
 
+/**
+ * Whether our controls made it into Tidy's API.
+ *
+ * Tidy renders the control itself, with its own markup, so looking for our
+ * class in the sheet answers nothing on a Tidy world. Registration is the only
+ * thing we can honestly assert - and it is what selftest.mjs asks about.
+ */
+export function tidyControlsRegistered() {
+  return registered;
+}
+
 /** For the console, when the button is missing and it is not obvious why. */
 export function debugTidy() {
   const module = game.modules.get("tidy5e-sheet");
