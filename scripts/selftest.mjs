@@ -36,6 +36,7 @@ import { MODULE_ID, IMPORTER_ID } from "./constants.mjs";
 import { isAvailable as rulesAvailable } from "./rules-data.mjs";
 import { tidyHandlesCharacters, tidyControlsRegistered } from "./tidy.mjs";
 import { LEVEL_UP_SELECTORS } from "./sheet-actions.mjs";
+import { DIALOGS } from "./option-watch.mjs";
 
 const OK = "ok";
 const MISSING = "NIE ZNALEZIONO";
@@ -67,11 +68,21 @@ function rootOf(app) {
   return el instanceof HTMLElement ? el : (el?.[0] ?? null);
 }
 
+/**
+ * Tytul okna importera.
+ *
+ * Ten sam zestaw selektorow, co w option-watch.mjs i importer-watch.mjs -
+ * celowo powtorzony, a nie zaimportowany: gdyby te pliki kiedys sie rozjechaly,
+ * narzedzie diagnostyczne ma pokazywac to, co widzi, a nie to, co widzi jeden
+ * z nich.
+ */
+function titleOf(app) {
+  return app?.querySelector?.(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
+}
+
 function importerWindow() {
   return Array.from(document.querySelectorAll(".ve-app")).find((app) =>
-    /import\s+classes/i.test(
-      app.querySelector(".window-title, .header-title, header h1")?.textContent ?? ""
-    )
+    /import\s+classes/i.test(titleOf(app))
   );
 }
 
@@ -388,6 +399,109 @@ export async function captureImporter({ rows = 12, full = false } = {}) {
   console.groupEnd();
 
   return markup;
+}
+
+/**
+ * Opisuje okna dialogowe importera otwarte w tej chwili - i mowi, czy
+ * option-watch.mjs w ogole je rozpoznaje.
+ *
+ * DLACZEGO
+ * --------
+ * Obserwator pominietych wyborow dziala z tabeli DIALOGS: jeden wpis na rodzaj
+ * okna, z wlasnym pomyslem na to, co znaczy "skonczone". Okno, ktorego w tabeli
+ * nie ma, jest dla nas NIEWIDZIALNE - gracz moze je zamknac bez wyboru, a
+ * kreator powie, ze wszystko w porzadku. Awaria po cichu, znowu.
+ *
+ * Dopisanie wpisu wymaga trzech rzeczy, ktorych nie da sie zgadnac zza ekranu:
+ * dokladnego tytulu, etykiety przycisku potwierdzenia i tego, po czym poznac
+ * niedokonczony wybor - raz jest to licznik "2/3", raz lista na mysliku, raz
+ * "Remaining: 2". To polecenie zbiera wszystkie trzy z zywego okna.
+ *
+ *   characterCreator.captureDialog()
+ *
+ * Uruchom przy OTWARTYM oknie, ktore chcesz opisac.
+ */
+export async function captureDialog() {
+  const windows = Array.from(document.querySelectorAll(".ve-app")).filter(
+    (el) => el.offsetParent !== null
+  );
+
+  if (!windows.length) {
+    console.warn(
+      `${MODULE_ID} | Zadne okno importera nie jest otwarte. Uruchom to, gdy okno wyboru ` +
+        "jest na ekranie."
+    );
+    return null;
+  }
+
+  const described = windows.map((app) => {
+    const title = titleOf(app);
+    const text = app.textContent ?? "";
+
+    const buttons = Array.from(app.querySelectorAll("button, .ve-btn")).map((b) => ({
+      tekst: (b.textContent ?? "").trim().slice(0, 40),
+      primary: b.classList.contains("ve-btn-primary"),
+      klasy: b.className
+    }));
+
+    // Trzy ksztalty "niedokonczonego", ktore juz znamy z innych okien. Ktorys
+    // z nich zwykle pasuje, a jesli zaden - to jest wlasnie ta informacja.
+    const selects = Array.from(app.querySelectorAll("select"));
+    const liczniki = [
+      ...text.matchAll(/([a-z ]+):\s*(\d+)\s*\/\s*(\d+)/gi),
+      ...text.matchAll(/(remaining|pozostalo):\s*(\d+)/gi)
+    ].map((m) => m[0].trim());
+
+    // Czy ktorykolwiek wpis DIALOGS rozpoznaje to okno.
+    const matched = DIALOGS.filter((d) => {
+      try {
+        return d.match(title, app);
+      } catch {
+        return false;
+      }
+    }).map((d) => d.id);
+
+    return {
+      title,
+      rozpoznane: matched.length ? matched.join(", ") : "NIE - to okno jest dla nas niewidzialne",
+      przyciski: buttons,
+      list: selects.length,
+      listNaMysliku: selects.filter((s) => !s.value || /^[-–—]$/.test(s.value.trim())).length,
+      liczniki,
+      radio: app.querySelectorAll("input[type='radio']").length,
+      checkbox: app.querySelectorAll("input[type='checkbox']").length,
+      tekst: text.replace(/\s+/g, " ").trim().slice(0, 300),
+      markup: app.outerHTML
+    };
+  });
+
+  console.group(`${MODULE_ID} | captureDialog - ${described.length} okien`);
+  for (const d of described) {
+    console.group(`"${d.title || "(bez tytulu)"}"`);
+    console.log("rozpoznane przez DIALOGS:", d.rozpoznane);
+    console.table(d.przyciski);
+    console.log("list:", d.list, "| na mysliku:", d.listNaMysliku, "| radio:", d.radio, "| checkbox:", d.checkbox);
+    console.log("liczniki:", d.liczniki.length ? d.liczniki : "(zadnych)");
+    console.log("tekst:", d.tekst);
+    console.groupEnd();
+  }
+  console.groupEnd();
+
+  // Do schowka wersja bez markupu - to ona nadaje sie do wklejenia w rozmowie.
+  // Pelny markup zostaje w zwroconym obiekcie, gdyby byl potrzebny.
+  const summary = JSON.stringify(
+    described.map(({ markup, ...rest }) => rest),
+    null,
+    2
+  );
+  try {
+    await navigator.clipboard.writeText(summary);
+    console.log("Opis w schowku.");
+  } catch (err) {
+    if (!trySelectionCopy(summary)) console.log(summary);
+  }
+
+  return described;
 }
 
 /** Ostatnia deska ratunku dla schowka: zaznaczenie i execCommand. */

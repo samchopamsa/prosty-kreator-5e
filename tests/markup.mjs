@@ -342,6 +342,55 @@ await group("captureImporter: przycinanie listy do probki", async () => {
   silence();
   const checksOut = selfTest();
   restore();
+
+  // captureDialog() wolalo titleOf(), ktorego w pliku nie bylo. node --check
+  // tego nie widzi, bo to blad dopiero w czasie wykonania - a jedynym miejscem,
+  // gdzie by wybuchl, byla konsola w Foundry. Wystarczy WYWOLAC funkcje, zeby
+  // taka dziura nie przeszla drugi raz.
+  const { captureDialog } = await import("../scripts/selftest.mjs");
+  const dialog = document.createElement("div");
+  dialog.className = "ve-app";
+  dialog.innerHTML =
+    '<h1 class="window-title">Choose Option: Fighting Style (Level 1)</h1>' +
+    '<div>Wybierz styl walki. <select><option>-</option></select></div>' +
+    '<button class="ve-btn ve-btn-primary">OK</button><button class="ve-btn">Skip</button>';
+  // offsetParent jest w jsdom zawsze null, wiec filtr "widoczne" odcialby
+  // wszystko. Podmieniamy go na czas testu.
+  Object.defineProperty(dom.window.HTMLElement.prototype, "offsetParent", {
+    get() { return this.parentNode; },
+    configurable: true
+  });
+  document.body.appendChild(dialog);
+
+  silence();
+  const dialogs = await captureDialog();
+  restore();
+
+  const found = dialogs.find((d) => d.title.startsWith("Choose Option"));
+  check("captureDialog czyta tytul okna", !!found, true);
+  check("captureDialog znajduje przycisk potwierdzenia", found?.przyciski.find((b) => b.primary)?.tekst, "OK");
+  check("captureDialog liczy listy na mysliku", found?.listNaMysliku, 1);
+
+  // To jest ta odpowiedz, dla ktorej narzedzie powstalo: czy obserwator
+  // pominietych wyborow w ogole widzi to okno.
+  check("captureDialog mowi, ze DIALOGS rozpoznaje znane okno", found?.rozpoznane, "choice");
+
+  const obcy = document.createElement("div");
+  obcy.className = "ve-app";
+  obcy.innerHTML = '<h1 class="window-title">Starting Equipment</h1><button class="ve-btn">OK</button>';
+  document.body.appendChild(obcy);
+  silence();
+  const withUnknown = await captureDialog();
+  restore();
+  check(
+    "nierozpoznane okno jest nazwane wprost, nie przemilczane",
+    /NIE - to okno jest dla nas niewidzialne/.test(
+      withUnknown.find((d) => d.title === "Starting Equipment")?.rozpoznane ?? ""
+    ),
+    true
+  );
+  obcy.remove();
+  dialog.remove();
   const byStatus = (s) => checksOut.filter((c) => c.status === s).length;
   check("selfTest cos zwraca", checksOut.length > 0, true);
   check("bez otwartej karty selfTest raportuje pominiecia", byStatus("pominieto") > 0, true);

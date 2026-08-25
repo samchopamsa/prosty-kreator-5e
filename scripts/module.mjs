@@ -24,7 +24,7 @@ import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { ReferenceConfig } from "./reference-config.mjs";
-import { selfTest, captureImporter } from "./selftest.mjs";
+import { selfTest, captureImporter, captureDialog } from "./selftest.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "defaultLanguage", {
@@ -338,6 +338,7 @@ Hooks.once("ready", () => {
     // naszym wyobrazeniu o nim.
     selfTest: () => selfTest(),
     captureImporter: (options) => captureImporter(options),
+    captureDialog: () => captureDialog(),
     verify: (actorRef, className, level, options) => debugVerify(actorRef, className, level, options),
     setDebug: (on = true) => {
       game.settings.set(MODULE_ID, "debug", !!on);
