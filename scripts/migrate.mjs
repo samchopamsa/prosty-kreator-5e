@@ -4,9 +4,9 @@
  * Keeps the flags this module writes on an actor readable as their shape
  * changes.
  *
- * There are five of them now - abilities, languages, guideDismissed,
- * disclaimerSeen, skippedOptions - and no way to tell an old one from a new
- * one. The first time any of them needs a different shape, every character made
+ * There are six of them now - abilities, languages, guideDismissed,
+ * disclaimerSeen, skippedOptions, gains - and no way to tell an old one from a
+ * new one. The first time any of them needs a different shape, every character made
  * before that day would be read wrongly, and the failure would be quiet: a
  * warning that does not appear, an ability bonus counted twice.
  *

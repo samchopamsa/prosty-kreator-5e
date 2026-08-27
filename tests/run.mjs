@@ -50,6 +50,7 @@ const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scri
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
+const { readGains, diffGains, gainSections } = await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
@@ -1475,6 +1476,125 @@ group("compendium: working out a book code without the importer's flag", () => {
   check("homebrew is not guessed at", sourceCode({ system: { source: { book: "Northlands" } } }), "");
   check("no source at all", sourceCode({}), "");
   check("an empty label", sourceCode({ system: { source: { book: "" } } }), "");
+});
+
+group("gains: what a step put on the sheet", () => {
+  // A sheet as gains.mjs reads it. Only the fields a step can change, in the
+  // shapes dnd5e actually keeps them in - languages as a Set, because reading
+  // that one as an object is the mistake this module has made before.
+  const sheet = ({
+    items = [],
+    skills = [],
+    saves = [],
+    tools = [],
+    languages = [],
+    abilities = {},
+    currency = {},
+    hp = 0,
+    speed = 30,
+    size = "med"
+  }) => ({
+    items: items.map(([type, name]) => ({ type, name, img: `${name}.webp`, flags: {} })),
+    system: {
+      skills: Object.fromEntries(skills.map((k) => [k, { value: 1 }])),
+      tools: Object.fromEntries(tools.map((k) => [k, { value: 1 }])),
+      abilities: Object.fromEntries(
+        Object.entries({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10, ...abilities }).map(
+          ([k, v]) => [k, { value: v, proficient: saves.includes(k) ? 1 : 0 }]
+        )
+      ),
+      traits: { languages: { value: new Set(languages) }, weaponProf: { value: [] }, size },
+      attributes: { hp: { max: hp }, movement: { walk: speed } },
+      currency
+    }
+  });
+
+  const read = (spec) => readGains(sheet(spec));
+  const diff = (before, after) => diffGains(read(before), read(after));
+
+  const empty = { hp: 0 };
+  const cleric = {
+    items: [["class", "Cleric"], ["subclass", "Life Domain"], ["feat", "Spellcasting"],
+            ["spell", "Guidance"], ["equipment", "Chain Mail"], ["weapon", "Mace"]],
+    skills: ["prc", "rel"],
+    saves: ["wis", "cha"],
+    languages: ["celestial"],
+    hp: 10,
+    currency: { gp: 15 }
+  };
+
+  const record = diff(empty, cleric);
+
+  check("hit points are a gain, not a total", record.hp, 10);
+  check("skills the step added", record.skills, ["prc", "rel"]);
+  check("saving throws the step added", record.saves, ["wis", "cha"]);
+  check("coins are counted as a gain", record.currency, { gp: 15 });
+  check("every item that arrived", record.items.map((i) => i.name),
+    ["Cleric", "Life Domain", "Spellcasting", "Guidance", "Chain Mail", "Mace"]);
+
+  // The whole reason this is a diff and not a reading: what was already there
+  // belongs to whatever put it there, not to this step.
+  const second = diff(cleric, {
+    ...cleric,
+    items: [...cleric.items, ["feat", "Channel Divinity"]],
+    skills: ["prc", "rel", "ins"],
+    hp: 18
+  });
+  check("only the new skill", second.skills, ["ins"]);
+  check("only the new item", second.items.map((i) => i.name), ["Channel Divinity"]);
+  check("hit points as the difference", second.hp, 8);
+
+  check("nothing changed is no record at all", diff(cleric, cleric), null);
+
+  // A step that only took something away has nothing to show. Reporting -8 hit
+  // points under "what this step added" would read as a bug.
+  check("losses are not gains", diff(cleric, empty), null);
+
+  // Two identical potions are two gains; matching by value alone hides one.
+  const potions = diff(
+    { items: [["consumable", "Potion of Healing"]] },
+    { items: [["consumable", "Potion of Healing"], ["consumable", "Potion of Healing"]] }
+  );
+  check("a second copy of the same item", potions.items.length, 1);
+
+  check("a size a species set", diff(empty, { size: "sml" }).size, "sml");
+  check("a size that did not change", diff(empty, empty), null);
+
+  const languages = diff({ languages: ["common"] }, { languages: ["common", "elvish"] });
+  check("languages read out of the Set", languages.languages, ["elvish"]);
+
+  // --- grouping ---------------------------------------------------------------
+
+  const sections = gainSections(record, { skipTypes: ["class", "subclass"] });
+  const byKey = Object.fromEntries(
+    sections.map((s) => [s.key, s.entries.map((e) => e.label)])
+  );
+
+  check("the sections a card draws", sections.map((s) => s.key),
+    ["stats", "proficiencies", "languages", "features", "spells", "gear"]);
+  check("the class itself is not repeated inside its own card", byKey.features, ["Spellcasting"]);
+
+  // The headings are the only thing left saying where any of this came from,
+  // the card having no title of its own - so the features one is named after
+  // the step rather than being "Features" three times over.
+  const heading = (kind) =>
+    gainSections(record, { kind }).find((s) => s.key === "features").label;
+  check("a class names its features", heading("class"), "Class features");
+  check("a species names its own", heading("species"), "Species traits");
+  check("a step with no kind falls back", heading(""), "Features");
+  check("spells stand apart from features", byKey.spells, ["Guidance"]);
+  check("equipment and coins together", byKey.gear, ["Chain Mail", "Mace", "GP"]);
+
+  // Empty sections are dropped rather than drawn as a heading with nothing
+  // under it - a card of headings says less than no card.
+  check("a card with one thing in it",
+    gainSections(diff(empty, { languages: ["dwarvish"] })).map((s) => s.key), ["languages"]);
+  check("no record, no card", gainSections(null), []);
+
+  // Anything of a type this file does not know still gets shown. A card that
+  // silently drops an item would be worse than an untidy one.
+  const odd = gainSections(diff(empty, { items: [["shipwreck", "Sloop"]] }));
+  check("an unknown item type is still shown", odd.map((s) => s.key), ["other"]);
 });
 
 // --- result ------------------------------------------------------------------

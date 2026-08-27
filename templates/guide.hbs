@@ -214,6 +214,25 @@
               {{/if}}
             </div>
           {{/if}}
+
+          {{#if gains}}
+          <div class="pk5e-gains">
+            {{#each gains}}
+            <div class="pk5e-gain-group">
+              <span class="pk5e-gain-label">{{label}}</span>
+              <span class="pk5e-gain-chips">
+                {{#each entries}}
+                <span class="pk5e-gain-chip">
+                  {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                  <span class="pk5e-gain-name">{{label}}</span>
+                  {{#if detail}}<em>{{detail}}</em>{{/if}}
+                </span>
+                {{/each}}
+              </span>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
         {{else}}
           <div class="pk5e-guide-chosen">
             <div class="pk5e-guide-empty-art" aria-hidden="true">?</div>

@@ -148,7 +148,7 @@ why skipped choices cannot be detected from Advancement data at all).
 ### Actor flags and migration
 
 The module writes flags under `prosty-kreator-5e` (abilities, languages,
-guideDismissed, disclaimerSeen, skippedOptions) plus a schema number. To change a
+guideDismissed, disclaimerSeen, skippedOptions, gains) plus a schema number. To change a
 flag's shape: write the migration function, push it onto `MIGRATIONS` in
 `migrate.mjs`, raise `SCHEMA`. Never renumber or remove existing entries — someone's
 character is still at that version and needs every step from there to here.

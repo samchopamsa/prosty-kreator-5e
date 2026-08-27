@@ -12,6 +12,35 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.63.0
+
+Zrobiony krok pokazuje, co dolozyl do karty.
+
+- **Spis pod wybrana klasa, gatunkiem i pochodzeniem:** biegloscie, jezyki,
+  cechy, zaklecia, ekwipunek, punkty zycia, rozmiar, szybkosc i monety -
+  pogrupowane, kazda pozycja jako osobna pigulka z ikonka przedmiotu.
+- **Bez naglowka nad calym spisem.** Siedzi tuz pod tym, czego dotyczy, wiec
+  "co dodal ten krok" mowilo to, co juz mowilo polozenie. Zamiast tego naglowek
+  ma kazda grupa - i pierwszy z nich brzmi "Cechy klasy", "Cechy gatunku" albo
+  "Cechy pochodzenia", zaleznie od kroku.
+- **Skad to wiadomo.** Panel czyta karte tuz przed nacisnieciem przycisku kroku
+  i drugi raz po tym, jak importer zglosi "Import Complete", i pokazuje roznice.
+  Nie ma tu przewidywania z regul - to, co naprawde wyladowalo na karcie, jest
+  tym, co widac, wlacznie z homebrew. Danych Advancement nie da sie do tego
+  uzyc: importer stempluje swoje wpisy `optional: false`, a na buildzie
+  z Charactermancerem `advancementOrigin` byl pusty na kazdym przedmiocie.
+- **Sam wybor nie powtarza sie w karcie.** Klasa, podklasa, gatunek
+  i pochodzenie sa naglowkiem kroku - w spisie ponizej ich nie ma.
+- **Czego karta nie obiecuje.** Powstaje wylacznie dla kroku przeprowadzonego
+  przez ten panel. Postac zaimportowana gdzie indziej albo zrobiona przed ta
+  wersja pokazuje sam naglowek, bez spisu - zamiast zgadywac, kto co dopisal.
+  Usuniecie klasy albo pochodzenia kasuje tez jej karte.
+- Nowa flaga `gains` na postaci, trzymana jako surowe klucze, nie gotowe
+  napisy: przelacznik jezyka w stopce dziala w kazdej chwili, a karta zapisana
+  po polsku zostalaby polska dla czytajacego po angielsku.
+
+---
+
 ## 1.62.0
 
 Bio wypelniane w kreatorze, zwiniety krok mowi, co w nim wybrano.

@@ -19,6 +19,7 @@ import { t } from "./i18n.mjs";
 import { text, importFlowNote } from "./sheet-actions.mjs";
 import { itemsWithSkippedChoices, abilitiesAssigned } from "./validate.mjs";
 import { languageLabels } from "./languages.mjs";
+import { gainSections } from "./gains.mjs";
 
 /** Readable names for the ability score methods stored on the actor. */
 const METHOD_KEYS = {
@@ -258,6 +259,17 @@ export function buildSteps(actor, { importing = false } = {}) {
     kindOf: t(`check.kindOf.${item.type}`)
   });
 
+  // What each import step actually put on the sheet, recorded by the panel
+  // while the importer ran (gains.mjs). Absent on a character built elsewhere,
+  // and absent for anything made before this was written - in both cases the
+  // step shows its headline and nothing more, which is the honest answer.
+  //
+  // The step's own item is left out: the class, species and background are
+  // already the headline of their step, drawn with a picture and a description,
+  // and a card repeating them underneath reads as a bug.
+  const gainRecords = actor.getFlag(MODULE_ID, "gains") ?? {};
+  const gainsFor = (key, skipTypes) => gainSections(gainRecords[key], { skipTypes, kind: key });
+
   // Order follows D&D Beyond: class first, because it is the decision the
   // rest of the character is built around, and the one a new player arrives
   // already having an opinion about.
@@ -281,6 +293,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       }),
       multiclass: classes.length > 1,
       totalLevel,
+      gains: gainsFor("class", ["class", "subclass"]),
       blurb: text("textClass", "blurb.class")
     },
     {
@@ -292,6 +305,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       removable: true,
       done: !!species,
       entries: species ? [entryFor(species)] : [],
+      gains: gainsFor("species", ["race", "species"]),
       blurb: text("textSpecies", "blurb.species"),
       // The importer hides each entry's description behind a [+]; players were
       // choosing from a list of names without knowing it was there.
@@ -306,6 +320,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       removable: true,
       done: !!background,
       entries: background ? [entryFor(background)] : [],
+      gains: gainsFor("background", ["background"]),
       blurb: text("textBackground", "blurb.background"),
       expandHint: t("guide.expandHint")
     },

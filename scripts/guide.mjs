@@ -27,6 +27,7 @@ import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./optio
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
+import { readGains, diffGains } from "./gains.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, wait } from "./sheet-actions.mjs";
@@ -801,6 +802,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // through the same dialogs, so the record rebuilds itself if it should.
       if (["species", "background", "class"].includes(step)) {
         await clearSkippedOptions(this.actor);
+        // Including the card of what it added. Removing one of two classes is
+        // the awkward case: the recording covers both, so what is left would be
+        // a card listing features the character no longer has. Losing the card
+        // is better than keeping a wrong one - taking the class again writes a
+        // fresh one anyway.
+        await this.clearGains(step);
       }
       return true;
     } catch (err) {
@@ -823,6 +830,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
       }
     }
+
+    // Read before the button is pressed, not after: everything the importer
+    // does from here on is what this step will be credited with.
+    const before = readGains(this.actor);
 
     const pressed = await this.addFor(step);
     if (!pressed) return;
@@ -847,7 +858,52 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
       await wait(600);
+      await this.recordGains(step, before);
       this.render();
+    }
+  }
+
+  /**
+   * Writes down what the step just added, for the card under its heading.
+   *
+   * In `finally`, so a cancelled or half-finished import still records what
+   * actually landed - the panel's whole job is reporting the sheet as it is,
+   * not as the importer intended it. diffGains() returns null when nothing
+   * changed, and then nothing is written: an empty card would be a claim that
+   * the step gave nothing, which is not the same as having no recording.
+   */
+  async recordGains(step, before) {
+    const actor = this.actor;
+    if (!actor || !before) return;
+
+    try {
+      const record = diffGains(before, readGains(actor));
+      if (!record) return;
+      // Cleared first, then written. An update MERGES what is already there, so
+      // writing straight over an earlier recording would leave that one's
+      // ability bonuses and coins behind - a class removed and taken again
+      // would show what both of them gave.
+      await this.clearGains(step);
+      await actor.setFlag(MODULE_ID, "gains", { [step]: record });
+    } catch (err) {
+      // Never worth interrupting creation over: the card is a nicety, the
+      // character is not.
+      console.warn(`${MODULE_ID} | Could not record what the ${step} step added`, err);
+    }
+  }
+
+  /**
+   * Forgets what a step added. The "-=" prefix is Foundry's own way of saying
+   * "remove this key" rather than "merge nothing into it".
+   */
+  async clearGains(step) {
+    const actor = this.actor;
+    if (!actor?.getFlag(MODULE_ID, "gains")?.[step]) return;
+
+    try {
+      await actor.update({ [`flags.${MODULE_ID}.gains.-=${step}`]: null });
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not clear what the ${step} step added`, err);
     }
   }
 

@@ -776,6 +776,87 @@
   padding-top: 8px;
 }
 
+/* ---------------------------------------------------------------------------
+   What a step added
+
+   A sunken block under the chosen class or background: a small heading, the
+   pills under it, one group after another. The block has no title of its own -
+   it sits directly beneath the thing it belongs to, and "what this step added"
+   over a card in the middle of a step was saying what the position already
+   said. The headings carry that instead, which is why the first of them reads
+   "Class features" rather than "Features".
+
+   No accent bar: the skipped-choice warning is the only thing in this panel
+   that gets one, and a second bordered block beside it made a perfectly good
+   class step look like it was reporting a problem.
+   --------------------------------------------------------------------------- */
+
+.pk5e-gains {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 6px;
+  padding: 8px 9px;
+  border-radius: 4px;
+  background: var(--pk5e-sunken-soft);
+}
+
+.pk5e-gain-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pk5e-gain-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
+.pk5e-gain-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.pk5e-gain-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 1px 7px;
+  font-size: 11px;
+  line-height: 1.5;
+  border: 1px solid var(--pk5e-line);
+  border-radius: 10px;
+  background: var(--pk5e-hover);
+}
+
+/* The picture is a hint, not a subject: an item with none must not leave a
+   gap where the others have one, hence no fixed slot. */
+.pk5e-gain-chip img {
+  width: 14px;
+  height: 14px;
+  border: none;
+  border-radius: 2px;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+
+.pk5e-gain-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk5e-gain-chip em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--pk5e-accent);
+}
+
 .pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }
 
 /* No accent bar here. The skipped-choices warning uses the same callout shape
