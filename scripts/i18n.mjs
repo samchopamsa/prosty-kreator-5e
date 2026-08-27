@@ -155,7 +155,7 @@ const STRINGS = {
     "flow.compendium":
       " After you press the button, the Compendium Browser opens. Find the entry, double-click it, and answer whatever the system asks - it lands on the sheet straight away.",
 
-    "source.title": "Where entries come from",
+    "source.title": "Data source",
     "source.ask":
       "Species, background and class can come from either place. Pick one to carry on - you can change it later, and it only decides what the next step does.",
     "source.changeHint": "Changing this affects the next step only. Anything already added stays as it is.",
@@ -433,7 +433,7 @@ const STRINGS = {
     "flow.compendium":
       " Po naciśnięciu przycisku otworzy się przeglądarka kompendiów. Znajdź wpis, kliknij go dwukrotnie i odpowiedz na pytania systemu - trafi na kartę od razu.",
 
-    "source.title": "Skąd biorą się wpisy",
+    "source.title": "Źródło danych",
     "source.ask":
       "Gatunek, pochodzenie i klasa mogą pochodzić z obu miejsc. Wybierz jedno, żeby ruszyć dalej - później możesz to zmienić, a decyduje to tylko o kolejnym kroku.",
     "source.changeHint": "Zmiana dotyczy dopiero kolejnego kroku. To, co już dodane, zostaje bez zmian.",

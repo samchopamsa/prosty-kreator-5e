@@ -20,7 +20,7 @@
  * Nothing here knows about the panel. It takes an actor and does a thing.
  */
 
-import { MODULE_ID, IMPORTER_ID, IMPORTER_BUTTON_LABEL } from "./constants.mjs";
+import { MODULE_ID, IMPORTER_ID, IMPORTER_BUTTON_LABELS } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { SOURCE_COMPENDIUM, effectiveSource } from "./source-mode.mjs";
 
@@ -234,8 +234,8 @@ export async function autoAdvance(mode = "importer") {
   // that. The compendium route then depends on that setting being Prompt or
   // Never, which is the GM's to set and not ours to override.
   if (!importerAnswersItself()) {
-    const label = toCompendium ? BROWSER_BUTTON_LABEL : IMPORTER_BUTTON_LABEL;
-    const chooser = await waitForButton([label], 4000);
+    const labels = toCompendium ? [BROWSER_BUTTON_LABEL] : IMPORTER_BUTTON_LABELS;
+    const chooser = await waitForButton(labels, 4000);
     if (chooser) chooser.click();
   }
 
