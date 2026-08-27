@@ -40,6 +40,7 @@
  */
 
 import { MODULE_ID, IMPORTER_ID } from "./constants.mjs";
+import { t } from "./i18n.mjs";
 
 export const SOURCE_IMPORTER = "importer";
 export const SOURCE_COMPENDIUM = "compendium";
@@ -121,4 +122,74 @@ export async function setSource(actor, mode) {
     console.warn(`${MODULE_ID} | Could not record the chosen source on ${actor.name}`, err);
     return false;
   }
+}
+
+/**
+ * Asks the question, BEFORE the panel opens.
+ *
+ * A popup rather than a card inside the panel, because the answer decides what
+ * the panel is going to show: with the compendium chosen the pick steps list
+ * entries themselves instead of handing over to the importer. Asked inside the
+ * panel it was a control that appeared to do nothing - it recorded a
+ * preference, redrew almost identically, and gave the player no sign that
+ * anything had happened.
+ *
+ * Built on the same DialogV2.wait shape as the level-up/creation chooser in
+ * sheet-button.mjs, so there is one way this module asks a either/or question.
+ *
+ * @param   {Actor}   actor
+ * @param   {boolean} force  Ask again even though it has been answered.
+ * @returns {Promise<string|null>}  The chosen route, or null if dismissed.
+ */
+export async function askForSource(actor, { force = false } = {}) {
+  if (!actor) return null;
+  if (!force && sourceChosen(actor)) return currentSource(actor);
+
+  // Nothing to ask when the importer is not installed: currentSource() has
+  // already settled it, and sourceChosen() is true, so this is only reachable
+  // through `force`. Answering it for them beats an empty dialog.
+  if (!importerAvailable()) return SOURCE_COMPENDIUM;
+
+  const DialogV2 = foundry.applications?.api?.DialogV2;
+  if (!DialogV2?.wait) {
+    // No dialog to ask with. The importer is the road the module was built
+    // around, so it is the safe answer - and nothing is recorded, so the
+    // question comes back when a newer Foundry can ask it.
+    console.warn(`${MODULE_ID} | DialogV2 unavailable, assuming the importer`);
+    return SOURCE_IMPORTER;
+  }
+
+  let choice = null;
+  try {
+    choice = await DialogV2.wait({
+      window: { title: t("source.title"), icon: "fa-solid fa-signs-post" },
+      // Wide enough that neither label wraps, matching the other chooser.
+      position: { width: 460 },
+      classes: ["pk5e-chooser"],
+      content: `<p>${t("source.ask")}</p>`,
+      buttons: [
+        {
+          action: SOURCE_IMPORTER,
+          label: t("source.importer"),
+          icon: "fa-solid fa-file-import"
+        },
+        {
+          action: SOURCE_COMPENDIUM,
+          label: t("source.compendium"),
+          icon: "fa-solid fa-book-atlas"
+        }
+      ],
+      // Dismissing is a real answer: the player opened the creator, saw the
+      // question and wants neither yet. Nothing is recorded and nothing opens.
+      rejectClose: false
+    });
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not ask which source to use`, err);
+    return SOURCE_IMPORTER;
+  }
+
+  if (!SOURCES.includes(choice)) return null;
+
+  await setSource(actor, choice);
+  return choice;
 }

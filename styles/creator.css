@@ -1320,42 +1320,12 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   opacity: 0.8;
 }
 
-/* The fork between the importer and the compendium.
-   Two cards rather than a dropdown: the difference between the routes is worth
-   a sentence each, and a dropdown hides the sentence behind the arrow. Framed
-   like a step, because that is what it is - the decision the first three steps
-   depend on. */
-.pk5e-source {
-  border: 1px solid var(--pk5e-sunken);
-  border-left: 3px solid var(--pk5e-line-strong);
-  border-radius: 4px;
-  padding: 6px 8px;
+/* Which route this character is on. The choosing happens in a popup before the
+   panel opens, so this is a line to read, not a control - one sentence and a
+   way back to the question, rather than a card competing with the steps. */
+.pk5e-source-line {
   display: flex;
-  flex-direction: column;
+  align-items: baseline;
   gap: 6px;
 }
-/* Unanswered, it is the only thing on the panel that needs attention. */
-.pk5e-source.is-asking { border-left-color: var(--pk5e-accent); }
-.pk5e-source-head { display: flex; align-items: center; gap: 6px; }
-.pk5e-source-options { display: flex; gap: 6px; flex-wrap: wrap; }
-.pk5e-source-option {
-  flex: 1 1 160px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  text-align: left;
-  padding: 6px 8px;
-  border: 1px solid var(--pk5e-line);
-  border-radius: 4px;
-  background: transparent;
-  line-height: 1.3;
-  height: auto;
-}
-.pk5e-source-option:hover { background: var(--pk5e-hover); }
-.pk5e-source-option.is-selected {
-  border-color: var(--pk5e-accent);
-  background: var(--pk5e-selected);
-}
-.pk5e-source-name { font-weight: 600; font-size: 13px; }
-.pk5e-source-hint { font-size: 11px; opacity: 0.75; white-space: normal; }
+.pk5e-source-line i { opacity: 0.7; }

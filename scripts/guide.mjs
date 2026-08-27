@@ -28,11 +28,9 @@ import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import {
-  SOURCES,
-  SOURCE_COMPENDIUM,
-  currentSource,
+  askForSource,
+  effectiveSource,
   importerAvailable,
-  setSource,
   usesCompendium
 } from "./source-mode.mjs";
 import { trace } from "./trace.mjs";
@@ -163,7 +161,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
       setLanguage: CreationGuide.onSetLanguage,
-      setSource: CreationGuide.onSetSource,
+      changeSource: CreationGuide.onChangeSource,
       setTheme: CreationGuide.onSetTheme,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
@@ -198,7 +196,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * Opens the guide for an existing character. Each actor gets its own window
    * id, so guides for two characters do not fight over the same application.
    */
-  static open(actorId) {
+  static async open(actorId) {
     const actor = game.actors.get(actorId);
     if (!actor) {
       ui.notifications.warn("That character no longer exists.");
@@ -210,6 +208,20 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       existing.render(true);
       return existing;
     }
+
+    // The question comes BEFORE the panel, because the answer decides what the
+    // panel shows. Asked here rather than at each of the eight places that open
+    // the creator - the sheet header, the sidebar, the context menu, Tidy, the
+    // console API - so none of them can forget to ask.
+    //
+    // Only the first time for a given character: askForSource() returns the
+    // recorded answer without asking again, and settles it silently when the
+    // importer is not installed.
+    const chosen = await askForSource(actor);
+    // Dismissed. The player looked at the question and wants neither yet, so
+    // opening the panel anyway would be answering it for them.
+    if (!chosen) return null;
+
     const guide = new CreationGuide({ actorId, id: `pk5e-guide-${actorId}` });
     guide.render(true);
     return guide;
@@ -382,20 +394,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         selected: code === currentTheme()
       })),
       disclaimerOpen: this._disclaimerOpen,
-      // The fork between the two routes. Only ever offered when there is
-      // something to choose between: without the importer installed there is
-      // one road, and drawing a pair of buttons where one is unreachable would
-      // be inventing a decision.
-      sourceAsk: importerAvailable() && !currentSource(actor),
-      sourceChoices: importerAvailable()
-        ? SOURCES.map((code) => ({
-            code,
-            label: t(`source.${code}`),
-            hint: t(`source.${code}Hint`),
-            icon: code === SOURCE_COMPENDIUM ? "fa-book-atlas" : "fa-file-import",
-            selected: code === currentSource(actor)
-          }))
-        : [],
+      // Which route this character is on, as a line to read rather than a
+      // control. The choosing happens in the popup before the panel opens;
+      // this is only here so the answer is visible, and changeable without
+      // having to know where the flag lives.
+      sourceName: t(`source.${effectiveSource(actor)}`),
+      sourceSwitchable: importerAvailable(),
       stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
@@ -776,19 +780,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Records which of the two routes this character is built along.
+   * Re-opens the source question after it has been answered.
    *
-   * Offered again after it has been answered, rather than asked once and
-   * locked: a player who picks the importer and finds their books are not in
-   * it needs a way back, and the choice costs nothing to change - it decides
-   * what the NEXT step does, not what the last one did. Steps already finished
-   * stay exactly as they are.
+   * Kept reachable rather than asked once and locked: a player who picks the
+   * importer and finds their books are not in it needs a way back. Changing it
+   * decides what the NEXT step does, not what the last one did - steps already
+   * finished stay exactly as they are.
    */
-  static async onSetSource(event, target) {
+  static async onChangeSource() {
     const actor = this.actor;
     if (!actor) return;
 
-    await setSource(actor, target.dataset.source);
+    await askForSource(actor, { force: true });
     this.render();
   }
 

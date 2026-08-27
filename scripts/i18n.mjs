@@ -158,6 +158,8 @@ const STRINGS = {
     "source.title": "Data source",
     "source.ask":
       "Species, background and class can come from either place. Pick one to carry on - you can change it later, and it only decides what the next step does.",
+    "source.active": "Source: {0}.",
+    "source.change": "Change",
     "source.changeHint": "Changing this affects the next step only. Anything already added stays as it is.",
     "source.importer": "Importer",
     "source.importerHint":
@@ -436,6 +438,8 @@ const STRINGS = {
     "source.title": "Źródło danych",
     "source.ask":
       "Gatunek, pochodzenie i klasa mogą pochodzić z obu miejsc. Wybierz jedno, żeby ruszyć dalej - później możesz to zmienić, a decyduje to tylko o kolejnym kroku.",
+    "source.active": "Źródło: {0}.",
+    "source.change": "Zmień",
     "source.changeHint": "Zmiana dotyczy dopiero kolejnego kroku. To, co już dodane, zostaje bez zmian.",
     "source.importer": "Importer",
     "source.importerHint":
