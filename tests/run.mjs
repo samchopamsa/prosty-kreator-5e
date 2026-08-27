@@ -52,9 +52,6 @@ const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
-const { currentSource, effectiveSource, sourceChosen, usesCompendium, importerAvailable,
-  SOURCE_IMPORTER, SOURCE_COMPENDIUM } =
-  await import("../scripts/source-mode.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/rules-data.mjs");
@@ -1478,71 +1475,6 @@ group("compendium: working out a book code without the importer's flag", () => {
   check("homebrew is not guessed at", sourceCode({ system: { source: { book: "Northlands" } } }), "");
   check("no source at all", sourceCode({}), "");
   check("an empty label", sourceCode({ system: { source: { book: "" } } }), "");
-});
-
-// --- which road a character is built along -----------------------------------
-
-group("source: the fork between the importer and the compendium", () => {
-  // The importer's presence is the whole of the question, so it is what the
-  // stub varies. Restored afterwards, because everything above ran without it.
-  const withImporter = (active, body) => {
-    const before = globalThis.game.modules;
-    globalThis.game.modules = { get: () => (active === null ? undefined : { active }) };
-    try {
-      body();
-    } finally {
-      globalThis.game.modules = before;
-    }
-  };
-
-  const actorWith = (source) => ({
-    getFlag: (scope, key) => (key === "source" ? source : undefined)
-  });
-
-  withImporter(true, () => {
-    check("with the importer present, an unanswered character asks", currentSource(actorWith(undefined)), null);
-    check("...and is not counted as chosen", sourceChosen(actorWith(undefined)), false);
-    check("a stored answer is honoured", currentSource(actorWith("compendium")), SOURCE_COMPENDIUM);
-    check("...and counts as chosen", sourceChosen(actorWith("compendium")), true);
-    check("the importer can be chosen too", currentSource(actorWith("importer")), SOURCE_IMPORTER);
-    // Anything not one of the two is treated as unanswered rather than trusted:
-    // a flag left by a future version must not send a step down a third road.
-    check("an unrecognised answer asks again", currentSource(actorWith("wikipedia")), null);
-    check("unanswered still has something to act on", effectiveSource(actorWith(undefined)), SOURCE_IMPORTER);
-  });
-
-  withImporter(false, () => {
-    // No second road: the fork is settled rather than presented.
-    check("without the importer there is nothing to ask", currentSource(actorWith(undefined)), SOURCE_COMPENDIUM);
-    check("...and nothing left to answer", sourceChosen(actorWith(undefined)), true);
-    // The character may have been started in a world where it was still there.
-    // Honouring that would hang every step waiting for a window that cannot
-    // appear, so the stored answer is overruled rather than obeyed.
-    check(
-      "a stored 'importer' is overruled once the importer is gone",
-      currentSource(actorWith("importer")),
-      SOURCE_COMPENDIUM
-    );
-    check("...which is what the steps act on", usesCompendium(actorWith("importer")), true);
-  });
-
-  withImporter(null, () => {
-    check("an importer that is not installed at all reads as absent", importerAvailable(), false);
-  });
-
-  // Read while `game.modules` does not exist yet - the panel is drawn early
-  // enough for that to happen, and a thrown error there costs the whole window.
-  const before = globalThis.game.modules;
-  delete globalThis.game.modules;
-  check("asked before Foundry is ready, it does not throw", importerAvailable(), false);
-  globalThis.game.modules = before;
-
-  // An actor with no getFlag at all - the shape a damaged document would
-  // present, and the shape buildSteps() is handed by the smoke test.
-  withImporter(true, () => {
-    check("an actor without flags does not throw", effectiveSource({}), SOURCE_IMPORTER);
-    check("neither does nothing at all", effectiveSource(null), SOURCE_IMPORTER);
-  });
 });
 
 // --- result ------------------------------------------------------------------

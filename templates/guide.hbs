@@ -24,14 +24,6 @@
 
       <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
 
-      <p class="pk5e-note pk5e-source-line">
-        <i class="fa-solid fa-signs-post"></i>
-        {{pkT "source.active" sourceName}}
-        {{#if sourceSwitchable}}
-        <button type="button" class="pk5e-link" data-action="changeSource">{{pkT "source.change"}}</button>
-        {{/if}}
-      </p>
-
       {{#if isGM}}
       <details class="pk5e-details" open>
         <summary>{{pkT "guide.ownership"}}</summary>

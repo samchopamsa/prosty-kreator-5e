@@ -22,10 +22,6 @@
 
 import { MODULE_ID, IMPORTER_ID, IMPORTER_BUTTON_LABELS } from "./constants.mjs";
 import { t } from "./i18n.mjs";
-import { SOURCE_COMPENDIUM, effectiveSource } from "./source-mode.mjs";
-
-/** The label on the Compendium Browser's button in the importer's own dialog. */
-export const BROWSER_BUTTON_LABEL = "use compendium browser";
 
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,12 +30,7 @@ export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * the module clicks through those dialogs itself, describing them would be
  * describing something the player never sees.
  */
-export function importFlowNote(actor = null) {
-  // The compendium route has no chain of dialogs to describe. What follows the
-  // button is a browser to search, and the entry is taken by double-clicking
-  // it - which is worth saying, because nothing on screen says so.
-  if (effectiveSource(actor) === SOURCE_COMPENDIUM) return t("flow.compendium");
-
+export function importFlowNote() {
   const setting = game.settings.get(MODULE_ID, "autoAdvance");
   const clickingThrough = setting === "everyone" || (setting === "players" && !game.user?.isGM);
   if (clickingThrough || importerAnswersItself()) return t("flow.importer");
@@ -212,41 +203,28 @@ function autoAdvanceApplies() {
   return !game.user?.isGM;
 }
 
-/**
- * @param {string} mode  Which road this character is on - see source-mode.mjs.
- *                       It decides WHICH button gets pressed in the importer's
- *                       dialog, and was hard-coded to the importer until the
- *                       compendium route existed: a player who wanted the
- *                       browser had it clicked away from them every time.
- */
-export async function autoAdvance(mode = "importer") {
+export async function autoAdvance() {
   if (!autoAdvanceApplies()) return;
-  const toCompendium = mode === SOURCE_COMPENDIUM;
+  const mode = "importer";
+  const skipSources = true;
 
   // Step one: the importer-or-browser choice.
   //
   // The importer can be told to stop asking, via its own "Use Importer when Using
   // ADD ... Button on Actor" setting. When it is, waiting for a window that will
   // never appear just adds four seconds to every step, so we ask the importer first.
-  //
-  // Note that when it answers itself there is nothing to redirect: its setting
-  // sends every add down its own road, and no amount of clicking here changes
-  // that. The compendium route then depends on that setting being Prompt or
-  // Never, which is the GM's to set and not ours to override.
-  if (!importerAnswersItself()) {
-    const labels = toCompendium ? [BROWSER_BUTTON_LABEL] : IMPORTER_BUTTON_LABELS;
+  if (mode && mode !== "off" && !importerAnswersItself()) {
+    const labels = mode === "importer" ? IMPORTER_BUTTON_LABELS : ["use compendium browser"];
     const chooser = await waitForButton(labels, 4000);
     if (chooser) chooser.click();
+    // The compendium browser opens straight onto its list; nothing else to skip.
+    if (mode === "compendium") return;
   }
-
-  // The Compendium Browser opens straight onto its list. There is no source
-  // screen and no "Open Importer" to press, so everything below is the
-  // importer's alone.
-  if (toCompendium) return;
 
   // Step two: the data source screen, closed by pressing "Open Importer".
   // Independent of step one on purpose - you may want to pick the importer
   // yourself and still not be asked about sources every time.
+  if (!skipSources) return;
 
   const opener = await waitForButton(["open importer"], 12000);
   if (!opener) return;
@@ -511,9 +489,7 @@ export async function pressSheetButton(actor, types, labels) {
   }
 
   button.click();
-  // Read from the actor rather than passed in: every caller would have to look
-  // it up anyway, and the one place that knows is source-mode.mjs.
-  autoAdvance(effectiveSource(actor));
+  autoAdvance();
   return true;
 }
 

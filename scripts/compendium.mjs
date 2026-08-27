@@ -118,30 +118,12 @@ export async function loadClassIndex() {
 }
 
 /**
- * The types the creation panel can offer a list for.
- *
- * "race" and "species" both appear because dnd5e renamed the type and
- * compendiums built at different times carry different ones - a library
- * holding both is normal, not a mistake.
- *
- * Subclasses are deliberately absent. They are not picked alongside a class;
- * the system asks for one through Advancement at the level the class gains it,
- * and offering a list here would invite adding one loose.
- */
-export const CREATION_TYPES = ["class", "race", "species", "background"];
-
-/** The same index, widened to everything the creation steps can offer. */
-export async function loadCreationIndex() {
-  return loadIndex(CREATION_TYPES);
-}
-
-/**
  * One index read per compendium, filtered to the types asked for.
  *
- * Split out of loadClassIndex() when the creation panel needed species and
- * backgrounds too: the reading windows want classes and subclasses, the panel
- * wants what a character is built from, and neither should have to filter the
- * other's list.
+ * The `types` parameter is the remains of a wider creation index that once fed
+ * a compendium-based picking panel. That panel is gone - creation goes through
+ * the importer - but the parameter costs nothing and keeps the filter in one
+ * place rather than inline in the loop.
  */
 async function loadIndex(types) {
   const entries = [];

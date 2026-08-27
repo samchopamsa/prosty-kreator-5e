@@ -152,37 +152,6 @@ const STRINGS = {
     "flow.prompt":
       " After you press the button, a small window asks where to take the entry from. Choose to use the importer, then press Open Importer in the window that follows - only then do you see the list to pick from.",
     "flow.importer": " After you press the button, the list of options opens by itself.",
-    "flow.compendium":
-      " After you press the button, the Compendium Browser opens. Find the entry, double-click it, and answer whatever the system asks - it lands on the sheet straight away.",
-
-    "source.title": "Data source",
-    "source.ask":
-      "Species, background and class can come from either place. Pick one to carry on - you can change it later, and it only decides what the next step does.",
-    "picker.title.class": "Choose a class",
-    "picker.title.species": "Choose a species",
-    "picker.title.background": "Choose a background",
-    "picker.lead.class": "Read what each class does, then add the one you want.",
-    "picker.lead.species": "Read what each species gives you, then add the one you want.",
-    "picker.lead.background": "Read what each background gives you, then add the one you want.",
-    "picker.search": "Search {0} entries...",
-    "picker.empty":
-      "Nothing of this kind in the compendiums being read. The selection is in the module settings, under the reference compendiums.",
-    "picker.allPacks": "All compendiums",
-    "picker.emptyFiltered": "Nothing of this kind in that compendium. Choose another above.",
-    "picker.placeholder": "Pick an entry on the left to read what it does.",
-    "picker.reading": "Reading...",
-    "picker.add": "Add",
-    "picker.addNamed": "Add {0}",
-    "picker.cancel": "Cancel",
-    "source.active": "Source: {0}.",
-    "source.change": "Change",
-    "source.changeHint": "Changing this affects the next step only. Anything already added stays as it is.",
-    "source.importer": "Importer",
-    "source.importerHint":
-      "The importer's full library, including books and homebrew it has loaded. It asks its own questions in its own windows, and says \"Import Complete\" when it is done.",
-    "source.compendium": "Compendium",
-    "source.compendiumHint":
-      "Your world's own compendiums - the SRD and anything imported into them. The browser opens, you pick an entry, and the system asks the rest.",
 
     "method.standard": "Standard array",
     "method.pointbuy": "Point buy",
@@ -448,37 +417,6 @@ const STRINGS = {
     "flow.prompt":
       " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz użycie importera, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
     "flow.importer": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
-    "flow.compendium":
-      " Po naciśnięciu przycisku otworzy się przeglądarka kompendiów. Znajdź wpis, kliknij go dwukrotnie i odpowiedz na pytania systemu - trafi na kartę od razu.",
-
-    "source.title": "Źródło danych",
-    "source.ask":
-      "Gatunek, pochodzenie i klasa mogą pochodzić z obu miejsc. Wybierz jedno, żeby ruszyć dalej - później możesz to zmienić, a decyduje to tylko o kolejnym kroku.",
-    "picker.title.class": "Wybierz klasę",
-    "picker.title.species": "Wybierz gatunek",
-    "picker.title.background": "Wybierz pochodzenie",
-    "picker.lead.class": "Przeczytaj, co daje każda klasa, i dodaj tę, którą chcesz.",
-    "picker.lead.species": "Przeczytaj, co daje każdy gatunek, i dodaj ten, który chcesz.",
-    "picker.lead.background": "Przeczytaj, co daje każde pochodzenie, i dodaj to, które chcesz.",
-    "picker.search": "Szukaj wśród {0} pozycji...",
-    "picker.empty":
-      "Nie ma nic tego rodzaju w czytanych kompendiach. Ich wybór jest w ustawieniach modułu, przy kompendiach referencyjnych.",
-    "picker.allPacks": "Wszystkie kompendia",
-    "picker.emptyFiltered": "Nie ma nic tego rodzaju w tym kompendium. Wybierz inne powyżej.",
-    "picker.placeholder": "Wybierz pozycję po lewej, żeby przeczytać, co robi.",
-    "picker.reading": "Wczytywanie...",
-    "picker.add": "Dodaj",
-    "picker.addNamed": "Dodaj: {0}",
-    "picker.cancel": "Anuluj",
-    "source.active": "Źródło: {0}.",
-    "source.change": "Zmień",
-    "source.changeHint": "Zmiana dotyczy dopiero kolejnego kroku. To, co już dodane, zostaje bez zmian.",
-    "source.importer": "Importer",
-    "source.importerHint":
-      "Pełna biblioteka importera, razem z księgami i homebrewem, które wczytał. Zadaje własne pytania we własnych oknach i kończy komunikatem \"Import Complete\".",
-    "source.compendium": "Kompendium",
-    "source.compendiumHint":
-      "Kompendia twojego świata - SRD i wszystko, co do nich zaimportowano. Otworzy się przeglądarka, wybierasz wpis, o resztę pyta system.",
 
     "method.standard": "Zestaw standardowy",
     "method.pointbuy": "Zakup punktowy",

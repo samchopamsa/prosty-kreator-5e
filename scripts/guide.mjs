@@ -26,14 +26,7 @@ import { folderChoices, uniqueActorName, tokenNameUpdate } from "./naming.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
-import { EntryPicker } from "./entry-picker.mjs";
 import { watchImportEnd } from "./import-end.mjs";
-import {
-  askForSource,
-  effectiveSource,
-  importerAvailable,
-  usesCompendium
-} from "./source-mode.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, wait } from "./sheet-actions.mjs";
@@ -162,7 +155,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
       setLanguage: CreationGuide.onSetLanguage,
-      changeSource: CreationGuide.onChangeSource,
       setTheme: CreationGuide.onSetTheme,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
@@ -197,7 +189,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * Opens the guide for an existing character. Each actor gets its own window
    * id, so guides for two characters do not fight over the same application.
    */
-  static async open(actorId) {
+  static open(actorId) {
     const actor = game.actors.get(actorId);
     if (!actor) {
       ui.notifications.warn("That character no longer exists.");
@@ -209,20 +201,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       existing.render(true);
       return existing;
     }
-
-    // The question comes BEFORE the panel, because the answer decides what the
-    // panel shows. Asked here rather than at each of the eight places that open
-    // the creator - the sheet header, the sidebar, the context menu, Tidy, the
-    // console API - so none of them can forget to ask.
-    //
-    // Only the first time for a given character: askForSource() returns the
-    // recorded answer without asking again, and settles it silently when the
-    // importer is not installed.
-    const chosen = await askForSource(actor);
-    // Dismissed. The player looked at the question and wants neither yet, so
-    // opening the panel anyway would be answering it for them.
-    if (!chosen) return null;
-
     const guide = new CreationGuide({ actorId, id: `pk5e-guide-${actorId}` });
     guide.render(true);
     return guide;
@@ -395,12 +373,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         selected: code === currentTheme()
       })),
       disclaimerOpen: this._disclaimerOpen,
-      // Which route this character is on, as a line to read rather than a
-      // control. The choosing happens in the popup before the panel opens;
-      // this is only here so the answer is visible, and changeable without
-      // having to know where the flag lives.
-      sourceName: t(`source.${effectiveSource(actor)}`),
-      sourceSwitchable: importerAvailable(),
       stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
@@ -656,15 +628,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   async addFor(step) {
     const config = STEP_CONFIG[step];
     if (!config || !this.actor) return false;
-
-    // On the compendium route our own picker takes the place of the importer's
-    // window: the sheet's button would open the Compendium Browser, which is
-    // again a list of names with nothing to read beside it.
-    if (usesCompendium(this.actor)) {
-      EntryPicker.open(this.actor.id, step);
-      return true;
-    }
-
     return pressSheetButton(this.actor, config.buttonTypes, config.labels);
   }
 
@@ -713,15 +676,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // The importer lists class names with nothing to read, so open the narrow
     // panel beside it. That one follows whatever the player highlights; the
     // wide reference window stays available from the link in this step.
-    //
-    // Not on the compendium route: the panel reads the importer's own list to
-    // know what is highlighted, so beside the Compendium Browser it would sit
-    // there empty. The browser shows descriptions itself.
-    if (
-      step === "class" &&
-      !usesCompendium(this.actor) &&
-      game.settings.get(MODULE_ID, "openReferenceWithClass")
-    ) {
+    if (step === "class" && game.settings.get(MODULE_ID, "openReferenceWithClass")) {
       try {
         openImporterPanel();
       } catch (err) {
@@ -731,26 +686,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const pressed = await this.addFor(step);
     if (!pressed) return;
-
-    // THE COMPENDIUM ROUTE ENDS HERE.
-    //
-    // There is no "Import Complete" window to wait for - the player picks an
-    // entry in the browser, dnd5e's Advancement prompts run, and the item
-    // lands. The createItem watcher redraws the panel when it does, which is
-    // the whole of the ending.
-    //
-    // Waiting anyway is what this avoids: watchImportEnd() looks for a window
-    // belonging to the importer, so on this route it never matched and every
-    // step sat marked "importing" for the full two-minute timeout, holding
-    // back the skipped-choice check the entire time.
-    //
-    // Nor is the check held back here. dnd5e's own prompts write their answers
-    // into the item's advancement data, so validate.mjs can read what was
-    // chosen without anyone having watched it happen.
-    if (usesCompendium(this.actor)) {
-      this.render();
-      return;
-    }
 
     // Marks the step as running until the importer says otherwise. This also
     // holds back the skipped-choice check: the importer puts its dialogs up a
@@ -789,24 +724,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  /**
-   * Re-opens the source question after it has been answered.
-   *
-   * Kept reachable rather than asked once and locked: a player who picks the
-   * importer and finds their books are not in it needs a way back. Changing it
-   * decides what the NEXT step does, not what the last one did - steps already
-   * finished stay exactly as they are.
-   */
-  static async onChangeSource() {
-    const actor = this.actor;
-    if (!actor) return;
-
-    await askForSource(actor, { force: true });
-    // Whatever list the picker had read belongs to the old answer.
-    EntryPicker.closeIfOpen();
-    this.render();
-  }
-
   static async onSetLanguage(event, target) {
     try {
       await game.settings.set(MODULE_ID, "language", target.dataset.lang);
@@ -836,9 +753,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Same reading panel as the class step: adding a second class is exactly the
     // moment a player wants to know what the classes do, and it was only
-    // offered the first time round. Skipped on the compendium route for the
-    // same reason as there - it has no list to follow.
-    if (!usesCompendium(actor) && game.settings.get(MODULE_ID, "openReferenceWithClass")) {
+    // offered the first time round.
+    if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
       try {
         openImporterPanel();
       } catch (err) {

@@ -17,7 +17,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { text, importFlowNote } from "./sheet-actions.mjs";
-import { usesCompendium } from "./source-mode.mjs";
 import { itemsWithSkippedChoices, abilitiesAssigned } from "./validate.mjs";
 import { languageLabels } from "./languages.mjs";
 
@@ -126,11 +125,6 @@ export function buildSteps(actor, { importing = false } = {}) {
     ? t(METHOD_KEYS[savedAbilities.method])
     : "";
 
-  // The [+] that hides each entry's description is the IMPORTER's. The
-  // Compendium Browser shows its descriptions on hover instead, so pointing at
-  // a control that is not there would be worse than saying nothing.
-  const expandHint = usesCompendium(actor) ? "" : t("guide.expandHint");
-
   const portrait = actor.img ?? "";
   const hasPortrait =
     !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
@@ -197,7 +191,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       actionLabel: t("stepAcc.class"),
       icon: "fa-shield-halved",
       levelUp: classes.length > 0,
-      help: t("help.class") + importFlowNote(actor),
+      help: t("help.class") + importFlowNote(),
       removable: true,
       done: classes.length > 0,
       entries: classes.map((item) => {
@@ -214,26 +208,26 @@ export function buildSteps(actor, { importing = false } = {}) {
       label: t("step.species"),
       actionLabel: t("stepAcc.species"),
       icon: "fa-dna",
-      help: t("help.species") + importFlowNote(actor),
+      help: t("help.species") + importFlowNote(),
       removable: true,
       done: !!species,
       entries: species ? [entryFor(species)] : [],
       blurb: text("textSpecies", "blurb.species"),
       // The importer hides each entry's description behind a [+]; players were
       // choosing from a list of names without knowing it was there.
-      expandHint
+      expandHint: t("guide.expandHint")
     },
     {
       key: "background",
       label: t("step.background"),
       actionLabel: t("stepAcc.background"),
       icon: "fa-scroll",
-      help: t("help.background") + importFlowNote(actor),
+      help: t("help.background") + importFlowNote(),
       removable: true,
       done: !!background,
       entries: background ? [entryFor(background)] : [],
       blurb: text("textBackground", "blurb.background"),
-      expandHint
+      expandHint: t("guide.expandHint")
     },
     {
       key: "abilities",
