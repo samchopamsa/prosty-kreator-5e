@@ -1,6 +1,30 @@
 <div class="pk5e-root">
 
   <div class="pk5e-body">
+
+    {{#if rail}}
+    <nav class="pk5e-rail" aria-label="{{pkT "guide.steps"}}">
+      {{#each rail}}
+      <button type="button" data-action="goStep" data-step="{{key}}"
+              class="pk5e-rail-step {{#if active}}is-active{{/if}} {{#if done}}is-done{{/if}}">
+        <span class="pk5e-guide-num">{{number}}</span>
+        <span class="pk5e-rail-body">
+          <span class="pk5e-rail-label">
+            {{#if icon}}<i class="fa-solid {{icon}}" aria-hidden="true"></i>{{/if}}
+            {{label}}
+          </span>
+          <span class="pk5e-rail-summary">{{#if summary}}{{summary}}{{else}}&mdash;{{/if}}</span>
+        </span>
+        {{#if hasSkipped}}
+          <span class="pk5e-guide-alert">!</span>
+        {{else if done}}
+          <span class="pk5e-guide-tick">&#10003;</span>
+        {{/if}}
+      </button>
+      {{/each}}
+    </nav>
+    {{/if}}
+
     <div class="pk5e-pane">
 
       {{#if missing}}
@@ -12,6 +36,7 @@
         </div>
       {{else}}
 
+      {{#if startActive}}
       <details class="pk5e-disclaimer" {{#if disclaimerOpen}}open{{/if}}>
         <summary>{{pkT "guide.disclaimerTitle"}}</summary>
         <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
@@ -63,7 +88,7 @@
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">1</span>
           <i class="fa-solid fa-signature pk5e-guide-icon"></i>
-          <span class="pk5e-guide-label">{{pkT "step.identity"}}</span>
+          <span class="pk5e-guide-label">{{pkT "step.start"}}</span>
           {{#if nameSet}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
         </div>
         <div class="pk5e-identity">
@@ -87,6 +112,7 @@
           </div>
         </div>
       </div>
+      {{/if}}
 
       {{#if stepsFailed}}
       <div class="pk5e-callout pk5e-skipped-item">
@@ -96,23 +122,19 @@
       {{/if}}
 
       {{#each steps}}
-      <div class="pk5e-guide-step {{#if done}}is-done{{/if}} {{#if folded}}is-folded{{/if}}">
-        <div class="pk5e-guide-head" data-action="toggleStep" data-step="{{key}}"
-             data-tooltip="{{#if folded}}{{pkT "guide.unfoldStep"}}{{else}}{{pkT "guide.foldStep"}}{{/if}}">
+      {{#if active}}
+      <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
+        <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">{{number}}</span>
           {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
-          {{#if folded}}<span class="pk5e-fold-result">{{#if foldResult}}{{foldResult}}{{else}}&mdash;{{/if}}</span>{{/if}}
           {{#if optional}}<span class="pk5e-abbr">{{pkT "guide.optional"}}</span>{{/if}}
           {{#if hasSkipped}}
             <span class="pk5e-guide-alert">!</span>
           {{else if done}}
             <span class="pk5e-guide-tick">&#10003;</span>
           {{/if}}
-          <span class="pk5e-fold-caret" aria-hidden="true">{{#if folded}}&#9656;{{else}}&#9662;{{/if}}</span>
         </div>
-
-        {{#unless folded}}
 
         {{#if showHelp}}
         <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
@@ -258,9 +280,8 @@
             {{/if}}
           </div>
         {{/if}}
-
-        {{/unless}}
       </div>
+      {{/if}}
       {{/each}}
 
       {{#if skippedOptions}}
@@ -328,11 +349,24 @@
     </span>
     <button type="button" data-action="postSummary">{{pkT "guide.postToChat"}}</button>
     <span class="pk5e-hint">{{progress}}</span>
-    <button type="button" class="pk5e-primary" data-action="finalizeGuide"
-            {{#unless allDone}}disabled{{/unless}}
-            data-tooltip="{{#unless allDone}}{{pkT "guide.finishFirst"}}{{/unless}}">
-      {{pkT "guide.finalize"}}
-    </button>
+
+    <span class="pk5e-nav">
+      <button type="button" data-action="goBack" {{#unless canBack}}disabled{{/unless}}>
+        {{pkT "guide.back"}}
+      </button>
+      <button type="button" data-action="goNext" {{#unless canNext}}disabled{{/unless}}>
+        {{pkT "guide.next"}}
+      </button>
+      {{#if isLast}}
+      <button type="button" class="pk5e-primary" data-action="finalizeGuide"
+              {{#unless allDone}}disabled{{/unless}}
+              data-tooltip="{{#unless allDone}}{{pkT "guide.finishFirst"}}{{/unless}}">
+        {{pkT "guide.finalize"}}
+      </button>
+      {{else}}
+      <button type="button" data-action="abortGuide">{{pkT "guide.abort"}}</button>
+      {{/if}}
+    </span>
   </footer>
 
 </div>

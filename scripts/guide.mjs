@@ -130,6 +130,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._help = {};
     /** Steps the player has folded away. Empty until they fold one. */
     this._folded = {};
+    /** Which card is on screen, and the order the rail walks through. */
+    this._active = null;
+    this._rail = [];
     /** What the sheet mode was before the panel unlocked it, once known. */
     this._priorSheetMode = undefined;
     /** Step whose import is still running, if any. */
@@ -158,6 +161,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
       toggleStep: CreationGuide.onToggleStep,
+      goStep: CreationGuide.onGoStep,
+      goBack: CreationGuide.onGoBack,
+      goNext: CreationGuide.onGoNext,
+      abortGuide: CreationGuide.onAbortGuide,
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
       setLanguage: CreationGuide.onSetLanguage,
@@ -351,6 +358,32 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           : step.result || "";
     }
 
+    // WHICH CARD IS ON SCREEN
+    //
+    // One step at a time, so the rail down the left is the whole of the
+    // navigation. That means the panel has to open somewhere sensible rather
+    // than at the top every time: the first thing not yet done, which on a new
+    // character is Start and on a half-finished one is where the player left
+    // off. Once a card has been picked by hand that choice stands, including
+    // when the sheet changes underneath - a redraw that moved the player to
+    // another step mid-typing would be unusable.
+    //
+    // "start" is the name-and-portrait block. It is not one of buildSteps()'
+    // steps and deliberately not made into one: steps.mjs states the rules, and
+    // naming a character is not one of them. It is this window's own first
+    // card, the same way the portrait leaving the list is this window's
+    // decision.
+    const named = !hasPlaceholderName(actor);
+    this._rail = ["start", ...steps.map((step) => step.key)];
+    const isDone = (key) =>
+      key === "start" ? named : !!steps.find((step) => step.key === key)?.done;
+
+    if (!this._active || !this._rail.includes(this._active)) {
+      this._active = this._rail.find((key) => !isDone(key)) ?? this._rail.at(-1);
+    }
+    const activeAt = this._rail.indexOf(this._active);
+    for (const step of steps) step.active = step.key === this._active;
+
     // Open the first time this character's panel is opened, folded away after
     // that. Worked out once per window rather than per render: setting the flag
     // updates the actor, which redraws, and the notice would collapse under the
@@ -461,6 +494,39 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       defaultFolderName:
         game.folders.get(game.settings.get(MODULE_ID, "defaultActorFolder"))?.name ?? "",
       steps,
+      // The rail is also where a folded step's answer went. Every entry says
+      // what was chosen, so the whole character reads down the left side
+      // without opening a single card - which is the thing the fold gave up
+      // when it collapsed a step to its name alone.
+      rail: [
+        {
+          key: "start",
+          number: 1,
+          icon: "fa-signature",
+          label: t("step.start"),
+          done: named,
+          summary: named ? actor.name : "",
+          active: this._active === "start"
+        },
+        ...steps.map((step) => ({
+          key: step.key,
+          number: step.number,
+          icon: step.icon,
+          label: step.label,
+          done: step.done,
+          optional: step.optional,
+          hasSkipped: step.hasSkipped,
+          summary: step.foldResult,
+          active: step.active
+        }))
+      ],
+      startActive: this._active === "start",
+      canBack: activeAt > 0,
+      canNext: activeAt >= 0 && activeAt < this._rail.length - 1,
+      // The last card is Bio, which nothing requires filling in - so the button
+      // that ends the process lives there, in place of the one that walks away
+      // from it.
+      isLast: activeAt === this._rail.length - 1,
       allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {
         // Every step in the list is counted, optional ones included, because
@@ -487,7 +553,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender() {
     applyTheme(this);
     this.unlockSheet();
-    preserveScroll(this, [".pk5e-pane"]);
+    preserveScroll(this, [".pk5e-pane", ".pk5e-rail"]);
 
     this.bindNameField();
     this.bindBioFields();
@@ -1169,6 +1235,40 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!key) return;
     this._folded[key] = !this._folded[key];
     this.render();
+  }
+
+  /**
+   * Moves to another card. The rail holds the order, built with the steps, so
+   * back and forward do not need a second list that could disagree with it.
+   */
+  goTo(key) {
+    if (!key || key === this._active) return;
+    this._active = key;
+    this.render();
+  }
+
+  static onGoStep(event, target) {
+    this.goTo(target.dataset.step);
+  }
+
+  static onGoBack() {
+    this.goTo(this._rail[this._rail.indexOf(this._active) - 1]);
+  }
+
+  static onGoNext() {
+    this.goTo(this._rail[this._rail.indexOf(this._active) + 1]);
+  }
+
+  /**
+   * Walks away from the panel without finishing.
+   *
+   * Nothing is undone: whatever reached the character sheet stays on it, which
+   * is the only honest meaning of "stop" in a creator that presses the sheet's
+   * own buttons. The panel comes back from the sheet button or from
+   * characterCreator.resume(), and opens on the first step still outstanding.
+   */
+  static async onAbortGuide() {
+    await this.close();
   }
 
   /** Ends the guided run: opens the finished sheet and closes the panel. */

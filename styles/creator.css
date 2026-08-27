@@ -118,6 +118,91 @@
   flex-direction: column;
   gap: 10px;
 }
+/* ---------------------------------------------------------------------------
+   The rail
+
+   One card at a time needs somewhere to say where you are, what is left, and
+   what the other steps came out as - so the answers move here, one line under
+   each step's name. That line is what the folded step used to show in its own
+   heading, which is why the fold is gone: with every answer visible at once,
+   collapsing a step hid nothing worth hiding.
+
+   A fixed width, not a share of the window: the cards are what should grow
+   when the panel is widened, and a rail that grows with them just moves the
+   text further from its number.
+   --------------------------------------------------------------------------- */
+
+.pk5e-rail {
+  flex: 0 0 auto;
+  width: 190px;
+  margin-right: 12px;
+  padding-right: 10px;
+  border-right: 1px solid var(--pk5e-sunken);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pk5e-rail-step {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pk5e-rail-step:hover { background: var(--pk5e-hover); }
+
+/* The card on screen, marked on the left edge rather than by a fill: a filled
+   row next to a ticked one read as a second kind of "done". */
+.pk5e-rail-step.is-active {
+  background: var(--pk5e-hover);
+  border-color: var(--pk5e-line);
+  box-shadow: inset 3px 0 0 var(--pk5e-accent);
+}
+
+.pk5e-rail-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.pk5e-rail-label {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pk5e-rail-label i { font-size: 10px; opacity: 0.55; }
+
+/* The answer. One line, cut with an ellipsis rather than wrapped: a
+   multiclassed character would otherwise push the rest of the rail down the
+   window every time a second class was added. */
+.pk5e-rail-summary {
+  font-size: 11px;
+  opacity: 0.65;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pk5e-rail-step.is-done .pk5e-guide-num {
+  border-color: var(--pk5e-accent);
+  color: var(--pk5e-accent);
+}
+
+.pk5e-nav { display: flex; gap: 6px; flex: 0 0 auto; }
+
 .pk5e-pane h2 { margin: 0; border: none; }
 .pk5e-lead { margin: 0; font-size: 14px; line-height: 1.45; }
 .pk5e-note,

@@ -66,6 +66,11 @@ const STRINGS = {
 
     "step.name": "Name",
     "step.identity": "Name and portrait",
+    "step.start": "Start",
+    "guide.steps": "Steps",
+    "guide.back": "Back",
+    "guide.next": "Next",
+    "guide.abort": "Stop",
     "step.species": "Species",
     "step.background": "Background",
     "step.class": "Class",
@@ -377,6 +382,11 @@ const STRINGS = {
 
     "step.name": "Imię",
     "step.identity": "Imię i portret",
+    "step.start": "Start",
+    "guide.steps": "Kroki",
+    "guide.back": "Wstecz",
+    "guide.next": "Dalej",
+    "guide.abort": "Przerwij",
     "step.species": "Gatunek",
     "step.background": "Pochodzenie",
     "step.class": "Klasa",
