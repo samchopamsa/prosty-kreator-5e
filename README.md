@@ -9,7 +9,7 @@ zbudowane. Kreator dokłada trzy rzeczy, których brakuje: **kolejność**, **to
 o co importery nigdy nie pytają** (punktacja cech, języki) i **wykrywanie tego,
 co zostało pominięte**.
 
-Wersja **1.61.0**.
+Wersja **1.62.0**.
 
 ---
 
@@ -168,7 +168,7 @@ popraw pole `download` na nowy tag (`check.sh` przypilnuje wszystkich trzech),
 a potem:
 
 ```bash
-git tag v1.61.0 && git push origin main v1.61.0
+git tag v1.62.0 && git push origin main v1.62.0
 ```
 
 Paczkę, opis wydania z changeloga i sam release tworzy workflow.

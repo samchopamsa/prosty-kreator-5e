@@ -75,12 +75,12 @@ const STRINGS = {
     "step.bio": "Bio",
     "stepAcc.bio": "bio",
     "blurb.bio":
-      "Optional. Who this character is: appearance, personality and history, as the importer wrote them onto the sheet.",
+      "Optional. Who this character is: appearance, personality and history. Typed here, saved onto the character sheet.",
     "help.bio":
-      "The importer fills most of this in from the background it imports. Anything missing is typed on the sheet's Biography tab - this step only shows what is there.",
-    "guide.bioOnSheet": "Fill this in on the sheet",
+      "The importer fills most of this in from the background it imports. Whatever is missing you type here, and it goes straight onto the character sheet.",
     "guide.foldStep": "Fold this step",
     "guide.unfoldStep": "Unfold this step",
+    "bio.filledOf": "{0} of {1} filled",
     "bio.details": "Description",
     "bio.personality": "Personality",
     "bio.gender": "Gender",
@@ -372,12 +372,12 @@ const STRINGS = {
     "step.bio": "Bio",
     "stepAcc.bio": "bio",
     "blurb.bio":
-      "Nieobowiązkowy. Kim jest ta postać: wygląd, osobowość i historia - tak, jak wpisał je importer.",
+      "Nieobowiązkowy. Kim jest ta postać: wygląd, osobowość i historia. Wpisujesz tutaj, zapisuje się na karcie.",
     "help.bio":
-      "Większość tego wypełnia importer z pochodzenia, które sprowadza. Resztę wpisuje się na karcie, w zakładce Biography - ten krok tylko pokazuje, co tam jest.",
-    "guide.bioOnSheet": "Uzupełnij na karcie",
+      "Większość tego wypełnia importer z pochodzenia, które sprowadza. Resztę wpisujesz tutaj - trafia prosto na kartę postaci.",
     "guide.foldStep": "Zwiń ten krok",
     "guide.unfoldStep": "Rozwiń ten krok",
+    "bio.filledOf": "wypełnione {0} z {1}",
     "bio.details": "Opis",
     "bio.personality": "Osobowość",
     "bio.gender": "Płeć",

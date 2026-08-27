@@ -99,7 +99,11 @@ function fieldText(value) {
   const raw = String(value ?? "");
   if (!raw) return "";
   return raw
-    .replace(/<\/(p|div|li)>/gi, "\n")
+    // A blank line between blocks, a single break for <br>. The difference
+    // matters because this text goes back into the field it came from: collapse
+    // both to one newline and the next edit welds two paragraphs into one.
+    .replace(/<\/(p|div)>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/g, " ")
@@ -116,34 +120,48 @@ function fieldText(value) {
 }
 
 /**
- * The character's own description, as the sheet holds it.
+ * The character's own description, with the paths needed to write it back.
  *
- * Read only, and deliberately so: the importer writes most of this from the
- * background it imports, and the sheet's Biography tab is where anyone edits
- * it. The step exists because that tab is two clicks away and a player has no
- * reason to look there for something they never filled in themselves - so what
- * arrived stayed invisible.
+ * Editable in the panel, not merely shown there. The first version of this step
+ * displayed the fields and sent the player to the sheet's Biography tab to fill
+ * them in, which is not a step - it is a signpost. Everything else in this panel
+ * is done where it is asked for, and so is this: the fields write straight to
+ * the actor, and the sheet shows what was typed.
+ *
+ * `rich` marks the fields dnd5e stores as HTML. They are shown as plain text -
+ * the importer writes paragraphs - and turned back into paragraphs on save, so
+ * what a player types survives as they typed it. The plain fields are strings
+ * and go back as strings.
  *
  * The alignment is the sheet's raw value rather than a looked-up label: the
- * system stores whatever was typed, and a 2024 character may carry no alignment
- * at all.
+ * system stores whatever was typed there, and a 2024 character may carry none.
  */
 function bioContent(actor) {
   const details = actor.system?.details ?? {};
 
-  const pick = (key, source = details) => ({ key, label: t(`bio.${key}`), value: fieldText(source[key]) });
+  const plain = (key) => ({
+    key,
+    label: t(`bio.${key}`),
+    value: fieldText(details[key]),
+    path: `system.details.${key}`
+  });
 
-  const fields = ["gender", "age", "height", "weight", "eyes", "hair", "skin", "faith", "alignment"].map((key) =>
-    pick(key)
-  );
-  const personality = ["trait", "ideal", "bond", "flaw"].map((key) => pick(key));
+  const rich = (key, raw, path) => ({
+    key,
+    label: t(`bio.${key}`),
+    value: fieldText(raw),
+    path: path ?? `system.details.${key}`,
+    rich: true
+  });
 
+  const fields = ["gender", "age", "height", "weight", "eyes", "hair", "skin", "faith", "alignment"].map(plain);
+  const personality = ["trait", "ideal", "bond", "flaw"].map((key) => rich(key, details[key]));
   const notes = [
-    { key: "appearance", label: t("bio.appearance"), text: fieldText(details.appearance) },
-    { key: "biography", label: t("bio.biography"), text: fieldText(details.biography?.value) }
-  ].filter((note) => note.text);
+    rich("appearance", details.appearance),
+    rich("biography", details.biography?.value, "system.details.biography.value")
+  ];
 
-  const filled = [...fields, ...personality].filter((field) => field.value).length + notes.length;
+  const filled = [...fields, ...personality, ...notes].filter((field) => field.value).length;
 
   return { fields, personality, notes, filled };
 }
@@ -344,8 +362,6 @@ export function buildSteps(actor, { importing = false } = {}) {
       icon: "fa-feather",
       removable: false,
       optional: true,
-      // The sheet is where this is written; the panel only shows what is there.
-      action: "openSheet",
       done: bio.filled > 0,
       result: "",
       img: "",

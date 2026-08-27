@@ -332,6 +332,22 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // Marks the step head, so the problem is visible before scrolling down.
       step.hasSkipped = (step.entries ?? []).some((entry) => entry.skipped);
       step.folded = !!this._folded[step.key];
+
+      // What the head says once the step is folded. A folded step showing only
+      // its own name has hidden the answer, which is the one thing the panel is
+      // there to report - so the choice moves up into the heading. Every entry,
+      // because a multiclassed character summarised as "Cleric 3" alone would be
+      // describing somebody else. Bio has no single choice to name, so it counts
+      // the fields that have something in them.
+      const chosen = (step.entries ?? []).map((entry) => entry.name).filter(Boolean);
+      const bioTotal = step.bio
+        ? step.bio.fields.length + step.bio.personality.length + step.bio.notes.length
+        : 0;
+      step.foldResult = chosen.length
+        ? chosen.join(", ")
+        : step.bio
+          ? t("bio.filledOf", step.bio.filled, bioTotal)
+          : step.result || "";
     }
 
     // Open the first time this character's panel is opened, folded away after
@@ -473,6 +489,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     preserveScroll(this, [".pk5e-pane"]);
 
     this.bindNameField();
+    this.bindBioFields();
     this.bindOwnership();
     this.bindDisclosures();
 
@@ -515,6 +532,61 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           save(ev);
         }
       });
+    }
+  }
+
+  /**
+   * The bio fields, saved to the character as they are left.
+   *
+   * Same rule as the name field above: written on blur, and on Enter for the
+   * single-line ones so it sticks even while the field keeps focus. Nothing is
+   * written unless the value actually changed - a player who tabs through the
+   * form without typing leaves no update behind, and no re-render either.
+   *
+   * The fields dnd5e stores as HTML are rebuilt as paragraphs from what was
+   * typed, with the text escaped first. A biography is prose that a player may
+   * well write an angle bracket into, and prose is not markup.
+   */
+  bindBioFields() {
+    const toHtml = (value) => {
+      if (!value) return "";
+      const escaped = value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return escaped
+        .split(/\n{2,}/)
+        .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
+        .join("");
+    };
+
+    for (const field of this.element.querySelectorAll("[data-bio]")) {
+      const save = async (ev) => {
+        const element = ev.currentTarget;
+        const path = element.dataset.bio;
+        if (!path || !this.actor) return;
+
+        const typed = element.value.trim();
+        const value = element.dataset.rich ? toHtml(typed) : typed;
+        const current = foundry.utils.getProperty(this.actor, path) ?? "";
+        if (String(current) === String(value)) return;
+
+        try {
+          await this.actor.update({ [path]: value });
+        } catch (err) {
+          console.warn(`${MODULE_ID} | Could not save ${path}`, err);
+        }
+      };
+
+      field.addEventListener("change", save);
+      if (field.tagName === "INPUT") {
+        field.addEventListener("keydown", (ev) => {
+          if (ev.key === "Enter") {
+            ev.preventDefault();
+            save(ev);
+          }
+        });
+      }
     }
   }
 

@@ -102,6 +102,7 @@
           <span class="pk5e-guide-num">{{number}}</span>
           {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
+          {{#if folded}}<span class="pk5e-fold-result">{{#if foldResult}}{{foldResult}}{{else}}&mdash;{{/if}}</span>{{/if}}
           {{#if optional}}<span class="pk5e-abbr">{{pkT "guide.optional"}}</span>{{/if}}
           {{#if hasSkipped}}
             <span class="pk5e-guide-alert">!</span>
@@ -125,29 +126,26 @@
             <span class="pk5e-bio-heading">{{pkT "bio.details"}}</span>
             <div class="pk5e-bio-grid">
               {{#each bio.fields}}
-              <span class="pk5e-bio-label">{{label}}</span>
-              <span class="pk5e-bio-value {{#unless value}}is-empty{{/unless}}">{{#if value}}{{value}}{{else}}&mdash;{{/if}}</span>
+              <label class="pk5e-bio-label" for="pk5e-bio-{{key}}">{{label}}</label>
+              <input type="text" id="pk5e-bio-{{key}}" data-bio="{{path}}"
+                     value="{{value}}" autocomplete="off">
               {{/each}}
             </div>
 
             <span class="pk5e-bio-heading">{{pkT "bio.personality"}}</span>
-            <div class="pk5e-bio-grid">
+            <div class="pk5e-bio-stack">
               {{#each bio.personality}}
-              <span class="pk5e-bio-label">{{label}}</span>
-              <span class="pk5e-bio-value {{#unless value}}is-empty{{/unless}}">{{#if value}}{{value}}{{else}}&mdash;{{/if}}</span>
+              <label class="pk5e-bio-label" for="pk5e-bio-{{key}}">{{label}}</label>
+              <textarea id="pk5e-bio-{{key}}" data-bio="{{path}}" data-rich="1" rows="2">{{value}}</textarea>
               {{/each}}
             </div>
 
-            {{#each bio.notes}}
-            <div class="pk5e-bio-note">
-              <span class="pk5e-bio-heading">{{label}}</span>
-              <p>{{text}}</p>
+            <div class="pk5e-bio-stack">
+              {{#each bio.notes}}
+              <label class="pk5e-bio-label" for="pk5e-bio-{{key}}">{{label}}</label>
+              <textarea id="pk5e-bio-{{key}}" data-bio="{{path}}" data-rich="1" rows="4">{{value}}</textarea>
+              {{/each}}
             </div>
-            {{/each}}
-          </div>
-
-          <div class="pk5e-step-buttons">
-            <button type="button" data-action="openSheet">{{pkT "guide.bioOnSheet"}}</button>
           </div>
 
         {{else if importing}}

@@ -12,6 +12,26 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.62.0
+
+Bio wypelniane w kreatorze, zwiniety krok mowi, co w nim wybrano.
+
+- **Krok Bio przestal odsylac do karty.** W 1.61.0 pokazywal pola i kazal je
+  uzupelniac w zakladce Biography, czyli nie byl krokiem, tylko drogowskazem.
+  Teraz wszystkie pola sa edytowalne w panelu i zapisuja sie wprost na postac -
+  reszta panelu robi rzeczy tam, gdzie o nie prosi, i to nie moze byc wyjatkiem.
+- **Zapis na wyjsciu z pola**, dla jednolinijkowych takze na Enter - ten sam
+  mechanizm co pole imienia. Wartosc niezmieniona nie jest zapisywana, wiec
+  przejscie przez formularz tabulatorem nie generuje ani jednej aktualizacji.
+- **Proza wraca jako proza.** Pola, ktore dnd5e trzyma jako HTML, sa pokazywane
+  jako czysty tekst i zapisywane z powrotem jako akapity, a wpisany tekst jest
+  wczesniej escapowany - biografia to pismo, nie markup. Zamkniecie akapitu daje
+  pusta linie, `<br>` pojedyncze zlamanie: bez tego rozroznienia druga edycja
+  sklejala dwa akapity w jeden.
+- **Zwiniety krok pokazuje w naglowku, co zostalo wybrane** - wszystkie wpisy,
+  bo postac wieloklasowa streszczona do pierwszej klasy opisywalaby kogos
+  innego. Bio liczy wypelnione pola, krok bez wyboru pokazuje myslnik.
+
 ## 1.61.0
 
 Panel czytelniejszy, karta Tidy odblokowywana, nowy krok Bio.
