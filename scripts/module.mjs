@@ -52,7 +52,8 @@ Hooks.once("init", () => {
     textClass: "Panel: class step",
     textAbilities: "Panel: ability scores step",
     textLanguages: "Panel: languages step",
-    textPortrait: "Panel: portrait step"
+    textPortrait: "Panel: portrait step",
+    textBio: "Panel: bio step"
   };
   for (const [key, name] of Object.entries(textSettings)) {
     game.settings.register(MODULE_ID, key, {

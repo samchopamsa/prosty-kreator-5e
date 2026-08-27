@@ -1319,3 +1319,343 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   font-size: 1.02em;
   opacity: 0.8;
 }
+
+/* ------------------------------------------------------------------ */
+/* Visual pass: the panel as a sequence, not a stack of boxes          */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Everything here is presentation only - no step gained or lost a control,
+ * and no rule below reads anything the template did not already render.
+ *
+ * The panel is 380px wide by default, which rules out the obvious way of
+ * drawing a guided flow: indenting every step to leave a gutter for a rail
+ * would cost nearly a tenth of the width on a window whose whole job is
+ * showing a picture beside a paragraph. So the connector is drawn only in the
+ * empty padding BETWEEN steps, where nothing else lives, and the sense of a
+ * sequence comes from the badges rather than from a continuous line.
+ */
+
+.pk5e-creator {
+  /* Fallback first: color-mix is ignored by engines that do not know it, and
+     the accent is Foundry's own, so it cannot be mixed ahead of time. */
+  --pk5e-accent-soft: rgba(255, 100, 0, 0.09);
+  --pk5e-accent-soft: color-mix(in srgb, var(--pk5e-accent) 11%, transparent);
+  --pk5e-accent-ink: #fff;
+}
+
+/* A step that is finished says so three times over - filled badge, tick, tinted
+   card - because at a glance the panel is scanned, not read. */
+.pk5e-guide-step {
+  position: relative;
+  padding-top: 16px;
+  border-top-color: var(--pk5e-line);
+}
+
+/* The connector: a short vertical line from one badge down to the next,
+   crossing the divider. Sits at the badge's centre (11px = half of 22px). */
+.pk5e-guide-step + .pk5e-guide-step::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  /* Up through the pane gap (14px) and down to the badge, so the line joins
+     one badge to the next instead of hanging off the divider. */
+  top: -14px;
+  height: 30px;
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--pk5e-line-strong);
+  opacity: 0.5;
+}
+
+.pk5e-guide-step + .pk5e-guide-step.is-done::before {
+  background: var(--pk5e-accent);
+  opacity: 0.55;
+}
+
+.pk5e-guide-num { transition: background-color 160ms ease, color 160ms ease; }
+
+.pk5e-guide-step.is-done .pk5e-guide-num {
+  background: var(--pk5e-accent);
+  color: var(--pk5e-accent-ink);
+  border-color: transparent;
+}
+
+/* The chosen entry becomes a card once it holds something. Not applied to the
+   placeholder: an empty slot that looks like a filled one is the thing this
+   layout was built to avoid. */
+.pk5e-guide-step.is-done .pk5e-guide-chosen {
+  padding: 8px;
+  border: 1px solid var(--pk5e-line);
+  border-radius: 6px;
+  background: var(--pk5e-accent-soft);
+}
+
+.pk5e-guide-chosen img {
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* Rounded to match the artwork it stands in for, and quieter than before: it
+   is a slot waiting to be filled, not something to read. */
+.pk5e-guide-empty-art {
+  border-radius: 6px;
+  border-color: var(--pk5e-line-strong);
+  font-weight: 400;
+  opacity: 0.3;
+}
+
+.pk5e-guide-empty-art.is-done {
+  background: transparent;
+  opacity: 0.8;
+}
+
+/* Progress as a bar as well as a tally. Its own line at the top of the footer,
+   so it costs no horizontal room in a window that has none to spare. */
+.pk5e-footer { flex-wrap: wrap; }
+
+.pk5e-progress {
+  flex: 1 1 100%;
+  order: -1;
+  height: 3px;
+  margin-bottom: 4px;
+  border-radius: 2px;
+  background: var(--pk5e-sunken);
+  overflow: hidden;
+}
+
+.pk5e-progress i {
+  display: block;
+  height: 100%;
+  background: var(--pk5e-accent);
+  transition: width 260ms ease;
+}
+
+/* The one button that ends the process, coloured like it. Disabled it stays
+   plain, because a greyed-out accent reads as broken rather than as blocked. */
+.pk5e-creator .pk5e-footer .pk5e-primary:not(:disabled) {
+  background: var(--pk5e-accent);
+  color: var(--pk5e-accent-ink);
+  border-color: transparent;
+}
+
+.pk5e-creator .pk5e-footer .pk5e-primary:not(:disabled):hover {
+  filter: brightness(1.12);
+}
+
+/* Hover feedback on the step's own buttons: they are full-width blocks, and a
+   full-width block with no hover state does not read as clickable. */
+.pk5e-guide-step button:not(.pk5e-link) {
+  border-radius: 4px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.pk5e-guide-step button:not(.pk5e-link):hover:not(:disabled) {
+  background: var(--pk5e-hover);
+  border-color: var(--pk5e-accent);
+}
+
+/* Same courtesy as the sheet button's pulse: anyone who asked their system for
+   less movement gets the colours without the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .pk5e-progress i,
+  .pk5e-guide-num,
+  .pk5e-guide-step button:not(.pk5e-link) {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Identity block: the portrait beside the name                        */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The portrait used to be the last step, a full-width picture at the bottom of
+ * a panel nobody scrolls to once the character works. Beside the name it is
+ * where the character is identified, and the same 96px square as every other
+ * step's artwork, so the first block matches the ones below it.
+ *
+ * It is a button, not an image with a handler: it opens a dialog, and anything
+ * that opens a dialog should be reachable from the keyboard without help.
+ */
+.pk5e-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pk5e-identity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Written against the step's own full-width button rule, which would otherwise
+   stretch the square across the panel. */
+.pk5e-guide-step button.pk5e-portrait {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--pk5e-line-strong);
+  background: var(--pk5e-sunken);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pk5e-portrait img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: none;
+  display: block;
+}
+
+/* Empty, it reads as the same waiting slot as an unmade step: dashed, dim, no
+   shadow - nothing has been chosen yet, so nothing is raised off the page. */
+.pk5e-guide-step button.pk5e-portrait.is-empty {
+  border-style: dashed;
+  box-shadow: none;
+  font-size: 26px;
+  opacity: 0.45;
+}
+
+.pk5e-guide-step button.pk5e-portrait:hover {
+  border-color: var(--pk5e-accent);
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* Step layout: heading, explanation, content, controls                */
+/* ------------------------------------------------------------------ */
+
+/*
+ * The step's name is the thing you scan for, so it is the largest text in the
+ * block and the explanation sits directly beneath it - question first, answer
+ * on demand, rather than an aside at the far end of the step.
+ */
+.pk5e-guide-label {
+  font-size: 17px;
+  letter-spacing: 0.3px;
+}
+
+/* Italic here and nowhere else in the panel: this is a question about the
+   step, not part of it. The step's own description stays upright, because
+   that IS the content. */
+.pk5e-help > summary { font-style: italic; }
+
+/* Every step folds, none folds on its own. The whole head is the target - the
+   caret alone is twelve pixels wide, and this panel is clicked through in a
+   hurry. Padding rather than negative margins: a head wider than its own
+   column is what put a horizontal scrollbar under the panel before. */
+.pk5e-guide-head[data-action] {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 120ms ease;
+}
+
+.pk5e-guide-head[data-action]:hover { background: var(--pk5e-hover); }
+
+.pk5e-fold-caret {
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.45;
+}
+
+.pk5e-guide-head[data-action]:hover .pk5e-fold-caret { opacity: 0.9; }
+
+/* A folded step is its own heading and nothing else, so it needs no room
+   beneath it. */
+.pk5e-guide-step.is-folded { padding-bottom: 0; }
+
+/* Controls share a line instead of stacking full-width blocks: "Remove" and
+   "Add level" belong to the same decision and read as a pair. */
+.pk5e-step-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.pk5e-guide-step .pk5e-step-buttons button:not(.pk5e-link) {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pk5e-guide-actions { flex-wrap: wrap; row-gap: 4px; }
+
+/* The portrait is the character, not one more step's illustration, so it is
+   larger than the 96px artwork below it. */
+.pk5e-guide-step button.pk5e-portrait {
+  width: 128px;
+  height: 128px;
+  flex: 0 0 128px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Bio: what the importer wrote onto the sheet                         */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Read only, and laid out as a record rather than a form: label left, value
+ * right, empty ones kept in place and dimmed. A missing weight is worth seeing
+ * as missing - dropping empty rows would leave a list whose shape changed
+ * every time the importer filled in one more field.
+ */
+.pk5e-bio {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pk5e-bio-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.pk5e-bio-grid {
+  display: grid;
+  grid-template-columns: minmax(90px, auto) 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+  align-items: baseline;
+}
+
+.pk5e-bio-label { opacity: 0.7; }
+
+.pk5e-bio-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.pk5e-bio-value.is-empty { opacity: 0.35; }
+
+/* Appearance and biography are prose, and the line breaks the writer put in
+   are part of it. */
+.pk5e-bio-note { display: flex; flex-direction: column; gap: 2px; }
+
+.pk5e-bio-note p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pk5e-guide-head[data-action] { transition: none; }
+}

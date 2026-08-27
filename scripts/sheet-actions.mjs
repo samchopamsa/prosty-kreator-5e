@@ -203,27 +203,75 @@ function autoAdvanceApplies() {
   return !game.user?.isGM;
 }
 
+/**
+ * The importer's own values for its "add button" setting.
+ * 0 Never, 1 Prompt, 2 Always - read from its config, not guessed at.
+ */
+const IMPORTER_ADD_PROMPT = 1;
+const IMPORTER_ADD_ALWAYS = 2;
+
+/** Told once per session; the setting persists, the flag only avoids the noise. */
+let askedImporterToStop = false;
+
+/**
+ * Stops the importer asking "Plutonium or Compendium Browser?" at every step.
+ *
+ * The panel no longer offers the compendium route, so the question has exactly
+ * one answer left - and it was being asked once per step, which is five
+ * identical clicks per character.
+ *
+ * This writes the importer's OWN setting rather than clicking its dialog away,
+ * because a dialog clicked away still flashes on screen. Two limits on it, both
+ * deliberate: it only ever turns Prompt into Always, so a player who has turned
+ * the importer off entirely (Never) keeps that; and it says what it did in the
+ * console, because quietly rewriting another module's configuration is the kind
+ * of thing someone should be able to find later.
+ */
+export function stopImporterAsking() {
+  if (askedImporterToStop) return;
+  try {
+    const config = globalThis[IMPORTER_ID]?.config;
+    if (typeof config?.getValue !== "function" || typeof config?.setValue !== "function") return;
+    if (config.getValue("actor", "addButtonMode") !== IMPORTER_ADD_PROMPT) return;
+
+    config.setValue("actor", "addButtonMode", IMPORTER_ADD_ALWAYS);
+    askedImporterToStop = true;
+    console.log(
+      `${MODULE_ID} | Turned the importer's "add button" setting from Prompt to Always. ` +
+        "The creator only offers the importer, so the question it asked at every step had one answer."
+    );
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not tell the importer to stop asking`, err);
+  }
+}
+
+/**
+ * Answers the chooser if it appears anyway - an older importer, a setting that
+ * would not take, a build that asks regardless.
+ *
+ * The window is hidden before the click rather than after: a dialog that
+ * appears and vanishes is still something the player saw.
+ */
+export async function answerImporterChooser() {
+  if (importerAnswersItself()) return false;
+
+  const button = await waitForButton(IMPORTER_BUTTON_LABELS, 4000);
+  if (!button) return false;
+
+  const dialog = button.closest(".ve-app, .application, .app");
+  if (dialog) dialog.style.visibility = "hidden";
+  button.click();
+  return true;
+}
+
 export async function autoAdvance() {
   if (!autoAdvanceApplies()) return;
-  const mode = "importer";
   const skipSources = true;
 
-  // Step one: the importer-or-browser choice.
-  //
-  // The importer can be told to stop asking, via its own "Use Importer when Using
-  // ADD ... Button on Actor" setting. When it is, waiting for a window that will
-  // never appear just adds four seconds to every step, so we ask the importer first.
-  if (mode && mode !== "off" && !importerAnswersItself()) {
-    const labels = mode === "importer" ? IMPORTER_BUTTON_LABELS : ["use compendium browser"];
-    const chooser = await waitForButton(labels, 4000);
-    if (chooser) chooser.click();
-    // The compendium browser opens straight onto its list; nothing else to skip.
-    if (mode === "compendium") return;
-  }
-
-  // Step two: the data source screen, closed by pressing "Open Importer".
-  // Independent of step one on purpose - you may want to pick the importer
-  // yourself and still not be asked about sources every time.
+  // The importer-or-browser choice is not handled here any more: it is answered
+  // for every step, by stopImporterAsking() and answerImporterChooser(), whether
+  // or not this setting is on. What is left is the data source screen, which is
+  // closed by pressing "Open Importer".
   if (!skipSources) return;
 
   const opener = await waitForButton(["open importer"], 12000);
@@ -281,16 +329,81 @@ export function findAddButton(root, types, labels) {
   });
 }
 
-/** Puts the sheet into edit mode, where the "Add X" buttons exist at all. */
-export async function ensureEditMode(actor) {
-  const sheet = actor.sheet;
-  const MODES = sheet.constructor?.MODES;
-  if (MODES?.EDIT === undefined || sheet._mode === MODES.EDIT) return;
+/**
+ * Which sheet is on screen and whether it is in edit mode, or null for a sheet
+ * neither mechanism recognises.
+ *
+ * Two sheets, two mechanisms, and the gap between them was a real bug: this
+ * file used to read `sheet._mode` alone. The dnd5e sheet has it, Tidy does
+ * not, so on a Tidy world ensureEditMode() returned immediately and the "Add
+ * Background" button it was meant to reveal was never on the page. Adding a
+ * background simply did nothing, with no error to explain it.
+ *
+ * Tidy keeps the same idea under its own names - measured against 13.9.1:
+ * `sheetMode` holds 1 for play and 2 for edit, and `toggleSheetMode()` is what
+ * its own header control calls. The method is preferred over assigning to
+ * `sheetMode`, because Tidy renders with Svelte and the assignment alone does
+ * not redraw the markup the button lives in.
+ */
+const TIDY_EDIT = 2;
 
-  const toggle = sheet.element?.querySelector("[data-action='changeMode']");
-  if (!toggle) return;
-  toggle.click();
-  await wait(400);
+export function sheetModeState(actor) {
+  const sheet = actor?.sheet;
+  if (!sheet) return null;
+
+  if (typeof sheet.toggleSheetMode === "function" && typeof sheet.sheetMode === "number") {
+    return { kind: "tidy", edit: sheet.sheetMode === TIDY_EDIT };
+  }
+
+  const MODES = sheet.constructor?.MODES;
+  if (MODES?.EDIT !== undefined) return { kind: "dnd5e", edit: sheet._mode === MODES.EDIT };
+
+  return null;
+}
+
+/** Flips whichever sheet this is. Quiet on anything unexpected, as everywhere here. */
+async function flipSheetMode(actor, kind) {
+  const sheet = actor?.sheet;
+  try {
+    if (kind === "tidy") {
+      await sheet.toggleSheetMode();
+      await wait(400);
+      return true;
+    }
+    const toggle = sheet.element?.querySelector("[data-action='changeMode']");
+    if (!toggle) return false;
+    toggle.click();
+    await wait(400);
+    return true;
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not switch the sheet mode`, err);
+    return false;
+  }
+}
+
+/**
+ * Puts the sheet into edit mode, where the "Add X" buttons exist at all.
+ * Returns what the mode was beforehand, so a caller can put it back.
+ */
+export async function ensureEditMode(actor) {
+  const state = sheetModeState(actor);
+  if (!state || state.edit) return state;
+  await flipSheetMode(actor, state.kind);
+  return state;
+}
+
+/**
+ * Puts the sheet back into play mode after the panel is done with it.
+ *
+ * `previous` is what ensureEditMode() reported. A player who had the sheet
+ * unlocked before the panel opened gets it back unlocked; everyone else gets
+ * the sheet they are used to reading, which is the point of play mode.
+ */
+export async function restoreSheetMode(actor, previous) {
+  if (previous?.edit) return;
+  const state = sheetModeState(actor);
+  if (!state || !state.edit) return;
+  await flipSheetMode(actor, state.kind);
 }
 
 /**
@@ -482,14 +595,33 @@ export async function pressSheetButton(actor, types, labels) {
   }
 
   if (!button) {
+    // Measured on Tidy 13.9.1, both of its character sheets: Quadrone carries
+    // the same data-action="findItem" buttons as the dnd5e sheet and works
+    // here once the sheet is unlocked, while the classic sheet has no picker at
+    // all - its "Add" button in the Background section creates an empty "New
+    // Background" item rather than opening anything. Pressing that from here
+    // would litter the character, so the classic sheet is told the truth
+    // instead of being driven.
+    const sheetName = actor.sheet?.constructor?.name ?? "";
+    if (/Tidy/i.test(sheetName) && !/Quadrone/i.test(sheetName)) {
+      ui.notifications.warn(
+        "The classic Tidy sheet has no picker for this - its Add button makes an empty item instead of opening the chooser. Switch this character to Tidy's Quadrone sheet or the dnd5e sheet, in Sheet Configuration.",
+        { permanent: true }
+      );
+      return false;
+    }
+
     ui.notifications.warn(
       "That button is not on the sheet right now. Put the sheet into edit mode and try again."
     );
     return false;
   }
 
+  // Ask the importer to stop offering a choice the panel no longer has, press
+  // the button on the sheet, then clear whatever the importer puts up.
+  stopImporterAsking();
   button.click();
-  autoAdvance();
+  answerImporterChooser().then(() => autoAdvance());
   return true;
 }
 

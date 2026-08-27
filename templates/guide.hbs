@@ -14,6 +14,7 @@
 
       <details class="pk5e-disclaimer" {{#if disclaimerOpen}}open{{/if}}>
         <summary>{{pkT "guide.disclaimerTitle"}}</summary>
+        <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
         <ul>
           <li>{{pkT "guide.disclaimerSource"}}</li>
           <li>{{pkT "guide.disclaimerComplete"}}</li>
@@ -21,8 +22,6 @@
           <li>{{pkT "guide.disclaimerRedo"}}</li>
         </ul>
       </details>
-
-      <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
 
       {{#if isGM}}
       <details class="pk5e-details" open>
@@ -60,19 +59,33 @@
       {{/if}}
 
 
-      <div class="pk5e-guide-step is-done">
+      <div class="pk5e-guide-step {{#if nameSet}}is-done{{/if}}">
         <div class="pk5e-guide-head">
           <span class="pk5e-guide-num">1</span>
           <i class="fa-solid fa-signature pk5e-guide-icon"></i>
-          <span class="pk5e-guide-label">{{pkT "step.name"}}</span>
+          <span class="pk5e-guide-label">{{pkT "step.identity"}}</span>
+          {{#if nameSet}}<span class="pk5e-guide-tick">&#10003;</span>{{/if}}
         </div>
-        <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
-        {{#if nameHelp}}
-        <details class="pk5e-help" data-help="name" {{#if nameHelpOpen}}open{{/if}}>
-          <summary>{{pkT "guide.whatIsThis"}}</summary>
-          <p>{{nameHelp}}</p>
-        </details>
-        {{/if}}
+        <div class="pk5e-identity">
+          <button type="button" class="pk5e-portrait {{#unless portraitSet}}is-empty{{/unless}}"
+                  data-action="setPortrait" data-tooltip="{{pkT "step.portrait"}}">
+            {{#if portraitSet}}
+              <img src="{{portrait}}" alt="">
+            {{else}}
+              <i class="fa-solid fa-image" aria-hidden="true"></i>
+            {{/if}}
+          </button>
+          <div class="pk5e-identity-body">
+            <input type="text" data-field="name" value="{{actorName}}" autocomplete="off">
+            {{#if portraitBlurb}}<p class="pk5e-note">{{portraitBlurb}}</p>{{/if}}
+            {{#if nameHelp}}
+            <details class="pk5e-help" data-help="name" {{#if nameHelpOpen}}open{{/if}}>
+              <summary>{{pkT "guide.whatIsThis"}}</summary>
+              <p>{{nameHelp}}</p>
+            </details>
+            {{/if}}
+          </div>
+        </div>
       </div>
 
       {{#if stepsFailed}}
@@ -83,8 +96,9 @@
       {{/if}}
 
       {{#each steps}}
-      <div class="pk5e-guide-step {{#if done}}is-done{{/if}}">
-        <div class="pk5e-guide-head">
+      <div class="pk5e-guide-step {{#if done}}is-done{{/if}} {{#if folded}}is-folded{{/if}}">
+        <div class="pk5e-guide-head" data-action="toggleStep" data-step="{{key}}"
+             data-tooltip="{{#if folded}}{{pkT "guide.unfoldStep"}}{{else}}{{pkT "guide.foldStep"}}{{/if}}">
           <span class="pk5e-guide-num">{{number}}</span>
           {{#if icon}}<i class="fa-solid {{icon}} pk5e-guide-icon"></i>{{/if}}
           <span class="pk5e-guide-label">{{label}}</span>
@@ -94,8 +108,49 @@
           {{else if done}}
             <span class="pk5e-guide-tick">&#10003;</span>
           {{/if}}
+          <span class="pk5e-fold-caret" aria-hidden="true">{{#if folded}}&#9656;{{else}}&#9662;{{/if}}</span>
         </div>
-        {{#if importing}}
+
+        {{#unless folded}}
+
+        {{#if showHelp}}
+        <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
+          <summary>{{pkT "guide.whatIsThis"}}</summary>
+          <p>{{help}}</p>
+        </details>
+        {{/if}}
+
+        {{#if bio}}
+          <div class="pk5e-bio">
+            <span class="pk5e-bio-heading">{{pkT "bio.details"}}</span>
+            <div class="pk5e-bio-grid">
+              {{#each bio.fields}}
+              <span class="pk5e-bio-label">{{label}}</span>
+              <span class="pk5e-bio-value {{#unless value}}is-empty{{/unless}}">{{#if value}}{{value}}{{else}}&mdash;{{/if}}</span>
+              {{/each}}
+            </div>
+
+            <span class="pk5e-bio-heading">{{pkT "bio.personality"}}</span>
+            <div class="pk5e-bio-grid">
+              {{#each bio.personality}}
+              <span class="pk5e-bio-label">{{label}}</span>
+              <span class="pk5e-bio-value {{#unless value}}is-empty{{/unless}}">{{#if value}}{{value}}{{else}}&mdash;{{/if}}</span>
+              {{/each}}
+            </div>
+
+            {{#each bio.notes}}
+            <div class="pk5e-bio-note">
+              <span class="pk5e-bio-heading">{{label}}</span>
+              <p>{{text}}</p>
+            </div>
+            {{/each}}
+          </div>
+
+          <div class="pk5e-step-buttons">
+            <button type="button" data-action="openSheet">{{pkT "guide.bioOnSheet"}}</button>
+          </div>
+
+        {{else if importing}}
           <p class="pk5e-importing">
             <i class="fa-solid fa-hourglass-half"></i>
             {{pkT "guide.importing"}}
@@ -124,6 +179,11 @@
                   {{pkT "option.delevelShort"}}
                 </button>
                 {{/if}}
+                {{#if @last}}{{#if ../levelUp}}
+                <button type="button" class="pk5e-link" data-action="levelUp">
+                  {{pkT "guide.levelUp"}}
+                </button>
+                {{/if}}{{/if}}
               </div>
 
               {{#if skipped}}
@@ -146,8 +206,15 @@
                 {{#if summary}}<p class="pk5e-guide-summary">{{summary}}</p>{{/if}}
               </div>
             </div>
-            <button type="button" class="pk5e-link"
-                    data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">{{pkT "guide.change"}}</button>
+            <div class="pk5e-guide-actions">
+              <button type="button" class="pk5e-link"
+                      data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">{{pkT "guide.change"}}</button>
+              {{#if levelUp}}
+              <button type="button" class="pk5e-link" data-action="levelUp">
+                {{pkT "guide.levelUp"}}
+              </button>
+              {{/if}}
+            </div>
           {{/if}}
         {{else}}
           <div class="pk5e-guide-chosen">
@@ -160,10 +227,8 @@
               {{/if}}
             </div>
           </div>
-        {{/if}}
 
-        {{#unless importing}}
-          {{#unless done}}
+          <div class="pk5e-step-buttons">
             {{#if removable}}
             <button type="button" data-action="addStep" data-step="{{key}}">{{pkT "guide.choose" actionLabel}}</button>
             {{else}}
@@ -171,21 +236,13 @@
               {{#if optional}}{{pkT "guide.addOptional" actionLabel}}{{else}}{{pkT "guide.set" actionLabel}}{{/if}}
             </button>
             {{/if}}
-          {{/unless}}
-
-          {{#if levelUp}}
-          <button type="button" class="pk5e-link" data-action="levelUp">
-            {{pkT "guide.levelUp"}}
-          </button>
-          {{/if}}
-        {{/unless}}
-
-        {{#if showHelp}}
-        <details class="pk5e-help" data-help="{{key}}" {{#if helpOpen}}open{{/if}}>
-          <summary>{{pkT "guide.whatIsThis"}}</summary>
-          <p>{{help}}</p>
-        </details>
+            {{#if levelUp}}
+            <button type="button" data-action="levelUp">{{pkT "guide.levelUp"}}</button>
+            {{/if}}
+          </div>
         {{/if}}
+
+        {{/unless}}
       </div>
       {{/each}}
 
@@ -239,6 +296,7 @@
   </div>
 
   <footer class="pk5e-footer">
+    <span class="pk5e-progress" aria-hidden="true"><i style="width: {{progressPct}}%"></i></span>
     <span class="pk5e-lang-switch">
       {{#each languages}}
       <button type="button" class="pk5e-chip {{#if selected}}is-active{{/if}}"

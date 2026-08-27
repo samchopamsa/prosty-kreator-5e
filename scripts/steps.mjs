@@ -87,6 +87,67 @@ function shortSummary(item) {
   return "";
 }
 
+/**
+ * Plain text out of a sheet field.
+ *
+ * The bio fields are written by the importer and by the player, so they arrive
+ * as HTML as often as not - biography.value certainly does. Paragraph ends
+ * become newlines rather than spaces, because a biography run into one block is
+ * unreadable and the panel renders these with the breaks kept.
+ */
+function fieldText(value) {
+  const raw = String(value ?? "");
+  if (!raw) return "";
+  return raw
+    .replace(/<\/(p|div|li)>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&#39;|&rsquo;|&lsquo;/g, "'")
+    .replace(/&quot;|&ldquo;|&rdquo;/g, '"')
+    .replace(/&mdash;/g, "-")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .join("\n")
+    .trim();
+}
+
+/**
+ * The character's own description, as the sheet holds it.
+ *
+ * Read only, and deliberately so: the importer writes most of this from the
+ * background it imports, and the sheet's Biography tab is where anyone edits
+ * it. The step exists because that tab is two clicks away and a player has no
+ * reason to look there for something they never filled in themselves - so what
+ * arrived stayed invisible.
+ *
+ * The alignment is the sheet's raw value rather than a looked-up label: the
+ * system stores whatever was typed, and a 2024 character may carry no alignment
+ * at all.
+ */
+function bioContent(actor) {
+  const details = actor.system?.details ?? {};
+
+  const pick = (key, source = details) => ({ key, label: t(`bio.${key}`), value: fieldText(source[key]) });
+
+  const fields = ["gender", "age", "height", "weight", "eyes", "hair", "skin", "faith", "alignment"].map((key) =>
+    pick(key)
+  );
+  const personality = ["trait", "ideal", "bond", "flaw"].map((key) => pick(key));
+
+  const notes = [
+    { key: "appearance", label: t("bio.appearance"), text: fieldText(details.appearance) },
+    { key: "biography", label: t("bio.biography"), text: fieldText(details.biography?.value) }
+  ].filter((note) => note.text);
+
+  const filled = [...fields, ...personality].filter((field) => field.value).length + notes.length;
+
+  return { fields, personality, notes, filled };
+}
+
 export function buildSteps(actor, { importing = false } = {}) {
 
   const species = actor.items.find((i) => i.type === "race" || i.type === "species");
@@ -125,6 +186,7 @@ export function buildSteps(actor, { importing = false } = {}) {
     ? t(METHOD_KEYS[savedAbilities.method])
     : "";
 
+  const bio = bioContent(actor);
   const portrait = actor.img ?? "";
   const hasPortrait =
     !!portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
@@ -274,6 +336,22 @@ export function buildSteps(actor, { importing = false } = {}) {
       result: hasPortrait ? t("guide.portraitSet") : "",
       img: hasPortrait ? actor.img : "",
       blurb: text("textPortrait", "blurb.portrait")
+    },
+    {
+      key: "bio",
+      label: t("step.bio"),
+      actionLabel: t("stepAcc.bio"),
+      icon: "fa-feather",
+      removable: false,
+      optional: true,
+      // The sheet is where this is written; the panel only shows what is there.
+      action: "openSheet",
+      done: bio.filled > 0,
+      result: "",
+      img: "",
+      bio,
+      blurb: text("textBio", "blurb.bio"),
+      help: t("help.bio")
     }
   ].map((step, index) => ({ ...step, number: index + 2 }));
 

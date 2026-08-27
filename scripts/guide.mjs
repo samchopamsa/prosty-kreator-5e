@@ -29,7 +29,7 @@ import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
-import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, wait } from "./sheet-actions.mjs";
+import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, wait } from "./sheet-actions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -127,6 +127,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._hooks = [];
     /** Per-step override of whether the explanation is expanded. */
     this._help = {};
+    /** Steps the player has folded away. Empty until they fold one. */
+    this._folded = {};
+    /** What the sheet mode was before the panel unlocked it, once known. */
+    this._priorSheetMode = undefined;
     /** Step whose import is still running, if any. */
     this._importing = null;
     /** When something last landed on the actor, used to detect a finished import. */
@@ -152,6 +156,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       openSheet: CreationGuide.onOpenSheet,
       finalizeGuide: CreationGuide.onFinalizeGuide,
       setPortrait: CreationGuide.onSetPortrait,
+      toggleStep: CreationGuide.onToggleStep,
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
       setLanguage: CreationGuide.onSetLanguage,
@@ -303,6 +308,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       console.error(`${MODULE_ID} | Could not build the steps for ${actor.name}`, err);
     }
 
+    // The portrait is drawn in the first block, beside the name, instead of as
+    // a step of its own: it is a picture of the character, and it belongs where
+    // the character is named. buildSteps() still returns it - steps.mjs states
+    // the rules and knows nothing about this window - so it is taken out here,
+    // which also leaves the remaining numbers running 2..6 without renumbering.
+    const portraitStep = steps.find((step) => step.key === "portrait");
+    steps = steps.filter((step) => step.key !== "portrait");
+
+    // Numbered here, not in steps.mjs, because the portrait leaving the list is
+    // this window's decision: numbering there would count a step this panel
+    // never draws and the player would be looking for a missing seven.
+    steps = steps.map((step, index) => ({ ...step, number: index + 2 }));
+
     const showHelp = game.settings.get(MODULE_ID, "showStepHelp");
     // Always collapsed to start with, so the steps stay scannable. The chevron
     // on the summary shows there is more to read.
@@ -313,6 +331,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       step.importing = this._importing === step.key;
       // Marks the step head, so the problem is visible before scrolling down.
       step.hasSkipped = (step.entries ?? []).some((entry) => entry.skipped);
+      step.folded = !!this._folded[step.key];
     }
 
     // Open the first time this character's panel is opened, folded away after
@@ -358,6 +377,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       actorName: actor.name,
       actorImg: actor.img ?? "",
       portrait: actor.img ?? "",
+      // Not "has an image": every actor has one. This is buildSteps() own test,
+      // which discounts the mystery man and the system placeholders.
+      portraitSet: !!portraitStep?.done,
+      // The first block used to be marked finished from the moment the panel
+      // opened, tick and all, while the character was still called "New
+      // Character". Same test the tally uses, so the two cannot disagree.
+      nameSet: !hasPlaceholderName(actor),
+      portraitBlurb: portraitStep?.blurb ?? "",
       nameHelp: showHelp ? t("help.name") : "",
       nameHelpOpen: this._help.name ?? helpDefault,
       introText: text("introText"),
@@ -419,21 +446,30 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       steps,
       allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {
-        // Every step is counted, optional ones included, because the intro
-        // promises seven and the numbering shows seven. A tally that quietly
-        // drops the portrait reads as a contradiction in the same window.
+        // Every step in the list is counted, optional ones included, because
+        // the intro promises six and the numbering shows six. The portrait is
+        // not among them any more: it is drawn inside the first block, so it is
+        // counted the way that block is - by the name being set.
         //
         // The name counts as done once it is not the placeholder we gave it,
         // which is the same rule the sheet button's count uses.
         const named = hasPlaceholderName(actor) ? 0 : 1;
         const done = steps.filter((step) => step.done).length + named;
         return t("guide.progress", done, steps.length + 1);
+      })(),
+      // The same tally as a width, for the footer bar. Rounded, because a bar
+      // three pixels tall cannot show the difference a fraction would make.
+      progressPct: (() => {
+        const named = hasPlaceholderName(actor) ? 0 : 1;
+        const done = steps.filter((step) => step.done).length + named;
+        return Math.round((done / (steps.length + 1)) * 100);
       })()
     };
   }
 
   _onRender() {
     applyTheme(this);
+    this.unlockSheet();
     preserveScroll(this, [".pk5e-pane"]);
 
     this.bindNameField();
@@ -598,7 +634,39 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._hooks.push(["updateActor", Hooks.on("updateActor", onActor)]);
   }
 
+  /**
+   * Unlocks the character sheet for as long as the panel is open.
+   *
+   * Not a convenience: on Tidy the "Add Background" button does not exist in
+   * play mode at all, so the step did nothing and explained nothing. The panel
+   * drives the sheet's own buttons, which means the sheet has to be in the
+   * state where those buttons exist.
+   *
+   * Runs on every render and gives up immediately once it has an answer - the
+   * sheet is usually already open behind the panel, but it may be opened later,
+   * and this catches up either way.
+   */
+  async unlockSheet() {
+    if (this._priorSheetMode !== undefined) return;
+    if (!this.actor?.sheet?.rendered) return;
+    try {
+      this._priorSheetMode = await ensureEditMode(this.actor);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not unlock the sheet`, err);
+    }
+  }
+
   async close(options) {
+    // Back to reading mode, unless the player had it unlocked before we did.
+    // An undefined prior mode means the panel never saw the sheet open, and the
+    // restore treats that as "it was locked" - the state a player who never
+    // touches the toggle expects to find.
+    try {
+      await restoreSheetMode(this.actor, this._priorSheetMode);
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not restore the sheet mode`, err);
+    }
+
     for (const [hook, id] of this._hooks) Hooks.off(hook, id);
     this._hooks = [];
     this._stopOptionWatch?.();
@@ -953,6 +1021,25 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static onRecheck() {
+    this.render();
+  }
+
+  /**
+   * Folds a step away, or opens it again.
+   *
+   * Nothing folds on its own: a step the player has not touched is always open,
+   * because the panel's job is to show what was chosen - the picture from the
+   * importer included - and a list that hides that by default is a list of
+   * headings. Folding is here for a long multiclassed panel, and it is the
+   * player who decides when that is.
+   *
+   * The state lives on the window rather than the actor: it is how one person
+   * is reading the panel at this moment, not something about the character.
+   */
+  static onToggleStep(event, target) {
+    const key = target.dataset.step;
+    if (!key) return;
+    this._folded[key] = !this._folded[key];
     this.render();
   }
 

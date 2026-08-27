@@ -12,6 +12,57 @@ Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
 
 ---
 
+## 1.61.0
+
+Panel czytelniejszy, karta Tidy odblokowywana, nowy krok Bio.
+
+- **Portret przeniesiony do pierwszego bloku, obok imienia.** Byl ostatnim
+  krokiem, czyli obrazkiem na dole panelu, do ktorego nikt nie przewija, gdy
+  postac juz dziala. Kwadrat 128 px, wiekszy niz 96 px ilustracji pozostalych
+  krokow - to postac, a nie kolejna pozycja z listy. Krokow nadal jest siedem,
+  bo w to miejsce wszedl Bio.
+- **Nowy krok Bio** - plec, wiek, wzrost, waga, oczy, wlosy, skora, wiara
+  i charakter, osobno cechy charakteru, idealy, wiezi i slabosci, na koncu
+  wyglad i biografia. Tylko do odczytu: pisze to importer z pochodzenia, a
+  edytuje sie na karcie. Krok istnieje dlatego, ze zakladka Biography jest dwa
+  klikniecia dalej i gracz nie ma powodu tam zagladac po cos, czego sam nie
+  wpisywal - wiec to, co przyszlo, pozostawalo niewidoczne. Puste pola zostaja
+  na miejscu, wyszarzone: znikajace wiersze zmienialyby uklad przy kazdym
+  kolejnym polu.
+- **Dodanie pochodzenia na Tidy 5e Sheets w koncu dziala.** `ensureEditMode()`
+  czytalo wylacznie `sheet._mode` i szukalo `[data-action='changeMode']` - to
+  mechanizm karty dnd5e, ktorego Tidy nie ma, wiec funkcja wychodzila w
+  pierwszej linii i karta zostawala zamknieta. A na Tidy przyciskow "Add" w
+  trybie odczytu po prostu nie ma. Teraz panel odblokowuje karte na czas swojej
+  pracy i zamyka ja z powrotem przy zamknieciu - chyba ze gracz mial ja
+  odblokowana wczesniej.
+- **Klasyczna karta Tidy mowi prawde zamiast milczec.** Zmierzone: jej przycisk
+  "Add" w sekcji pochodzenia tworzy pusty przedmiot "New Background", zamiast
+  otwierac wybor - nie ma tam czego nacisnac. Panel nie nacisnie go wiec nigdy,
+  tylko poprosi o przelaczenie na Quadrone albo karte dnd5e. Wczesniejszy
+  komunikat radzil wlaczyc tryb edycji, co na tej karcie bylo nieprawda.
+- **Koniec pytania "Plutonium czy Compendium Browser?" przy kazdym kroku.**
+  Panel nie oferuje juz drogi przez kompendium, wiec pytanie mialo jedna
+  odpowiedz, a bylo zadawane raz na krok. Ustawienie importera przechodzi z
+  Prompt na Always - u zrodla, bo dialog klikniety i tak mignalby na ekranie.
+  Wartosc Never zostaje nietknieta, a zmiana trafia do konsoli.
+- **Kazdy krok da sie zwinac, zaden nie zwija sie sam.** Panel pokazuje, co
+  zostalo wybrane, z obrazkiem z importera wlacznie; lista, ktora domyslnie to
+  chowa, jest lista naglowkow. Zwijanie jest dla dlugiego panelu postaci
+  wieloklasowej i to gracz decyduje, kiedy nim jest.
+- **Uklad kroku.** Nazwa wieksza i wyrazniejsza, pod nia "Co to jest?" mala
+  kursywa, dalej wybor i opis bez zmian, a "Usun", "Cofnij poziom" i "Dodaj
+  poziom" w jednej linii zamiast trzech blokow na cala szerokosc. Akapit
+  wstepny przeniesiony do ramki "Zanim zaczniesz".
+- **Panel wyglada jak ciag krokow, a nie stos ramek**: linia laczaca odznaki
+  numerow, wypelniona odznaka na kroku ukonczonym, dokonany wybor w karcie
+  z delikatna poswiata, pasek postepu w stopce i przycisk konczacy w kolorze
+  akcentu.
+- **`check.sh` sprawdza rejestracje ustawien.** `text("textBio", ...)` czyta
+  ustawienie swiata, a Foundry rzuca wyjatkiem na nieznanym - zabierajac ze
+  soba cala liste krokow. Testy stubuja `game.settings`, wiec brak rejestracji
+  przechodzil kazda kontrole i wysypywal sie dopiero przy pierwszym renderze.
+
 ## 1.60.0
 
 Diagnostyka cudzego markupu i wydawanie przez tag.

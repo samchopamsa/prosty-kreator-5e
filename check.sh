@@ -116,6 +116,38 @@ node -e '
   process.exit(bad);
 ' || fail=1
 
+# --- 3b. settings read by name ---------------------------------------------
+#
+# text("textBio", ...) reads a world setting, and Foundry throws on a setting
+# that was never registered - which takes the whole step list down with it. The
+# unit tests stub game.settings, so they cannot see this: a missing registration
+# passed every check here and failed on the first real render.
+
+step "settings"
+node -e '
+  const fs = require("fs");
+  const registered = new Set();
+  const module_ = fs.readFileSync("scripts/module.mjs", "utf8");
+  // Both shapes in use: the textSettings table and individual register calls.
+  for (const m of module_.matchAll(/^\s{4}(\w+):\s*"/gm)) registered.add(m[1]);
+  for (const m of module_.matchAll(/settings\.register\(\s*MODULE_ID\s*,\s*"([^"]+)"/g)) registered.add(m[1]);
+
+  const wanted = new Set();
+  for (const f of fs.readdirSync("scripts")) {
+    if (!f.endsWith(".mjs")) continue;
+    const src = fs.readFileSync("scripts/" + f, "utf8");
+    for (const m of src.matchAll(/\btext\(\s*"([^"]+)"/g)) wanted.add(m[1]);
+    for (const m of src.matchAll(/settings\.get\(\s*MODULE_ID\s*,\s*"([^"]+)"/g)) wanted.add(m[1]);
+  }
+
+  const missing = [...wanted].filter((k) => !registered.has(k));
+  if (missing.length) {
+    console.log("  FAIL read but never registered: " + missing.join(", "));
+    process.exit(1);
+  }
+  console.log("  ok   " + wanted.size + " settings read, all registered");
+' || fail=1
+
 # --- 4. imports ------------------------------------------------------------
 #
 # A cycle works in ES modules only as long as nobody imports a const across it,

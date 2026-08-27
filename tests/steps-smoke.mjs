@@ -42,11 +42,11 @@ const steps = buildSteps(actor);
 console.log("krokow:", steps.length);
 console.table(steps.map((s) => ({ nr: s.number, key: s.key, label: s.label, done: s.done, wpisow: (s.entries ?? []).length })));
 
-if (steps.length !== 6) {
-  console.error("expected six steps");
+if (steps.length !== 7) {
+  console.error("expected seven steps");
   process.exit(1);
 }
-if (steps.map((s) => s.key).join() !== "class,species,background,abilities,languages,portrait") {
+if (steps.map((s) => s.key).join() !== "class,species,background,abilities,languages,portrait,bio") {
   console.error("steps are in the wrong order");
   process.exit(1);
 }
