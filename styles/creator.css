@@ -1329,3 +1329,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   gap: 6px;
 }
 .pk5e-source-line i { opacity: 0.7; }
+
+/* Narrowing the picker to one compendium. Only drawn when more than one holds
+   entries of this kind, so it never appears as a choice of one. */
+.pk5e-pack-filter { width: 100%; font-size: 12px; }

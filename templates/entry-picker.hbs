@@ -8,6 +8,15 @@
           <input type="search" data-search placeholder="{{searchPlaceholder}}" autocomplete="off">
         </div>
 
+        {{#if packs.length}}
+        <select data-pack-filter class="pk5e-pack-filter">
+          <option value="">{{allPacksLabel}}</option>
+          {{#each packs}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+          {{/each}}
+        </select>
+        {{/if}}
+
         {{#if empty}}
         <p class="pk5e-empty">{{emptyHint}}</p>
         {{/if}}

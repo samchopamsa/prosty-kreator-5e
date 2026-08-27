@@ -84,15 +84,63 @@ export function multiclassProblems(actor) {
 const CHOICE_TYPES = ["Trait", "AbilityScoreImprovement", "Size", "ItemChoice"];
 
 /**
+ * Was the player actually asked anything by this advancement?
+ *
+ * An empty value only means "skipped" if there was something to fill it with,
+ * and for two of the four types there very often was not. Read out of dnd5e
+ * 5.3.3 rather than assumed:
+ *
+ *   TraitConfigurationData      grants: Set    - fixed, nobody is asked
+ *                               choices: [{count, pool}]  - the actual question
+ *   ItemChoiceConfigurationData choices: { "<level>": {count} }
+ *
+ * A class's saving throws and armour proficiencies are Traits with `grants`
+ * filled and `choices` empty. They can never produce a `chosen`, so reading
+ * them as skipped accused the player of missing a question that was never put
+ * to them - on a character where every real dialog had been answered.
+ *
+ * ItemChoice is keyed by level, so an entry for level 3 on a level 1 character
+ * is not outstanding either; it has not come round yet.
+ *
+ * @param {object} advancement
+ * @param {number} level  Level the item has reached, for the level-keyed types.
+ */
+export function offersAChoice(advancement, level = Infinity) {
+  const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
+  const config = advancement?.configuration ?? {};
+
+  switch (type) {
+    case "Trait": {
+      const choices = Array.from(config.choices ?? []);
+      return choices.some((choice) => Number(choice?.count ?? 0) > 0);
+    }
+    case "ItemChoice": {
+      const choices = config.choices ?? {};
+      return Object.entries(choices).some(
+        ([at, choice]) => Number(choice?.count ?? 0) > 0 && Number(at) <= level
+      );
+    }
+    default:
+      // AbilityScoreImprovement and Size always put something to the player;
+      // whether it was answered is decided by the value below.
+      return true;
+  }
+}
+
+/**
  * True when a choice was offered and nothing came back.
  *
  * @param {object}  advancement
  * @param {boolean} secondaryClass  This entry belongs to a class taken as a
  *                                  multiclass rather than the first one.
+ * @param {number}  level           Level the item has reached.
  */
-export function choiceWasSkipped(advancement, secondaryClass = false) {
+export function choiceWasSkipped(advancement, secondaryClass = false, level = Infinity) {
   const type = advancement?.type ?? advancement?.constructor?.typeName ?? "";
   if (!CHOICE_TYPES.includes(type)) return false;
+
+  // Nothing was asked, so nothing can have been skipped.
+  if (!offersAChoice(advancement, level)) return false;
 
   // Multiclassing grants a reduced set - no skill proficiencies from the second
   // class, a shorter list of armour - and the entries for what it does not
@@ -191,8 +239,11 @@ export function itemsWithSkippedChoices(actor) {
     );
 
     const secondary = isSecondaryClass(actor, item);
+    // Level-keyed advancements are only outstanding up to the level reached.
+    // A class carries its own; anything else applies from level 1.
+    const level = item.type === "class" ? Number(item.system?.levels ?? 1) : 1;
 
-    if (!advancements.some((adv) => choiceWasSkipped(adv, secondary))) continue;
+    if (!advancements.some((adv) => choiceWasSkipped(adv, secondary, level))) continue;
 
     problems.push({ id: item.id, name: item.name, type: item.type });
   }

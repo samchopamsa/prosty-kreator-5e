@@ -77,6 +77,8 @@ export class EntryPicker extends HandlebarsApplicationMixin(ApplicationV2) {
     this.selected = null;
     this.detail = null;
     this.entries = null;
+    /** Compendium being shown, or "" for all of them. */
+    this.packFilter = "";
     this._adding = false;
   }
 
@@ -143,10 +145,33 @@ export class EntryPicker extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const chosen = this.entries.find((entry) => entry.uuid === this.selected) ?? null;
 
+    // Which compendiums these entries actually came from. Built from the
+    // entries rather than from the settings, so a compendium that is selected
+    // but holds no class does not appear as an option that empties the list.
+    const packs = new Map();
+    for (const entry of this.entries) {
+      if (!packs.has(entry.packId)) packs.set(entry.packId, entry.packLabel);
+    }
+
+    const shown = this.packFilter
+      ? this.entries.filter((entry) => entry.packId === this.packFilter)
+      : this.entries;
+
     return {
       step: this.step,
       lead: t(`picker.lead.${this.step}`),
-      entries: this.entries.map((entry) => ({
+      // Only worth showing when there is something to narrow. One compendium
+      // is not a choice.
+      packs:
+        packs.size > 1
+          ? Array.from(packs, ([id, label]) => ({
+              id,
+              label,
+              selected: id === this.packFilter
+            })).sort((a, b) => a.label.localeCompare(b.label))
+          : [],
+      allPacksLabel: t("picker.allPacks"),
+      entries: shown.map((entry) => ({
         uuid: entry.uuid,
         name: entry.name,
         img: entry.img,
@@ -154,9 +179,9 @@ export class EntryPicker extends HandlebarsApplicationMixin(ApplicationV2) {
         selected: entry.uuid === this.selected,
         search: `${entry.name} ${entry.origin}`.toLowerCase()
       })),
-      empty: this.entries.length === 0,
-      emptyHint: t("picker.empty"),
-      searchPlaceholder: t("picker.search", this.entries.length),
+      empty: shown.length === 0,
+      emptyHint: this.packFilter ? t("picker.emptyFiltered") : t("picker.empty"),
+      searchPlaceholder: t("picker.search", shown.length),
       selected: chosen,
       detail: this.detail,
       readingLabel: t("picker.reading"),
@@ -170,6 +195,22 @@ export class EntryPicker extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender() {
     applyTheme(this);
     preserveScroll(this, [".pk5e-options", ".pk5e-detail-col"]);
+
+    this.element.querySelector("[data-pack-filter]")?.addEventListener("change", (ev) => {
+      this.packFilter = ev.currentTarget.value;
+      // A selection that the filter has just hidden would leave the right-hand
+      // pane describing something no longer on the list.
+      if (this.packFilter) {
+        const stillShown = this.entries.some(
+          (entry) => entry.uuid === this.selected && entry.packId === this.packFilter
+        );
+        if (!stillShown) {
+          this.selected = null;
+          this.detail = null;
+        }
+      }
+      this.render();
+    });
 
     // Filters rows already on the page rather than re-rendering, so the field
     // keeps focus and the caret between keystrokes.

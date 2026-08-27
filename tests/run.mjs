@@ -163,11 +163,43 @@ group("validate: advancement choices left unmade", () => {
     }),
     false
   );
-  check("trait with no choice made", choiceWasSkipped({ type: "Trait", value: { chosen: [] } }), true);
+  // A Trait that actually asks something carries `choices`; one that only
+  // hands out fixed proficiencies carries `grants` and asks nothing. Shapes
+  // read from dnd5e 5.3.3's TraitConfigurationData.
+  const asking = { choices: [{ count: 2, pool: ["skills:*"] }], grants: [] };
+  const granting = { choices: [], grants: ["saves:dex", "saves:int"] };
+
+  check(
+    "trait with no choice made",
+    choiceWasSkipped({ type: "Trait", configuration: asking, value: { chosen: [] } }),
+    true
+  );
   check(
     "trait chosen",
-    choiceWasSkipped({ type: "Trait", value: { chosen: ["skills:his"] } }),
+    choiceWasSkipped({ type: "Trait", configuration: asking, value: { chosen: ["skills:his"] } }),
     false
+  );
+  // THE FALSE ALARM. A class's saving throws and armour training are Traits
+  // with grants filled and choices empty, so `chosen` can never be anything
+  // else. Read as skipped, they accused the player of missing a question that
+  // was never put to them - on a character where every dialog had been answered.
+  check(
+    "a trait that only grants is not a question anyone skipped",
+    choiceWasSkipped({ type: "Trait", configuration: granting, value: { chosen: [] } }),
+    false
+  );
+  // ItemChoice is keyed by level: an entry for level 3 is not outstanding on a
+  // level 1 character, it simply has not come round yet.
+  const atThree = { choices: { 3: { count: 1 } } };
+  check(
+    "an item choice from a level not yet reached is not outstanding",
+    choiceWasSkipped({ type: "ItemChoice", configuration: atThree, value: {} }, false, 1),
+    false
+  );
+  check(
+    "the same choice once the level is reached",
+    choiceWasSkipped({ type: "ItemChoice", configuration: atThree, value: {} }, false, 3),
+    true
   );
   // The one that would fire on every correct character if the rule were just
   // "is it empty": ScaleValue holds figures derived from level, never choices.
@@ -189,7 +221,7 @@ group("validate: advancement choices left unmade", () => {
   );
   check(
     "the same entry on a first class is still checked",
-    choiceWasSkipped({ type: "Trait", value: { chosen: [] } }, false),
+    choiceWasSkipped({ type: "Trait", configuration: asking, value: { chosen: [] } }, false),
     true
   );
   // Size and ability increases are not granted by class at all, so an empty one
@@ -209,7 +241,7 @@ group("validate: advancement choices left unmade", () => {
     "reported once per item, not once per entry",
     itemsWithSkippedChoices(
       actor([
-        { type: "Trait", value: { chosen: [] } },
+        { type: "Trait", configuration: asking, value: { chosen: [] } },
         { type: "Size", value: { size: "" } }
       ])
     ).map((p) => p.name),
@@ -217,7 +249,7 @@ group("validate: advancement choices left unmade", () => {
   );
   check(
     "a complete item is not reported",
-    itemsWithSkippedChoices(actor([{ type: "Trait", value: { chosen: ["skills:rel"] } }])),
+    itemsWithSkippedChoices(actor([{ type: "Trait", configuration: asking, value: { chosen: ["skills:rel"] } }])),
     []
   );
 });

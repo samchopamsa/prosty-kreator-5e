@@ -167,6 +167,8 @@ const STRINGS = {
     "picker.search": "Search {0} entries...",
     "picker.empty":
       "Nothing of this kind in the compendiums being read. The selection is in the module settings, under the reference compendiums.",
+    "picker.allPacks": "All compendiums",
+    "picker.emptyFiltered": "Nothing of this kind in that compendium. Choose another above.",
     "picker.placeholder": "Pick an entry on the left to read what it does.",
     "picker.reading": "Reading...",
     "picker.add": "Add",
@@ -461,6 +463,8 @@ const STRINGS = {
     "picker.search": "Szukaj wśród {0} pozycji...",
     "picker.empty":
       "Nie ma nic tego rodzaju w czytanych kompendiach. Ich wybór jest w ustawieniach modułu, przy kompendiach referencyjnych.",
+    "picker.allPacks": "Wszystkie kompendia",
+    "picker.emptyFiltered": "Nie ma nic tego rodzaju w tym kompendium. Wybierz inne powyżej.",
     "picker.placeholder": "Wybierz pozycję po lewej, żeby przeczytać, co robi.",
     "picker.reading": "Wczytywanie...",
     "picker.add": "Dodaj",

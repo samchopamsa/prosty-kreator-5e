@@ -33,6 +33,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
+import { deleteWithAdvancement } from "./sheet-actions.mjs";
 
 /** The system's Advancement manager, wherever this version keeps it. */
 function advancementManager() {
@@ -44,17 +45,22 @@ function advancementManager() {
 }
 
 /**
- * Would this be a second background on a character that may only have one?
+ * What is already on the character that a new one of this type would replace.
  *
  * Asked of the system's own metadata rather than a list here, so a type that
- * changes its mind in a later version changes this answer with it. dnd5e shows
- * an error and refuses the drop; we do the same rather than inventing a
- * different rule.
+ * changes its mind in a later version changes this answer with it. A character
+ * may hold one background and one species; classes are not singletons, because
+ * a second one is a multiclass rather than a correction.
+ *
+ * dnd5e refuses the drop outright at this point. We do NOT: picking a species
+ * again means changing your mind, which is what the importer's route already
+ * does, and telling the player to go and delete the old one first is a step
+ * they only have to take because of how we happened to build this.
  */
-function blockedAsDuplicate(actor, type) {
+function replacedBy(actor, type) {
   const singleton = CONFIG.Item?.dataModels?.[type]?.metadata?.singleton ?? false;
-  if (!singleton) return false;
-  return (actor.itemTypes?.[type]?.length ?? 0) > 0;
+  if (!singleton) return [];
+  return Array.from(actor.itemTypes?.[type] ?? []);
 }
 
 /**
@@ -84,11 +90,27 @@ export async function addFromCompendium(actor, uuid) {
   const itemData = doc.toObject();
   delete itemData._id;
 
-  if (blockedAsDuplicate(actor, itemData.type)) {
-    ui.notifications.warn(
-      `${actor.name} already has a ${itemData.type}. Remove that one first, then add this.`
-    );
-    return false;
+  // Changing your mind replaces rather than refuses. The old one goes through
+  // the Advancement reversal first, so the proficiencies, features and hit
+  // points it granted are unwound - deleting the item alone would leave all of
+  // that on the character, silently attributed to nothing.
+  for (const existing of replacedBy(actor, itemData.type)) {
+    trace(`replacing ${existing.name} with ${itemData.name}`);
+    try {
+      await deleteWithAdvancement(actor, existing);
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not remove ${existing.name}`, err);
+      ui.notifications.error(`Could not remove ${existing.name}: ${err.message}`);
+      return false;
+    }
+
+    // The reversal window can be closed without finishing it, which leaves the
+    // old entry in place. Adding the new one anyway would give the character
+    // two of something it may only have one of.
+    if (actor.items.get(existing.id)) {
+      ui.notifications.warn(`${existing.name} was not removed, so nothing was added.`);
+      return false;
+    }
   }
 
   const AdvancementManager = advancementManager();
