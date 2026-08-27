@@ -24,12 +24,80 @@
  * line up with the codes the importer shows ("XPHB", "TCE"). The canonical code
  * is in the importer's source flag, and that is what we compare. It is only ever a
  * tie-breaker: the name is the key.
+ *
+ * Entries that never went through the importer - the SRD, anything imported
+ * from D&D Beyond - have no such flag, so sourceCode() translates the label
+ * instead. See its comment for why the table is as short as it is.
  */
 
 import { MODULE_ID, IMPORTER_FLAG } from "./constants.mjs";
 import { referencePackIds } from "./reference-config.mjs";
 
 const WANTED_TYPES = ["class", "subclass"];
+
+/**
+ * Book labels, as dnd5e writes them, against the codes the importer uses.
+ *
+ * Deliberately short. This is only ever a tie-breaker between two compendiums
+ * holding the same entry under the same name - the name is the key, and an
+ * unrecognised book simply means the first match wins, which is what happened
+ * before this existed. A long table would be a lot of guessing for a decision
+ * that rarely gets made.
+ */
+const BOOK_CODES = {
+  phb: "PHB",
+  playershandbook: "PHB",
+  dmg: "DMG",
+  dungeonmastersguide: "DMG",
+  mm: "MM",
+  monstermanual: "MM",
+  tce: "TCE",
+  tcoe: "TCE",
+  tashascauldronofeverything: "TCE",
+  xge: "XGE",
+  xgte: "XGE",
+  xanatharsguidetoeverything: "XGE",
+  mpmm: "MPMM",
+  motm: "MPMM",
+  mordenkainenpresentsmonstersofthemultiverse: "MPMM"
+};
+
+/** The 2024 rewrites carry the same code with an X in front. */
+const REVISED = { PHB: "XPHB", DMG: "XDMG", MM: "XMM" };
+
+/**
+ * The canonical book code for a compendium entry.
+ *
+ * The importer's flag is the answer whenever it is there, because it is already
+ * the code we are comparing against. Entries that never went through it - the
+ * SRD, anything imported from D&D Beyond - carry only dnd5e's own
+ * system.source, whose `book` is a human label ("Player's Handbook 2024") that
+ * matches no code at all. Read that way every such entry scored an empty
+ * string, so the tie-break below could never fire on exactly the libraries
+ * where duplicates are most likely.
+ *
+ * The 2014/2024 split is read from `rules` where dnd5e records it and from the
+ * label otherwise, since that distinction is the one that actually separates
+ * two entries sharing a name.
+ */
+export function sourceCode(entry) {
+  const fromImporter = entry?.flags?.[IMPORTER_FLAG]?.source;
+  if (fromImporter) return String(fromImporter);
+
+  const source = entry?.system?.source ?? {};
+  const label = String(source.book || source.custom || "");
+  if (!label) return "";
+
+  const revised = String(source.rules ?? "") === "2024" || /\b2024\b/.test(label);
+  const key = normalise(label).replace(/20(14|24)/g, "");
+
+  // "SRD 5.2", "SRD 5.1" - the version moves, the book does not.
+  if (key.startsWith("srd")) return "SRD";
+
+  const base = BOOK_CODES[key];
+  if (!base) return "";
+  return revised ? REVISED[base] ?? base : base;
+}
 
 /** Lower case, letters and digits only. For comparing identifiers to names. */
 export function normalise(value) {
@@ -84,7 +152,7 @@ export async function loadClassIndex() {
           ? entry.system?.identifier || normalise(entry.name)
           : entry.system?.classIdentifier || "",
         // Canonical book code, comparable with the importer's.
-        code: entry.flags?.[IMPORTER_FLAG]?.source ?? "",
+        code: sourceCode(entry),
         // Human label, for showing the reader where this came from.
         origin: source.book || source.custom || pack.metadata.label,
         packId: pack.collection,

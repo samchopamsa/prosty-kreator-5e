@@ -40,9 +40,10 @@ globalThis.Hooks = { on: () => 0, off: () => {} };
 globalThis.CONFIG = { DND5E: { abilities: {} }, Actor: { documentClass: { defaultName: () => "Player Character" } } };
 globalThis.ui = { notifications: { warn: () => {}, info: () => {}, error: () => {} } };
 
-const { matchImporterEntry, groupByClass, normalise } = await import("../scripts/compendium.mjs");
+const { matchImporterEntry, groupByClass, normalise, sourceCode } =
+  await import("../scripts/compendium.mjs");
 const { choiceWasSkipped, itemsWithSkippedChoices, multiclassProblems, checkCharacter,
-  abilitiesAssigned } =
+  abilitiesAssigned, isSecondaryClass } =
   await import("../scripts/validate.mjs");
 const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mjs");
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
@@ -51,6 +52,9 @@ const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
+const { currentSource, effectiveSource, sourceChosen, usesCompendium, importerAvailable,
+  SOURCE_IMPORTER, SOURCE_COMPENDIUM } =
+  await import("../scripts/source-mode.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/rules-data.mjs");
@@ -1346,6 +1350,167 @@ group("validate: telling assigned scores from bonuses", () => {
   check("the standard array is", abilitiesAssigned(six(15, 14, 13, 12, 10, 8)), true);
   check("a rolled character is", abilitiesAssigned(six(9, 16, 14, 11, 13, 7)), true);
   check("an empty sheet does not throw", abilitiesAssigned({}), false);
+});
+
+// --- telling a multiclass from a first class ---------------------------------
+
+group("validate: which class was taken first", () => {
+  const classItem = (id, { identifier = id, primary = undefined } = {}) => ({
+    id,
+    type: "class",
+    system: { identifier },
+    flags: primary === undefined ? {} : { plutonium: { isPrimaryClass: primary } }
+  });
+
+  const actorWith = (items, originalClass = "") => ({
+    items,
+    system: { details: { originalClass } }
+  });
+
+  // The importer's own answer, which needs nothing else.
+  const fighter = classItem("aaa", { primary: true });
+  const wizard = classItem("bbb", { primary: false });
+  const flagged = actorWith([fighter, wizard]);
+  check("the importer's flag says the first class is first", isSecondaryClass(flagged, fighter), false);
+  check("...and the second is second", isSecondaryClass(flagged, wizard), true);
+
+  // A compendium class carries no flag at all. This is the case that produced
+  // a warning nothing could clear.
+  const rogue = classItem("ccc");
+  const cleric = classItem("ddd");
+  const byId = actorWith([rogue, cleric], "ccc");
+  check("dnd5e's own record names the first class", isSecondaryClass(byId, rogue), false);
+  check("...so the other one is the multiclass", isSecondaryClass(byId, cleric), true);
+
+  // Some data stores the identifier rather than the id; both are accepted, so
+  // the same pair is asked again with originalClass holding "rogue".
+  const named = classItem("eee", { identifier: "rogue" });
+  const byIdentifier = actorWith([named, cleric], "rogue");
+  check("the identifier is accepted where the id would be", isSecondaryClass(byIdentifier, named), false);
+  check("...and the other class is still the multiclass", isSecondaryClass(byIdentifier, cleric), true);
+
+  // One class is the first one whatever else is recorded - checked before
+  // originalClass, which on a single-class character is routinely empty.
+  const alone = classItem("fff");
+  check("a lone class is never a multiclass", isSecondaryClass(actorWith([alone]), alone), false);
+  check(
+    "...even with nothing recorded at all",
+    isSecondaryClass({ items: [alone], system: {} }, alone),
+    false
+  );
+
+  // Two classes and no record of which came first. Suppressing the check on
+  // both is the deliberate choice: a missed warning beats one that cannot be
+  // cleared.
+  const nothingRecorded = actorWith([rogue, cleric], "");
+  check("two classes and no record reads as multiclass", isSecondaryClass(nothingRecorded, rogue), true);
+
+  check("a background is not a class", isSecondaryClass(byId, { type: "background", id: "ccc" }), false);
+  check("nothing at all does not throw", isSecondaryClass(null, null), false);
+});
+
+// --- book codes for entries the importer never touched -----------------------
+
+group("compendium: working out a book code without the importer's flag", () => {
+  // The flag wins outright - it is already the code we compare against.
+  check(
+    "the importer's flag is used as-is",
+    sourceCode({ flags: { plutonium: { source: "XPHB" } }, system: { source: { book: "PHB 2024" } } }),
+    "XPHB"
+  );
+
+  // dnd5e records the edition separately; the label alone also carries it.
+  check(
+    "rules 2024 promotes the Player's Handbook",
+    sourceCode({ system: { source: { book: "Player's Handbook", rules: "2024" } } }),
+    "XPHB"
+  );
+  check(
+    "so does a label saying 2024",
+    sourceCode({ system: { source: { book: "PHB 2024" } } }),
+    "XPHB"
+  );
+  check(
+    "the 2014 book keeps the plain code",
+    sourceCode({ system: { source: { book: "Player's Handbook", rules: "2014" } } }),
+    "PHB"
+  );
+  check("an abbreviation is recognised too", sourceCode({ system: { source: { book: "TCoE" } } }), "TCE");
+
+  // The SRD's version number moves between releases; the book does not.
+  check("SRD 5.2", sourceCode({ system: { source: { book: "SRD 5.2" } } }), "SRD");
+  check("SRD 5.1", sourceCode({ system: { source: { book: "SRD 5.1" } } }), "SRD");
+
+  // An unrecognised book scores nothing rather than a guess, which leaves the
+  // match exactly where it was before any of this: first candidate wins.
+  check("homebrew is not guessed at", sourceCode({ system: { source: { book: "Northlands" } } }), "");
+  check("no source at all", sourceCode({}), "");
+  check("an empty label", sourceCode({ system: { source: { book: "" } } }), "");
+});
+
+// --- which road a character is built along -----------------------------------
+
+group("source: the fork between the importer and the compendium", () => {
+  // The importer's presence is the whole of the question, so it is what the
+  // stub varies. Restored afterwards, because everything above ran without it.
+  const withImporter = (active, body) => {
+    const before = globalThis.game.modules;
+    globalThis.game.modules = { get: () => (active === null ? undefined : { active }) };
+    try {
+      body();
+    } finally {
+      globalThis.game.modules = before;
+    }
+  };
+
+  const actorWith = (source) => ({
+    getFlag: (scope, key) => (key === "source" ? source : undefined)
+  });
+
+  withImporter(true, () => {
+    check("with the importer present, an unanswered character asks", currentSource(actorWith(undefined)), null);
+    check("...and is not counted as chosen", sourceChosen(actorWith(undefined)), false);
+    check("a stored answer is honoured", currentSource(actorWith("compendium")), SOURCE_COMPENDIUM);
+    check("...and counts as chosen", sourceChosen(actorWith("compendium")), true);
+    check("the importer can be chosen too", currentSource(actorWith("importer")), SOURCE_IMPORTER);
+    // Anything not one of the two is treated as unanswered rather than trusted:
+    // a flag left by a future version must not send a step down a third road.
+    check("an unrecognised answer asks again", currentSource(actorWith("wikipedia")), null);
+    check("unanswered still has something to act on", effectiveSource(actorWith(undefined)), SOURCE_IMPORTER);
+  });
+
+  withImporter(false, () => {
+    // No second road: the fork is settled rather than presented.
+    check("without the importer there is nothing to ask", currentSource(actorWith(undefined)), SOURCE_COMPENDIUM);
+    check("...and nothing left to answer", sourceChosen(actorWith(undefined)), true);
+    // The character may have been started in a world where it was still there.
+    // Honouring that would hang every step waiting for a window that cannot
+    // appear, so the stored answer is overruled rather than obeyed.
+    check(
+      "a stored 'importer' is overruled once the importer is gone",
+      currentSource(actorWith("importer")),
+      SOURCE_COMPENDIUM
+    );
+    check("...which is what the steps act on", usesCompendium(actorWith("importer")), true);
+  });
+
+  withImporter(null, () => {
+    check("an importer that is not installed at all reads as absent", importerAvailable(), false);
+  });
+
+  // Read while `game.modules` does not exist yet - the panel is drawn early
+  // enough for that to happen, and a thrown error there costs the whole window.
+  const before = globalThis.game.modules;
+  delete globalThis.game.modules;
+  check("asked before Foundry is ready, it does not throw", importerAvailable(), false);
+  globalThis.game.modules = before;
+
+  // An actor with no getFlag at all - the shape a damaged document would
+  // present, and the shape buildSteps() is handed by the smoke test.
+  withImporter(true, () => {
+    check("an actor without flags does not throw", effectiveSource({}), SOURCE_IMPORTER);
+    check("neither does nothing at all", effectiveSource(null), SOURCE_IMPORTER);
+  });
 });
 
 // --- result ------------------------------------------------------------------

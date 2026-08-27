@@ -129,6 +129,50 @@ export function choiceWasSkipped(advancement, secondaryClass = false) {
 }
 
 /**
+ * Was this class taken as a multiclass rather than as the character's first?
+ *
+ * Two sources, because neither covers both roads onto the sheet:
+ *
+ * 1. The IMPORTER writes isPrimaryClass on every class it creates, and it is
+ *    the plain answer whenever it is there.
+ *
+ * 2. A class added from a COMPENDIUM carries no such flag - the importer never
+ *    touched it. dnd5e keeps its own record in system.details.originalClass,
+ *    so that is read instead. It is stored as the class item's id; older data
+ *    and some tools write the identifier ("fighter") instead, so both are
+ *    accepted rather than guessed between.
+ *
+ * Without the flag this was answering "primary" for every compendium class,
+ * which is what made a multiclassed character unusable: the reduced entries a
+ * second class leaves empty ON PURPOSE were read as skipped choices, and the
+ * warning could not be cleared by any amount of redoing the step.
+ *
+ * A single class is always the first one, whatever anything else claims - and
+ * checked before originalClass, which on a one-class character is routinely
+ * empty and would otherwise decide nothing.
+ */
+export function isSecondaryClass(actor, item) {
+  if (item?.type !== "class") return false;
+
+  const flagged = item.flags?.[IMPORTER_FLAG]?.isPrimaryClass;
+  if (flagged === false) return true;
+  if (flagged === true) return false;
+
+  const classes = actor?.items?.filter?.((i) => i.type === "class") ?? [];
+  if (classes.length < 2) return false;
+
+  const original = actor?.system?.details?.originalClass;
+  if (!original) {
+    // Two classes and nothing saying which came first. Treated as secondary,
+    // which suppresses the Trait check on both: a missed warning is a
+    // nuisance, and a warning nothing can clear destroys trust in the list.
+    return true;
+  }
+
+  return original !== item.id && original !== item.system?.identifier;
+}
+
+/**
  * Which of species, background and class were added with choices skipped.
  *
  * Reported per item, not per entry: the player does not need to know that it
@@ -146,10 +190,7 @@ export function itemsWithSkippedChoices(actor) {
       item.advancement?.byId?.values?.() ?? item.system?.advancement ?? []
     );
 
-    // The importer records which class was taken first; anything else is a
-    // multiclass and gets less.
-    const secondary =
-      item.type === "class" && item.flags?.[IMPORTER_FLAG]?.isPrimaryClass === false;
+    const secondary = isSecondaryClass(actor, item);
 
     if (!advancements.some((adv) => choiceWasSkipped(adv, secondary))) continue;
 

@@ -152,6 +152,19 @@ const STRINGS = {
     "flow.prompt":
       " After you press the button, a small window asks where to take the entry from. Choose to use the importer, then press Open Importer in the window that follows - only then do you see the list to pick from.",
     "flow.importer": " After you press the button, the list of options opens by itself.",
+    "flow.compendium":
+      " After you press the button, the Compendium Browser opens. Find the entry, double-click it, and answer whatever the system asks - it lands on the sheet straight away.",
+
+    "source.title": "Where entries come from",
+    "source.ask":
+      "Species, background and class can come from either place. Pick one to carry on - you can change it later, and it only decides what the next step does.",
+    "source.changeHint": "Changing this affects the next step only. Anything already added stays as it is.",
+    "source.importer": "Importer",
+    "source.importerHint":
+      "The importer's full library, including books and homebrew it has loaded. It asks its own questions in its own windows, and says \"Import Complete\" when it is done.",
+    "source.compendium": "Compendium",
+    "source.compendiumHint":
+      "Your world's own compendiums - the SRD and anything imported into them. The browser opens, you pick an entry, and the system asks the rest.",
 
     "method.standard": "Standard array",
     "method.pointbuy": "Point buy",
@@ -417,6 +430,19 @@ const STRINGS = {
     "flow.prompt":
       " Po naciśnięciu przycisku pojawi się małe okno z pytaniem o źródło. Wybierz użycie importera, potem naciśnij Open Importer w kolejnym oknie - dopiero wtedy zobaczysz listę do wyboru.",
     "flow.importer": " Po naciśnięciu przycisku lista opcji otworzy się sama.",
+    "flow.compendium":
+      " Po naciśnięciu przycisku otworzy się przeglądarka kompendiów. Znajdź wpis, kliknij go dwukrotnie i odpowiedz na pytania systemu - trafi na kartę od razu.",
+
+    "source.title": "Skąd biorą się wpisy",
+    "source.ask":
+      "Gatunek, pochodzenie i klasa mogą pochodzić z obu miejsc. Wybierz jedno, żeby ruszyć dalej - później możesz to zmienić, a decyduje to tylko o kolejnym kroku.",
+    "source.changeHint": "Zmiana dotyczy dopiero kolejnego kroku. To, co już dodane, zostaje bez zmian.",
+    "source.importer": "Importer",
+    "source.importerHint":
+      "Pełna biblioteka importera, razem z księgami i homebrewem, które wczytał. Zadaje własne pytania we własnych oknach i kończy komunikatem \"Import Complete\".",
+    "source.compendium": "Kompendium",
+    "source.compendiumHint":
+      "Kompendia twojego świata - SRD i wszystko, co do nich zaimportowano. Otworzy się przeglądarka, wybierasz wpis, o resztę pyta system.",
 
     "method.standard": "Zestaw standardowy",
     "method.pointbuy": "Zakup punktowy",

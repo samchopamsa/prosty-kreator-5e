@@ -24,6 +24,31 @@
 
       <p class="pk5e-lead">{{#if introText}}{{introText}}{{else}}{{pkT "guide.intro"}}{{/if}}</p>
 
+      {{#if sourceChoices.length}}
+      <div class="pk5e-source {{#if sourceAsk}}is-asking{{/if}}">
+        <div class="pk5e-source-head">
+          <i class="fa-solid fa-signs-post pk5e-guide-icon"></i>
+          <span class="pk5e-guide-label">{{pkT "source.title"}}</span>
+        </div>
+        {{#if sourceAsk}}
+        <p class="pk5e-note">{{pkT "source.ask"}}</p>
+        {{/if}}
+        <div class="pk5e-source-options">
+          {{#each sourceChoices}}
+          <button type="button" class="pk5e-source-option {{#if selected}}is-selected{{/if}}"
+                  data-action="setSource" data-source="{{code}}">
+            <i class="fa-solid {{icon}}"></i>
+            <span class="pk5e-source-name">{{label}}</span>
+            <span class="pk5e-source-hint">{{hint}}</span>
+          </button>
+          {{/each}}
+        </div>
+        {{#unless sourceAsk}}
+        <p class="pk5e-note">{{pkT "source.changeHint"}}</p>
+        {{/unless}}
+      </div>
+      {{/if}}
+
       {{#if isGM}}
       <details class="pk5e-details" open>
         <summary>{{pkT "guide.ownership"}}</summary>
