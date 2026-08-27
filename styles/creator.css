@@ -1329,3 +1329,48 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   gap: 6px;
 }
 .pk5e-source-line i { opacity: 0.7; }
+
+/* Picking an entry from the compendium, inside the step it belongs to.
+   A list rather than a link to a browser: on this route the panel IS the
+   browser, and sending the player somewhere else to choose was the thing the
+   compendium route existed to avoid. Capped in height so a library of 300
+   backgrounds does not push the rest of the panel off the screen. */
+.pk5e-picker { display: flex; flex-direction: column; gap: 4px; }
+.pk5e-picker-search { width: 100%; font-size: 12px; }
+.pk5e-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--pk5e-sunken);
+  border-radius: 4px;
+  padding: 3px;
+}
+.pk5e-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  font-size: 12px;
+  height: auto;
+  line-height: 1.4;
+}
+.pk5e-picker-option:hover { background: var(--pk5e-hover); }
+.pk5e-picker-option:disabled { opacity: 0.5; }
+.pk5e-picker-option img {
+  width: 22px;
+  height: 22px;
+  object-fit: cover;
+  border: none;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+.pk5e-picker-name { flex: 1 1 auto; min-width: 0; }
+/* Which book it came from, so two entries with one name can be told apart. */
+.pk5e-picker-origin { font-size: 11px; opacity: 0.6; flex: 0 0 auto; }

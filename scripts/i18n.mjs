@@ -158,6 +158,9 @@ const STRINGS = {
     "source.title": "Data source",
     "source.ask":
       "Species, background and class can come from either place. Pick one to carry on - you can change it later, and it only decides what the next step does.",
+    "guide.pickerSearch": "Search {0} entries...",
+    "guide.pickerEmpty":
+      "Nothing of this kind in the compendiums you are reading. Check the compendium selection in the module settings, or use the browser below.",
     "source.active": "Source: {0}.",
     "source.change": "Change",
     "source.changeHint": "Changing this affects the next step only. Anything already added stays as it is.",
@@ -438,6 +441,9 @@ const STRINGS = {
     "source.title": "Źródło danych",
     "source.ask":
       "Gatunek, pochodzenie i klasa mogą pochodzić z obu miejsc. Wybierz jedno, żeby ruszyć dalej - później możesz to zmienić, a decyduje to tylko o kolejnym kroku.",
+    "guide.pickerSearch": "Szukaj wśród {0} pozycji...",
+    "guide.pickerEmpty":
+      "Nie ma nic tego rodzaju w kompendiach, które czytasz. Sprawdź wybór kompendiów w ustawieniach modułu albo użyj przeglądarki poniżej.",
     "source.active": "Źródło: {0}.",
     "source.change": "Zmień",
     "source.changeHint": "Zmiana dotyczy dopiero kolejnego kroku. To, co już dodane, zostaje bez zmian.",

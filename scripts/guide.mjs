@@ -26,6 +26,8 @@ import { folderChoices, uniqueActorName, tokenNameUpdate } from "./naming.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
+import { loadCreationIndex } from "./compendium.mjs";
+import { addFromCompendium } from "./add-from-compendium.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import {
   askForSource,
@@ -160,6 +162,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       setPortrait: CreationGuide.onSetPortrait,
       setDefaultFolder: CreationGuide.onSetDefaultFolder,
       levelUp: CreationGuide.onLevelUp,
+      pickEntry: CreationGuide.onPickEntry,
       setLanguage: CreationGuide.onSetLanguage,
       changeSource: CreationGuide.onChangeSource,
       setTheme: CreationGuide.onSetTheme,
@@ -315,10 +318,28 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // this fails. A damaged item, or a field the system moved in an update,
     // would otherwise leave the player looking at an empty window with no idea
     // why - and no way back to the character.
+    // The list the compendium route picks from. Read once per window rather
+    // than per render: a render happens on every item, flag and name change,
+    // and an index read per compendium each time would make typing a name feel
+    // heavy. Nothing here changes while the panel is open except by our own
+    // doing, and removing an entry re-reads nothing it did not already have.
+    if (usesCompendium(actor) && this._catalogue === undefined) {
+      this._catalogue = null;
+      try {
+        this._catalogue = await loadCreationIndex();
+        trace(`compendium catalogue: ${this._catalogue.length} entries`);
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not read the compendiums`, err);
+      }
+    }
+
     let steps = [];
     let stepsFailed = false;
     try {
-      steps = buildSteps(actor, { importing: !!this._importing });
+      steps = buildSteps(actor, {
+        importing: !!this._importing,
+        catalogue: usesCompendium(actor) ? this._catalogue : null
+      });
     } catch (err) {
       stepsFailed = true;
       console.error(`${MODULE_ID} | Could not build the steps for ${actor.name}`, err);
@@ -400,6 +421,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // having to know where the flag lives.
       sourceName: t(`source.${effectiveSource(actor)}`),
       sourceSwitchable: importerAvailable(),
+      // Lets a step say why its list is empty rather than silently falling
+      // back to the button that opens the browser.
+      compendiumMode: usesCompendium(actor),
       stepsFailed,
       report,
       // Surfaced separately from the checklist: this one has a fix attached,
@@ -466,6 +490,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this.bindNameField();
     this.bindOwnership();
     this.bindDisclosures();
+    this.bindPickerSearch();
 
     if (!this._hooks.length) this.registerWatchers();
 
@@ -485,6 +510,28 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           this.render();
         }
       );
+    }
+  }
+
+  /**
+   * Narrows a compendium list as the player types.
+   *
+   * Filters rows already on the page rather than re-rendering: a render would
+   * rebuild the input and take the focus and the caret with it, so the second
+   * keystroke would land somewhere else. The same reason ReferenceConfig
+   * filters its compendium list this way.
+   */
+  bindPickerSearch() {
+    for (const field of this.element.querySelectorAll("[data-picker-search]")) {
+      const list = field.parentElement?.querySelector(".pk5e-picker-list");
+      if (!list) continue;
+
+      field.addEventListener("input", (ev) => {
+        const query = ev.currentTarget.value.trim().toLowerCase();
+        for (const row of list.querySelectorAll(".pk5e-picker-option")) {
+          row.style.display = !query || (row.dataset.search ?? "").includes(query) ? "" : "none";
+        }
+      });
     }
   }
 
@@ -780,6 +827,33 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
+   * Takes an entry the player picked out of the compendium list.
+   *
+   * No waiting afterwards, for the same reason the compendium route does not
+   * wait in onAddStep: the system's Advancement window either opens or it does
+   * not, and either way the item arriving on the actor is what redraws the
+   * panel. The createItem watcher already does that.
+   */
+  static async onPickEntry(event, target) {
+    const actor = this.actor;
+    if (!actor) return;
+
+    // Guards against a second click while the first is still resolving - the
+    // list stays on screen until the item lands, and two clicks would start
+    // two advancement managers over the same character.
+    if (this._picking) return;
+    this._picking = true;
+    target.disabled = true;
+
+    try {
+      await addFromCompendium(actor, target.dataset.uuid);
+    } finally {
+      this._picking = false;
+      this.render();
+    }
+  }
+
+  /**
    * Re-opens the source question after it has been answered.
    *
    * Kept reachable rather than asked once and locked: a player who picks the
@@ -792,6 +866,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!actor) return;
 
     await askForSource(actor, { force: true });
+    // Switching to the compendium means the list has never been read; switching
+    // away means it is no longer wanted. Either way the cached one is wrong.
+    this._catalogue = undefined;
     this.render();
   }
 

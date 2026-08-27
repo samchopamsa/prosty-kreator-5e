@@ -172,7 +172,25 @@
 
         {{#unless importing}}
           {{#unless done}}
-            {{#if removable}}
+            {{#if options.length}}
+            <div class="pk5e-picker">
+              <input type="search" class="pk5e-picker-search" data-picker-search
+                     placeholder="{{pkT "guide.pickerSearch" options.length}}" autocomplete="off">
+              <div class="pk5e-picker-list">
+                {{#each options}}
+                <button type="button" class="pk5e-picker-option" data-action="pickEntry"
+                        data-uuid="{{uuid}}" data-search="{{search}}">
+                  {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                  <span class="pk5e-picker-name">{{name}}</span>
+                  <span class="pk5e-picker-origin">{{origin}}</span>
+                </button>
+                {{/each}}
+              </div>
+            </div>
+            {{else if removable}}
+              {{#if @root.compendiumMode}}
+              <p class="pk5e-note">{{pkT "guide.pickerEmpty"}}</p>
+              {{/if}}
             <button type="button" data-action="addStep" data-step="{{key}}">{{pkT "guide.choose" actionLabel}}</button>
             {{else}}
             <button type="button" data-action="{{#if action}}{{action}}{{else}}finalise{{/if}}">

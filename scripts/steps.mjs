@@ -88,7 +88,28 @@ function shortSummary(item) {
   return "";
 }
 
-export function buildSteps(actor, { importing = false } = {}) {
+/**
+ * Entries the compendium route can offer for a step, ready for the template.
+ *
+ * Sorted by name, and the origin is carried along so two entries with the same
+ * name from different books can be told apart - which is the whole reason a
+ * player would hesitate over the list.
+ */
+function optionsFor(catalogue, types) {
+  if (!catalogue) return [];
+  return catalogue
+    .filter((entry) => types.includes(entry.type))
+    .map((entry) => ({
+      uuid: entry.uuid,
+      name: entry.name,
+      img: entry.img,
+      origin: entry.origin,
+      search: `${entry.name} ${entry.origin}`.toLowerCase()
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function buildSteps(actor, { importing = false, catalogue = null } = {}) {
 
   const species = actor.items.find((i) => i.type === "race" || i.type === "species");
   const background = actor.items.find((i) => i.type === "background");
@@ -207,7 +228,8 @@ export function buildSteps(actor, { importing = false } = {}) {
       }),
       multiclass: classes.length > 1,
       totalLevel,
-      blurb: text("textClass", "blurb.class")
+      blurb: text("textClass", "blurb.class"),
+      options: optionsFor(catalogue, ["class"])
     },
     {
       key: "species",
@@ -219,6 +241,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       done: !!species,
       entries: species ? [entryFor(species)] : [],
       blurb: text("textSpecies", "blurb.species"),
+      options: optionsFor(catalogue, ["race", "species"]),
       // The importer hides each entry's description behind a [+]; players were
       // choosing from a list of names without knowing it was there.
       expandHint
@@ -233,6 +256,7 @@ export function buildSteps(actor, { importing = false } = {}) {
       done: !!background,
       entries: background ? [entryFor(background)] : [],
       blurb: text("textBackground", "blurb.background"),
+      options: optionsFor(catalogue, ["background"]),
       expandHint
     },
     {
