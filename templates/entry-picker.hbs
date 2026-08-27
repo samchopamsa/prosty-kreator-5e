@@ -1,0 +1,54 @@
+<div class="pk5e-root">
+
+  <div class="pk5e-body">
+    <div class="pk5e-pane pk5e-split">
+
+      <div class="pk5e-list-col">
+        <div class="pk5e-listbar">
+          <input type="search" data-search placeholder="{{searchPlaceholder}}" autocomplete="off">
+        </div>
+
+        {{#if empty}}
+        <p class="pk5e-empty">{{emptyHint}}</p>
+        {{/if}}
+
+        <div class="pk5e-options">
+          {{#each entries}}
+          <button type="button" class="pk5e-option {{#if selected}}is-selected{{/if}}"
+                  data-action="pickEntry" data-uuid="{{uuid}}" data-search="{{search}}">
+            <img src="{{img}}" alt="">
+            <span class="pk5e-option-text">
+              <span class="pk5e-option-name">{{name}}</span>
+              <span class="pk5e-option-meta">{{origin}}</span>
+            </span>
+          </button>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="pk5e-detail-col">
+        {{#if selected}}
+          <h3>{{selected.name}}</h3>
+          <p class="pk5e-note">{{selected.origin}}</p>
+          {{#if detail}}
+            <div class="pk5e-detail-text">{{{detail}}}</div>
+          {{else}}
+            <p class="pk5e-placeholder">{{readingLabel}}</p>
+          {{/if}}
+        {{else}}
+          <p class="pk5e-placeholder">{{placeholder}}</p>
+        {{/if}}
+      </div>
+
+    </div>
+  </div>
+
+  <footer class="pk5e-footer">
+    <button type="button" class="pk5e-primary" data-action="confirm" {{#unless canConfirm}}disabled{{/unless}}>
+      {{confirmLabel}}
+    </button>
+    <button type="button" data-action="cancel">{{cancelLabel}}</button>
+    <span class="pk5e-hint">{{lead}}</span>
+  </footer>
+
+</div>
