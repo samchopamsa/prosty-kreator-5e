@@ -127,14 +127,17 @@
    heading, which is why the fold is gone: with every answer visible at once,
    collapsing a step hid nothing worth hiding.
 
-   A fixed width, not a share of the window: the cards are what should grow
-   when the panel is widened, and a rail that grows with them just moves the
-   text further from its number.
+   Wide enough for the answer to fit on one line, which is the whole point of
+   the rail: at 190px "Fighter 1, Wizard 1" and the longer step names ran into
+   the tick on the right, and a row that has to be widened by hand to be read
+   is worse than no row at all. Capped as well as floored, though - the cards
+   are what should grow when the panel is widened, and a rail that grows with
+   them just moves the text further from its number.
    --------------------------------------------------------------------------- */
 
 .pk5e-rail {
   flex: 0 0 auto;
-  width: 190px;
+  width: clamp(210px, 25%, 280px);
   margin-right: 12px;
   padding-right: 10px;
   border-right: 1px solid var(--pk5e-sunken);
@@ -175,21 +178,30 @@
   line-height: 1.25;
 }
 
+/* One line, cut with an ellipsis, the same as the answer under it. A flex row
+   here could not be cut: the text sat in a bare text node, which has nothing to
+   apply an ellipsis to, so a long step name simply ran out past the tick and
+   over the border. A block with an inline icon can be cut. */
 .pk5e-rail-label {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.pk5e-rail-label i { font-size: 10px; opacity: 0.55; }
+.pk5e-rail-label i {
+  font-size: 12px;
+  opacity: 0.55;
+  margin-right: 5px;
+}
 
 /* The answer. One line, cut with an ellipsis rather than wrapped: a
    multiclassed character would otherwise push the rest of the rail down the
    window every time a second class was added. */
 .pk5e-rail-summary {
-  font-size: 11px;
+  font-size: 13px;
   opacity: 0.65;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -204,17 +216,17 @@
 .pk5e-nav { display: flex; gap: 6px; flex: 0 0 auto; }
 
 .pk5e-pane h2 { margin: 0; border: none; }
-.pk5e-lead { margin: 0; font-size: 14px; line-height: 1.45; }
+.pk5e-lead { margin: 0; font-size: 16px; line-height: 1.45; }
 .pk5e-note,
 .pk5e-placeholder {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.75;
   line-height: 1.4;
 }
-.pk5e-label { font-weight: 600; font-size: 13px; }
+.pk5e-label { font-weight: 600; font-size: 15px; }
 .pk5e-details { border-top: 1px solid var(--pk5e-sunken); padding-top: 8px; }
-.pk5e-details summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.pk5e-details summary { cursor: pointer; font-weight: 600; font-size: 15px; }
 .pk5e-packs {
   display: flex;
   flex-direction: column;
@@ -229,11 +241,11 @@
   align-items: center;
   gap: 8px;
   padding: 3px 4px;
-  font-size: 12px;
+  font-size: 14px;
   border-radius: 3px;
 }
 .pk5e-pack:hover { background: var(--pk5e-sunken-soft); }
-.pk5e-pack-origin { opacity: 0.6; font-size: 11px; white-space: nowrap; }
+.pk5e-pack-origin { opacity: 0.6; font-size: 13px; white-space: nowrap; }
 /* --- listy wyboru --- */
 .pk5e-split {
   flex-direction: row;
@@ -245,9 +257,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  font-size: 13px;
+  font-size: 15px;
 }
-.pk5e-abilities { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pk5e-abilities { width: 100%; border-collapse: collapse; font-size: 15px; }
 .pk5e-abilities th,
 .pk5e-abilities td {
   padding: 5px 8px;
@@ -257,7 +269,7 @@
 .pk5e-abilities td { width: 1%; white-space: nowrap; }
 .pk5e-abilities select,
 .pk5e-abilities input[type="number"] { width: 80px; }
-.pk5e-abbr { opacity: 0.5; font-size: 11px; font-weight: 400; }
+.pk5e-abbr { opacity: 0.5; font-size: 13px; font-weight: 400; }
 .pk5e-mod { text-align: center; font-variant-numeric: tabular-nums; }
 /* --- podsumowanie --- */
 .pk5e-summary {
@@ -265,14 +277,14 @@
   grid-template-columns: auto 1fr;
   gap: 4px 12px;
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 .pk5e-callout {
   border-left: 3px solid var(--pk5e-accent);
   padding: 8px 10px;
   background: var(--pk5e-sunken-soft);
   border-radius: 0 4px 4px 0;
-  font-size: 13px;
+  font-size: 15px;
 }
 .pk5e-callout p { margin: 4px 0 0; line-height: 1.45; }
 /* --- stopka --- */
@@ -285,7 +297,7 @@
   border-top: 1px solid var(--pk5e-sunken);
 }
 .pk5e-footer button { flex: 0 0 auto; width: auto; padding: 4px 14px; }
-.pk5e-footer .pk5e-hint { flex: 1 1 auto; font-size: 11px; opacity: 0.7; line-height: 1.3; }
+.pk5e-footer .pk5e-hint { flex: 1 1 auto; font-size: 13px; opacity: 0.7; line-height: 1.3; }
 .pk5e-footer .pk5e-primary { font-weight: 600; }
 .pk5e-link {
   background: none;
@@ -294,7 +306,7 @@
   width: auto;
   text-decoration: underline;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.8;
   align-self: flex-start;
 }
@@ -324,7 +336,7 @@
   gap: 8px;
 }
 /* v0.4 - complete character mode */
-.pk5e-launch-secondary { opacity: 0.85; font-size: 12px; }
+.pk5e-launch-secondary { opacity: 0.85; font-size: 14px; }
 .pk5e-creator table.pk5e-abilities td { white-space: nowrap; }
 /* Button injected into the dnd5e character sheet (edit mode only).
    When placed beside the rest buttons it copies their classes, so it needs no
@@ -338,7 +350,7 @@
   flex: 0 0 auto;
   padding: 3px 10px;
   margin: 2px 4px 2px 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   white-space: nowrap;
   border-radius: 4px;
@@ -351,7 +363,7 @@
   margin: 8px 0 2px;
   padding-bottom: 2px;
   border-bottom: 1px solid var(--pk5e-sunken);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -378,14 +390,14 @@
   height: 18px;
   border-radius: 50%;
   border: 1px solid currentColor;
-  font-size: 10px;
+  font-size: 12px;
   flex: 0 0 auto;
   opacity: 0.7;
 }
-.pk5e-guide-label { font-weight: 600; font-size: 13px; flex: 1 1 auto; }
+.pk5e-guide-label { font-weight: 600; font-size: 15px; flex: 1 1 auto; }
 .pk5e-guide-tick { color: var(--pk5e-accent); font-weight: 700; }
-.pk5e-guide-result { margin: 0; font-size: 13px; }
-.pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 12px; padding: 3px 8px; }
+.pk5e-guide-result { margin: 0; font-size: 15px; }
+.pk5e-guide-step button:not(.pk5e-link) { width: 100%; font-size: 14px; padding: 3px 8px; }
 /* Once chosen, the entry gets room: a large picture beside the name and the
    description, rather than a thumbnail on a single cramped line. */
 .pk5e-guide-chosen {
@@ -411,7 +423,7 @@
   flex: 1 1 auto;
 }
 .pk5e-guide-chosen .pk5e-guide-result {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.25;
   padding-bottom: 4px;
@@ -435,19 +447,19 @@
   flex-direction: column;
   padding-left: 10px;
   border-left: 2px solid transparent;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pk5e-report-item.is-error { border-left-color: #b34747; }
 .pk5e-report-item.is-warning { border-left-color: #c08a3e; }
 .pk5e-report-label { font-weight: 600; }
-.pk5e-report-hint { opacity: 0.7; font-size: 11px; line-height: 1.3; }
+.pk5e-report-hint { opacity: 0.7; font-size: 13px; line-height: 1.3; }
 /* chat summary card */
 .pk5e-card { display: flex; flex-direction: column; gap: 6px; }
 .pk5e-card-head { display: flex; align-items: center; gap: 8px; }
 .pk5e-card-head img { border: none; border-radius: 4px; flex: 0 0 48px; }
 .pk5e-card-head h3 { margin: 0; }
-.pk5e-card-head p { margin: 0; font-size: 12px; opacity: 0.75; }
-.pk5e-card-stats { display: flex; gap: 12px; font-size: 12px; }
+.pk5e-card-head p { margin: 0; font-size: 14px; opacity: 0.75; }
+.pk5e-card-stats { display: flex; gap: 12px; font-size: 14px; }
 .pk5e-card-abilities { display: flex; gap: 4px; justify-content: space-between; }
 .pk5e-card-ability {
   display: flex;
@@ -457,10 +469,10 @@
   padding: 2px 0;
   border-radius: 3px;
   background: var(--pk5e-sunken-soft);
-  font-size: 11px;
+  font-size: 13px;
 }
-.pk5e-card-abbr { font-weight: 700; opacity: 0.6; font-size: 9px; }
-.pk5e-card-score { font-size: 13px; }
+.pk5e-card-abbr { font-weight: 700; opacity: 0.6; font-size: 11px; }
+.pk5e-card-score { font-size: 15px; }
 .pk5e-card-mod { opacity: 0.75; }
 
 /* Restored: still used by the finaliser and the guide panel. */
@@ -470,13 +482,13 @@
   align-items: center;
   gap: 8px;
   padding: 3px 4px;
-  font-size: 12px;
+  font-size: 14px;
   border-radius: 3px;
 }
 
 .pk5e-pack:hover { background: var(--pk5e-sunken-soft); }
 .pk5e-pack-name { min-width: 0; }
-.pk5e-pack-origin { opacity: 0.6; font-size: 11px; white-space: nowrap; }
+.pk5e-pack-origin { opacity: 0.6; font-size: 13px; white-space: nowrap; }
 
 .pk5e-packs {
   display: flex;
@@ -503,10 +515,10 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pk5e-empty { font-size: 12px; padding: 8px; line-height: 1.4; }
+.pk5e-empty { font-size: 14px; padding: 8px; line-height: 1.4; }
 
 /* Standard Languages table */
-.pk5e-lang-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pk5e-lang-table { width: 100%; border-collapse: collapse; font-size: 15px; }
 
 .pk5e-lang-table th,
 .pk5e-lang-table td {
@@ -525,12 +537,12 @@
 }
 
 /* "What is this?" explanations */
-.pk5e-help { font-size: 12px; margin-top: 2px; }
+.pk5e-help { font-size: 14px; margin-top: 2px; }
 
 .pk5e-help > summary {
   cursor: pointer;
   opacity: 0.7;
-  font-size: 11px;
+  font-size: 13px;
   text-decoration: underline;
   list-style: none;
 }
@@ -561,7 +573,7 @@
   width: 16px;
   text-align: center;
   opacity: 0.55;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .pk5e-guide-step.is-done .pk5e-guide-icon {
@@ -589,7 +601,7 @@
 .pk5e-guide-head { gap: 8px; align-items: center; }
 
 .pk5e-guide-label {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.2px;
 }
@@ -597,7 +609,7 @@
 .pk5e-guide-num {
   width: 22px;
   height: 22px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   opacity: 0.55;
 }
@@ -608,8 +620,8 @@
   color: var(--pk5e-accent);
 }
 
-.pk5e-guide-icon { font-size: 13px; width: 18px; }
-.pk5e-guide-tick { font-size: 15px; }
+.pk5e-guide-icon { font-size: 15px; width: 18px; }
+.pk5e-guide-tick { font-size: 16px; }
 
 /* expandable explanation, with a chevron so it reads as openable */
 .pk5e-help > summary {
@@ -617,7 +629,7 @@
   align-items: center;
   gap: 5px;
   text-decoration: none;
-  font-size: 11px;
+  font-size: 13px;
   opacity: 0.65;
   padding: 2px 0;
 }
@@ -626,7 +638,7 @@
    differs between Foundry versions and rendered as an empty box. */
 .pk5e-help > summary::before {
   content: "\25B8";
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   display: inline-block;
   transition: transform 120ms ease;
@@ -653,7 +665,7 @@
 .pk5e-importing {
   margin: 4px 0 0;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.4;
   border-left: 2px solid var(--pk5e-accent);
   background: rgba(255, 100, 0, 0.08);
@@ -665,7 +677,7 @@
 /* Not italic: italics read as "flavour aside", but this IS the description. */
 .pk5e-guide-summary {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   opacity: 0.85;
 }
@@ -696,7 +708,7 @@
 .pk5e-chip {
   width: auto;
   padding: 2px 8px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.4;
   border-radius: 10px;
   flex: 0 0 auto;
@@ -752,8 +764,8 @@
 }
 
 .pk5e-option-text { display: flex; flex-direction: column; overflow: hidden; }
-.pk5e-option-name { font-size: 13px; }
-.pk5e-option-meta { font-size: 10px; opacity: 0.6; }
+.pk5e-option-name { font-size: 15px; }
+.pk5e-option-meta { font-size: 12px; opacity: 0.6; }
 
 .pk5e-detail-col {
   flex: 1 1 auto;
@@ -766,7 +778,7 @@
 }
 
 .pk5e-detail-col h3 { margin: 0; }
-.pk5e-detail-text { font-size: 13px; line-height: 1.45; }
+.pk5e-detail-text { font-size: 15px; line-height: 1.45; }
 
 /* ------------------------------------------------------------------ */
 /* Reference tree                                                      */
@@ -782,21 +794,21 @@
   padding: 5px 4px;
   border-bottom: 1px solid rgba(128, 128, 128, 0.22);
   list-style: none;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .pk5e-branch-head::-webkit-details-marker { display: none; }
 
 .pk5e-branch-head::before {
   content: "\25B8";
-  font-size: 10px;
+  font-size: 12px;
   opacity: 0.6;
   transition: transform 120ms ease;
 }
 
 .pk5e-branch details[open] > .pk5e-branch-head::before { transform: rotate(90deg); }
 .pk5e-branch-name { font-weight: 700; flex: 1 1 auto; }
-.pk5e-branch-count { font-size: 10px; opacity: 0.5; }
+.pk5e-branch-count { font-size: 12px; opacity: 0.5; }
 .pk5e-branch-head:hover { background: var(--pk5e-sunken-soft); }
 
 .pk5e-subbranch { padding-left: 10px; border-left: 1px solid rgba(128, 128, 128, 0.2); }
@@ -804,14 +816,14 @@
 
 .pk5e-bulk { display: flex; gap: 6px; align-items: center; }
 .pk5e-bulk input[type="search"] { flex: 1 1 auto; min-width: 0; }
-.pk5e-bulk button { width: auto; flex: 0 0 auto; padding: 2px 10px; font-size: 12px; }
+.pk5e-bulk button { width: auto; flex: 0 0 auto; padding: 2px 10px; font-size: 14px; }
 
 .pk5e-roll-badge {
   display: inline-block;
   margin-left: 6px;
   padding: 0 5px;
   border-radius: 8px;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.3px;
   vertical-align: 1px;
@@ -830,7 +842,7 @@
   border: 1px dashed rgba(128, 128, 128, 0.45);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.08);
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 700;
   opacity: 0.35;
   user-select: none;
@@ -893,7 +905,7 @@
 }
 
 .pk5e-gain-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -912,7 +924,7 @@
   gap: 4px;
   max-width: 100%;
   padding: 1px 7px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.5;
   border: 1px solid var(--pk5e-line);
   border-radius: 10px;
@@ -970,16 +982,16 @@
 .pk5e-panel-picker input {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
 }
 .pk5e-panel-caret {
   flex: 0 0 auto;
   width: 28px;
   padding: 0;
-  font-size: 11px;
+  font-size: 13px;
 }
 
-.pk5e-panel-limited { flex: 0 0 auto; font-size: 11px; }
+.pk5e-panel-limited { flex: 0 0 auto; font-size: 13px; }
 
 /* The dropdown lives INSIDE the window with its own scroll. Positioned
    absolutely it would be clipped by the window edge at this width. */
@@ -1000,7 +1012,7 @@
   width: 100%;
   text-align: left;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   padding: 2px 4px;
   background: none;
   border: none;
@@ -1014,7 +1026,7 @@
   display: block;
   width: 100%;
   text-align: left;
-  font-size: 12px;
+  font-size: 14px;
   padding: 2px 4px 2px 16px;
   background: none;
   border: none;
@@ -1030,7 +1042,7 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.45;
 }
 
@@ -1039,13 +1051,13 @@
   margin-bottom: 6px;
   padding-bottom: 3px;
 }
-.pk5e-panel-head h3 { margin: 0; font-size: 14px; }
-.pk5e-panel-origin { font-size: 11px; opacity: 0.7; }
+.pk5e-panel-head h3 { margin: 0; font-size: 16px; }
+.pk5e-panel-origin { font-size: 13px; opacity: 0.7; }
 
 .pk5e-panel-notice {
   margin: 0 0 6px;
   padding: 5px 7px;
-  font-size: 11px;
+  font-size: 13px;
   border-left: 3px solid var(--pk5e-accent);
   background: var(--pk5e-hover);
 }
@@ -1061,7 +1073,7 @@
   width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 12px;
   margin: 6px 0;
   /* Nudges the scrollbar into view on hover, so it is discoverable. */
   scrollbar-width: thin;
@@ -1094,7 +1106,7 @@
   border-left: 3px solid var(--pk5e-warning-line);
   margin-bottom: 6px;
 }
-.pk5e-skipped-item button { width: 100%; margin-top: 6px; font-size: 12px; }
+.pk5e-skipped-item button { width: 100%; margin-top: 6px; font-size: 14px; }
 
 /* Exclamation instead of a tick: the step is filled in, but not correctly, and
    a tick beside a problem reads as approval. */
@@ -1102,7 +1114,7 @@
   margin-left: auto;
   font-weight: 700;
   color: var(--pk5e-warning);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1;
 }
 
@@ -1112,7 +1124,7 @@
   gap: 4px;
   margin-top: 6px;
 }
-.pk5e-option-actions button:not(.pk5e-link) { width: 100%; font-size: 12px; }
+.pk5e-option-actions button:not(.pk5e-link) { width: 100%; font-size: 14px; }
 
 /* The disclaimer. Red, because every point in it describes a way the step can
    silently go wrong - but bordered rather than filled, so it reads as a notice
@@ -1123,7 +1135,7 @@
   border-radius: 0 4px 4px 0;
   padding: 8px 10px;
   margin-bottom: 10px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.45;
 }
 .pk5e-disclaimer > summary {
@@ -1182,7 +1194,7 @@
   border-radius: 8px;
   background: #c0392b;
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 15px;
   text-align: center;
@@ -1224,13 +1236,13 @@
   border: 1px solid var(--pk5e-line);
   border-radius: 3px;
 }
-.pk5e-levelup-head h3 { margin: 0; font-size: 15px; }
+.pk5e-levelup-head h3 { margin: 0; font-size: 16px; }
 
 .pk5e-levelup-go {
   width: 100%;
   margin-top: 10px;
   padding: 5px 8px;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 600;
 }
 
@@ -1243,7 +1255,7 @@
   margin: 0 0 8px;
   font-family: inherit;
   font-variant: normal;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.02em;
   border-bottom: 2px solid var(--pk5e-accent);
@@ -1262,7 +1274,7 @@
   margin: 0 0 4px;
   font-family: inherit;
   font-variant: normal;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--pk5e-accent);
 }
@@ -1270,7 +1282,7 @@
 
 /* The gains are the point of the window, so they are marked out from the rest
    of the text rather than left as a plain list. */
-.pk5e-change { margin: 3px 0; font-size: 12px; }
+.pk5e-change { margin: 3px 0; font-size: 14px; }
 .pk5e-change.is-level,
 .pk5e-change.is-newClass { font-weight: 700; }
 .pk5e-change.is-hp { color: var(--pk5e-accent); }
@@ -1291,7 +1303,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
    it is about how to use another window, not about the character. */
 .pk5e-expand-hint {
   margin: 4px 0 0;
-  font-size: 11px;
+  font-size: 13px;
   opacity: 0.75;
   font-style: italic;
 }
@@ -1690,7 +1702,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 .pk5e-guide-step button.pk5e-portrait.is-empty {
   border-style: dashed;
   box-shadow: none;
-  font-size: 26px;
+  font-size: 28px;
   opacity: 0.45;
 }
 
@@ -1709,7 +1721,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
  * on demand, rather than an aside at the far end of the step.
  */
 .pk5e-guide-label {
-  font-size: 17px;
+  font-size: 18px;
   letter-spacing: 0.3px;
 }
 
@@ -1733,7 +1745,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 
 .pk5e-fold-caret {
   flex: 0 0 auto;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   opacity: 0.45;
 }
@@ -1761,7 +1773,8 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 .pk5e-guide-actions { flex-wrap: wrap; row-gap: 4px; }
 
 /* The portrait is the character, not one more step's illustration, so it is
-   larger than the 96px artwork below it. */
+   larger than the artwork below it. Raised again further down, once that
+   artwork grew. */
 .pk5e-guide-step button.pk5e-portrait {
   width: 128px;
   height: 128px;
@@ -1785,7 +1798,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 }
 
 .pk5e-bio-heading {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -1796,7 +1809,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   display: grid;
   grid-template-columns: minmax(90px, auto) 1fr;
   gap: 2px 10px;
-  font-size: 12px;
+  font-size: 14px;
   align-items: baseline;
 }
 
@@ -1816,7 +1829,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 
 .pk5e-bio-note p {
   margin: 0;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   white-space: pre-line;
   overflow-wrap: anywhere;
@@ -1832,7 +1845,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 .pk5e-bio-grid input[type="text"] {
   width: 100%;
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
   padding: 2px 5px;
 }
 
@@ -1846,7 +1859,7 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   width: 100%;
   min-width: 0;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.45;
   padding: 4px 6px;
   resize: vertical;
@@ -1868,6 +1881,98 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.75;
+}
+
+/* ---------------------------------------------------------------------------
+   Reading size
+
+   The panel was sized for a narrow strip beside the sheet: 10 and 11px text,
+   a 16px icon, chips at 11px. In two columns it is a window of its own and was
+   being read at arm's length, so everything moves up a step - the base here,
+   and each rule's own size raised with it. The measure is Foundry's sidebar:
+   an actor's name in that list is what "normal text" looks like in this
+   interface, and nothing in a window this size should be smaller than the
+   labels around it.
+
+   The step's icon and number are the exception that gets more than a step:
+   before anything is chosen they are the only picture the card has, and at
+   16px they read as decoration on the heading rather than as the subject.
+   --------------------------------------------------------------------------- */
+
+.pk5e-creator { font-size: 14px; }
+
+.pk5e-guide-step > .pk5e-guide-head .pk5e-guide-num {
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+}
+
+.pk5e-guide-step > .pk5e-guide-head .pk5e-guide-icon {
+  font-size: 22px;
+  width: 28px;
+  opacity: 0.7;
+}
+
+.pk5e-rail-label i { font-size: 14px; }
+
+/* The gains chips. Same size as the name they sit under, because they are the
+   answer to "what did this step actually put on the sheet" - and a 20px icon
+   is one an item can be recognised by, which a 14px one was not. */
+.pk5e-gains { gap: 9px; padding: 10px 11px; }
+.pk5e-gain-label { font-size: 12px; }
+
+.pk5e-gain-chip {
+  gap: 6px;
+  padding: 2px 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  border-radius: 12px;
+}
+
+.pk5e-gain-chip img {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Findings on the step that can fix them
+
+   The checklist still exists in full on the summary card, but each finding is
+   also shown here, under the step it belongs to. Marked but not boxed: a
+   bordered block beside the step's own callouts read as a second, competing
+   warning, and most of these are one line of "no languages chosen".
+   --------------------------------------------------------------------------- */
+
+.pk5e-step-findings {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pk5e-line);
+  gap: 6px;
+}
+
+/* ---------------------------------------------------------------------------
+   The chosen entry's artwork
+
+   96px was the size of a picture squeezed into a strip. With the card in a
+   column of its own there is room for the class or species portrait to be seen
+   rather than identified, and the placeholder grows with it so the slot does
+   not change size the moment something is chosen.
+   --------------------------------------------------------------------------- */
+
+.pk5e-guide-chosen img,
+.pk5e-guide-empty-art {
+  width: 128px;
+  height: 128px;
+  flex: 0 0 128px;
+}
+
+/* The portrait keeps its lead over the artwork below it, which has just grown
+   to 128px: it is the character, not an illustration of one of its parts. */
+.pk5e-guide-step button.pk5e-portrait {
+  width: 160px;
+  height: 160px;
+  flex: 0 0 160px;
 }

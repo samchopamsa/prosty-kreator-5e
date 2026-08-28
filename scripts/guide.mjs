@@ -110,7 +110,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // opening as a narrow strip over the sheet, which was hard to read.
     const vw = globalThis.innerWidth ?? 1200;
     const vh = globalThis.innerHeight ?? 900;
-    const width = Math.min(980, Math.max(360, vw - 40));
+    // Two columns to fit now, not one, so the cap is higher: the rail takes a
+    // fixed slice and what is left has to hold a picture, a name and a wrapped
+    // description without them stacking. The floor stays where it was - a small
+    // window is still better filled than overflowed.
+    const width = Math.min(1120, Math.max(360, vw - 40));
     const height = Math.max(520, vh - 40);
 
     super({
@@ -150,7 +154,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       icon: "fa-solid fa-hat-wizard",
       resizable: true
     },
-    position: { width: 380, height: 560 },
+    // Only a fallback: the constructor works the real size out from the window
+    // it is opening into. Sized for the two columns all the same, so a panel
+    // opened before that runs is not a strip.
+    position: { width: 900, height: 640 },
     actions: {
       addStep: CreationGuide.onAddStep,
       removeStep: CreationGuide.onRemoveStep,
@@ -358,32 +365,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           : step.result || "";
     }
 
-    // WHICH CARD IS ON SCREEN
-    //
-    // One step at a time, so the rail down the left is the whole of the
-    // navigation. That means the panel has to open somewhere sensible rather
-    // than at the top every time: the first thing not yet done, which on a new
-    // character is Start and on a half-finished one is where the player left
-    // off. Once a card has been picked by hand that choice stands, including
-    // when the sheet changes underneath - a redraw that moved the player to
-    // another step mid-typing would be unusable.
-    //
-    // "start" is the name-and-portrait block. It is not one of buildSteps()'
-    // steps and deliberately not made into one: steps.mjs states the rules, and
-    // naming a character is not one of them. It is this window's own first
-    // card, the same way the portrait leaving the list is this window's
-    // decision.
-    const named = !hasPlaceholderName(actor);
-    this._rail = ["start", ...steps.map((step) => step.key)];
-    const isDone = (key) =>
-      key === "start" ? named : !!steps.find((step) => step.key === key)?.done;
-
-    if (!this._active || !this._rail.includes(this._active)) {
-      this._active = this._rail.find((key) => !isDone(key)) ?? this._rail.at(-1);
-    }
-    const activeAt = this._rail.indexOf(this._active);
-    for (const step of steps) step.active = step.key === this._active;
-
     // Open the first time this character's panel is opened, folded away after
     // that. Worked out once per window rather than per render: setting the flag
     // updates the actor, which redraws, and the notice would collapse under the
@@ -422,6 +403,57 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     const ownership = actor.ownership ?? {};
+    const failures = report.checks.filter((check) => !check.ok);
+    // Read once here: the first card counts as done when the character is no
+    // longer called "New Character", and both the rail and the findings below
+    // ask the same question.
+    const named = !hasPlaceholderName(actor);
+
+    // EACH FINDING UNDER THE STEP THAT CAN FIX IT
+    //
+    // Every check carries the step it belongs to (validate.mjs), so "no
+    // languages" is shown on the languages step rather than in a list at the
+    // bottom that named a step the player then had to go and find.
+    //
+    // Only once the step is done, and never while its import is running. Both
+    // halves matter: an untouched step reporting "no class" is telling the
+    // player what the step is FOR as though it were a fault, and the importer
+    // fills a character in over several seconds, so a check run mid-import
+    // reports gaps that are about to fill themselves.
+    for (const step of steps) {
+      const settled = step.done && this._importing !== step.key;
+      step.failures = settled ? failures.filter((check) => check.step === step.key) : [];
+    }
+    const startFailures = named ? failures.filter((check) => check.step === "start") : [];
+
+    // WHICH CARD IS ON SCREEN
+    //
+    // One step at a time, so the rail down the left is the whole of the
+    // navigation. That means the panel has to open somewhere sensible rather
+    // than at the top every time: the first thing not yet done, which on a new
+    // character is Start and on a half-finished one is where the player left
+    // off. Once a card has been picked by hand that choice stands, including
+    // when the sheet changes underneath - a redraw that moved the player to
+    // another step mid-typing would be unusable.
+    //
+    // "start" is the name-and-portrait block and "report" is the summary, and
+    // neither is one of buildSteps()' steps: steps.mjs states the rules of
+    // character creation, and neither naming a character nor reading a
+    // checklist is one of them. They are this window's own first and last
+    // cards, the same way the portrait leaving the list is this window's
+    // decision.
+    this._rail = ["start", ...steps.map((step) => step.key), "report"];
+    const isDone = (key) => {
+      if (key === "start") return named;
+      if (key === "report") return report.ready;
+      return !!steps.find((step) => step.key === key)?.done;
+    };
+
+    if (!this._active || !this._rail.includes(this._active)) {
+      this._active = this._rail.find((key) => !isDone(key)) ?? this._rail.at(-1);
+    }
+    const activeAt = this._rail.indexOf(this._active);
+    for (const step of steps) step.active = step.key === this._active;
 
     return {
       actorName: actor.name,
@@ -515,17 +547,36 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           label: step.label,
           done: step.done,
           optional: step.optional,
-          hasSkipped: step.hasSkipped,
+          // A step carrying a finding is marked in the rail the same way a
+          // skipped choice is: the player should not have to open every card to
+          // learn that one of them has something wrong with it.
+          hasSkipped: step.hasSkipped || step.failures.length > 0,
           summary: step.foldResult,
           active: step.active
-        }))
+        })),
+        {
+          key: "report",
+          number: steps.length + 2,
+          icon: "fa-clipboard-check",
+          label: t("step.report"),
+          done: report.ready,
+          summary: report.ready ? t("guide.ready") : t("guide.toFix", report.problems),
+          active: this._active === "report"
+        }
       ],
       startActive: this._active === "start",
+      reportActive: this._active === "report",
+      reportNumber: steps.length + 2,
+      // The findings that belong to the first card rather than to a step: the
+      // portrait, which is set beside the name. Held back until the character
+      // has been named, so an untouched panel does not open on a complaint.
+      startFailures,
       canBack: activeAt > 0,
       canNext: activeAt >= 0 && activeAt < this._rail.length - 1,
-      // The last card is Bio, which nothing requires filling in - so the button
-      // that ends the process lives there, in place of the one that walks away
-      // from it.
+      // The last card is the summary, so the button that ends the process lives
+      // there, in place of the one that walks away from it - next to the list
+      // of what is still wrong, which is what the decision to finalise is
+      // actually made against.
       isLast: activeAt === this._rail.length - 1,
       allDone: steps.every((step) => step.done || step.optional),
       progress: (() => {

@@ -6,6 +6,7 @@
     <nav class="pk5e-rail" aria-label="{{pkT "guide.steps"}}">
       {{#each rail}}
       <button type="button" data-action="goStep" data-step="{{key}}"
+              title="{{label}}{{#if summary}} - {{summary}}{{/if}}"
               class="pk5e-rail-step {{#if active}}is-active{{/if}} {{#if done}}is-done{{/if}}">
         <span class="pk5e-guide-num">{{number}}</span>
         <span class="pk5e-rail-body">
@@ -111,6 +112,17 @@
             {{/if}}
           </div>
         </div>
+
+        {{#if startFailures}}
+        <ul class="pk5e-report-list pk5e-step-findings">
+          {{#each startFailures}}
+          <li class="pk5e-report-item is-{{level}}">
+            <span class="pk5e-report-label">{{label}}</span>
+            <span class="pk5e-report-hint">{{hint}}</span>
+          </li>
+          {{/each}}
+        </ul>
+        {{/if}}
       </div>
       {{/if}}
 
@@ -255,6 +267,17 @@
             {{/each}}
           </div>
           {{/if}}
+
+          {{#if failures}}
+          <ul class="pk5e-report-list pk5e-step-findings">
+            {{#each failures}}
+            <li class="pk5e-report-item is-{{level}}">
+              <span class="pk5e-report-label">{{label}}</span>
+              <span class="pk5e-report-hint">{{hint}}</span>
+            </li>
+            {{/each}}
+          </ul>
+          {{/if}}
         {{else}}
           <div class="pk5e-guide-chosen">
             <div class="pk5e-guide-empty-art" aria-hidden="true">?</div>
@@ -284,6 +307,17 @@
       {{/if}}
       {{/each}}
 
+      {{#if reportActive}}
+      <div class="pk5e-guide-step {{#if ready}}is-done{{/if}}">
+        <div class="pk5e-guide-head">
+          <span class="pk5e-guide-num">{{reportNumber}}</span>
+          <i class="fa-solid fa-clipboard-check pk5e-guide-icon"></i>
+          <span class="pk5e-guide-label">{{pkT "step.report"}}</span>
+          <button type="button" class="pk5e-link" data-action="recheck">{{pkT "guide.recheck"}}</button>
+        </div>
+
+        <p class="pk5e-note">{{pkT "guide.reportBlurb"}}</p>
+
       {{#if skippedOptions}}
       <section class="pk5e-skipped">
         {{#each skippedOptions}}
@@ -312,7 +346,6 @@
           <span class="pk5e-guide-label">
             {{#if ready}}{{pkT "guide.ready"}}{{else}}{{pkT "guide.toFix" report.problems}}{{/if}}
           </span>
-          <button type="button" class="pk5e-link" data-action="recheck">{{pkT "guide.recheck"}}</button>
         </div>
         {{#if failures}}
         <ul class="pk5e-report-list">
@@ -327,7 +360,8 @@
         <p class="pk5e-note">{{pkT "guide.allGood"}}</p>
         {{/if}}
       </section>
-
+      </div>
+      {{/if}}
 
       {{/if}}
     </div>
