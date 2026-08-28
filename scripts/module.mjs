@@ -90,7 +90,12 @@ Hooks.once("init", () => {
       players: "Click through for players only",
       everyone: "Click through for everyone"
     },
-    default: "off"
+    // Players get walked past it, the GM does not. The screen asks which books
+    // to read out of a list of fifteen source codes - a question the GM has an
+    // opinion about and a player has no way to answer, and it stands between
+    // them and the class list every single time. The GM keeps it because
+    // narrowing the books is a thing they actually do.
+    default: "players"
   });
 
   game.settings.register(MODULE_ID, "openReferenceWithClass", {

@@ -239,6 +239,27 @@ const armourLabel = (key) =>
 const signed = (value) => (value > 0 ? `+${value}` : String(value));
 
 /**
+ * The rules page the system itself points at for one of its own keys.
+ *
+ * dnd5e hangs a `reference` on skills and abilities - a uuid into its rules
+ * compendium - and its tooltip layer renders those pages the same way it
+ * renders an item. So a proficiency pill can be hovered for the actual rule,
+ * without this module writing a word of rules text of its own.
+ *
+ * Tools are not rules pages but items: the config gives an `id` that is already
+ * a full compendium uuid, and an item is exactly what the tooltip wants.
+ *
+ * Languages and the weapon and armour proficiencies have no reference at all -
+ * `sim` and `mar` are two bare strings in the config - so those pills carry no
+ * tooltip, and say what they are in their own label instead.
+ */
+function referenceUuid(group, key) {
+  const entry = globalThis.CONFIG?.DND5E?.[group]?.[key];
+  if (!entry || typeof entry === "string") return "";
+  return String(entry.reference ?? entry.id ?? "");
+}
+
+/**
  * A pill for one item, with the sheet's own tooltip attached where we can.
  *
  * THE UUID IS LOOKED UP, NOT STORED. The record deliberately holds plain values
@@ -284,12 +305,24 @@ export function gainSections(record, { skipTypes = [], kind = "", actor = null }
   }
   push("stats", stats);
 
+  // "Weapon: Martial" rather than "Martial", and the same for armour. On their
+  // own those two words say nothing about what kind of proficiency they are,
+  // and they sit in a row next to skills and tools that name themselves.
   push("proficiencies", [
-    ...(record.skills ?? []).map((key) => ({ label: skillLabel(key) })),
-    ...(record.saves ?? []).map((key) => ({ label: t("gains.save", abilityLabel(key)) })),
-    ...(record.tools ?? []).map((key) => ({ label: toolLabel(key) })),
-    ...(record.weapons ?? []).map((key) => ({ label: weaponLabel(key) })),
-    ...(record.armour ?? []).map((key) => ({ label: armourLabel(key) }))
+    ...(record.skills ?? []).map((key) => ({
+      label: skillLabel(key),
+      uuid: referenceUuid("skills", key)
+    })),
+    ...(record.saves ?? []).map((key) => ({
+      label: t("gains.save", abilityLabel(key)),
+      uuid: referenceUuid("abilities", key)
+    })),
+    ...(record.tools ?? []).map((key) => ({
+      label: toolLabel(key),
+      uuid: referenceUuid("tools", key)
+    })),
+    ...(record.weapons ?? []).map((key) => ({ label: t("gains.weaponOf", weaponLabel(key)) })),
+    ...(record.armour ?? []).map((key) => ({ label: t("gains.armourOf", armourLabel(key)) }))
   ]);
 
   push(

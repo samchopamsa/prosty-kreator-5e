@@ -75,7 +75,8 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 // ostrzezenia, ktore sa czescia tego, co testujemy.
 globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
-const { readRow, watchImporter, importerRect } = await import("../scripts/importer-watch.mjs");
+const { readRow, watchImporter, importerRect, matchesImporterTitle } =
+  await import("../scripts/importer-watch.mjs");
 
 // --- harness, ten sam co w run.mjs ------------------------------------------
 
@@ -211,6 +212,16 @@ group("importer: rozpoznanie okna", () => {
   other.innerHTML = '<h1 class="window-title">Select Sources</h1>';
   document.body.appendChild(other);
   check("inne okno ve-app nie udaje importera", importerRect() !== null, true);
+
+  // Przy level upie i multiclassie ta sama lista przychodzi pod innym tytulem -
+  // zgrane z zywego okna 2026-08-28. Dopasowanie tylko do "Import Classes" bylo
+  // powodem, dla ktorego panel opisow nie pokazywal sie przy multiclassie.
+  // Sprawdzane przez funkcje z modulu, nie przez kopie wyrazenia tutaj: kopia
+  // przechodzilaby dalej po tym, jak modul by sie rozjechal.
+  check("tytul z dodawania klasy", matchesImporterTitle("Import Classes & Subclasses"), true);
+  check("tytul z level upu i multiclassu", matchesImporterTitle("Filter/Search for Class and Subclass"), true);
+  check("ekran zrodel nadal nie", matchesImporterTitle("Select Sources"), false);
+  check("ekran poziomow to nie lista klas", matchesImporterTitle("Select Class Levels"), false);
   // Panel opisow tez nosi klase "application", ale nie "ve-app" - to okno
   // importera znika, nasz panel zostaje.
   document.querySelector(".ve-app").remove();

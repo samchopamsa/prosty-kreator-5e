@@ -28,8 +28,25 @@
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
 
-/** Only this importer. The source picker and the importer chooser share ve-app. */
-const TITLE_MATCH = /import\s+classes/i;
+/**
+ * Only this importer. The source picker and the importer chooser share ve-app.
+ *
+ * TWO TITLES, ONE WINDOW. Adding a class calls it "Import Classes & Subclasses";
+ * levelling up and multiclassing reach the same list under "Filter/Search for
+ * Class and Subclass" (captured from a live level-up, 2026-08-28). Matching only
+ * the first is why the description panel never appeared when a player
+ * multiclassed: it opened, found nothing it recognised, and sat empty beside a
+ * window it was looking straight at. Same markup underneath - the Name and
+ * Source sort headers and the veapp__list are identical in both.
+ *
+ * The "for" in the second alternative is load-bearing: without it this also
+ * matches "Select Class and Subclass Levels", which is the level screen -
+ * a different window with a different job, handled in level-select.mjs.
+ */
+const TITLE_MATCH = /import\s+classes|for\s+class\s+and\s+subclass/i;
+
+/** Exported so the tests read the module's own rule rather than a copy of it. */
+export const matchesImporterTitle = (title) => TITLE_MATCH.test(title ?? "");
 
 /**
  * Above this many rows changing at once we assume the list was repainted -
@@ -176,13 +193,18 @@ export function watchImporter({ onSelect, onClose } = {}) {
     clearTimeout(watchdog);
 
     // Found the window - but is the list inside it still shaped as we expect?
+    //
+    // An empty list is not a complaint. The level-up route reaches this window
+    // with its filters up and no rows built yet, and warning then would put
+    // "the importer's markup has changed" in the GM's console every time
+    // somebody multiclassed. Rows that exist and cannot be read still is one.
     const list = app.querySelector(".veapp__list");
-    const readable = list
-      ? Array.from(list.querySelectorAll("label")).some((row) => readRow(row))
-      : false;
-    if (!readable) {
-      warnMarkup(list ? "rows unreadable" : "list container not found", {
-        found: list ? "div.veapp__list present, no row yielded a name" : "no div.veapp__list"
+    const rows = list ? Array.from(list.querySelectorAll("label")) : [];
+    if (!list) {
+      warnMarkup("list container not found", { found: "no div.veapp__list" });
+    } else if (rows.length && !rows.some((row) => readRow(row))) {
+      warnMarkup("rows unreadable", {
+        found: `div.veapp__list present with ${rows.length} rows, none yielded a name`
       });
     }
 

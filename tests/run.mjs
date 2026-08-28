@@ -1606,6 +1606,47 @@ group("gains: what a step put on the sheet", () => {
   check("an unknown item type is still shown", odd.map((s) => s.key), ["other"]);
 });
 
+group("gains: proficiency pills", () => {
+  const saved = { ...CONFIG.DND5E };
+  Object.assign(CONFIG.DND5E, {
+    skills: { ath: { label: "Athletics", reference: "Compendium.dnd5e.rules.JournalEntry.A.JournalEntryPage.B" } },
+    abilities: { str: { label: "Strength", reference: "Compendium.dnd5e.rules.JournalEntry.A.JournalEntryPage.C" } },
+    tools: { alchemist: { ability: "int", id: "Compendium.dnd5e.equipment24.Item.phbtulAlchemists" } },
+    weaponProficiencies: { mar: "Martial" },
+    armorProficiencies: { hvy: "Heavy" }
+  });
+
+  const record = {
+    items: [], skills: ["ath"], saves: ["str"], tools: ["alchemist"],
+    weapons: ["mar"], armour: ["hvy"], languages: [], abilities: {}, currency: {}
+  };
+  const entries = gainSections(record).find((s) => s.key === "proficiencies").entries;
+  const labels = entries.map((e) => e.label);
+
+  // "Martial" on its own says nothing about what kind of proficiency it is,
+  // sitting in a row next to skills and tools that name themselves.
+  check("a weapon proficiency says it is one", labels.includes("Weapon: Martial"), true);
+  check("and so does armour", labels.includes("Armor: Heavy"), true);
+
+  // The tooltip target comes from the system's own configuration: a rules page
+  // for skills and abilities, a compendium item for a tool.
+  check("a skill points at its rules page",
+    entries.find((e) => e.label === "Athletics").uuid,
+    "Compendium.dnd5e.rules.JournalEntry.A.JournalEntryPage.B");
+  check("a save points at the ability's page",
+    entries.find((e) => e.label === "Strength save").uuid,
+    "Compendium.dnd5e.rules.JournalEntry.A.JournalEntryPage.C");
+  check("a tool points at the item",
+    entries.find((e) => e.uuid?.includes("equipment24")) !== undefined, true);
+
+  // Weapons and armour are two bare strings in the config, with nothing to
+  // point at - so they carry no tooltip rather than a broken one.
+  check("a weapon proficiency has nothing to link to",
+    entries.find((e) => e.label === "Weapon: Martial").uuid, undefined);
+
+  Object.assign(CONFIG.DND5E, saved);
+});
+
 // --- ability scores and languages, now that the arithmetic is testable --------
 //
 // These used to be methods on two ApplicationV2 subclasses, which meant point
