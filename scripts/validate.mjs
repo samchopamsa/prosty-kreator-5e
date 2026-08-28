@@ -18,6 +18,22 @@ const ERROR = "error";
 const WARNING = "warning";
 
 /**
+ * Which step of the panel a kind of item belongs to.
+ *
+ * A skipped choice is reported against the item that offered it, and the panel
+ * wants to show it on the step that put that item there. A subclass belongs to
+ * the class step, because that is where it was chosen and where it can be taken
+ * away again.
+ */
+const STEP_OF_TYPE = {
+  race: "species",
+  species: "species",
+  background: "background",
+  class: "class",
+  subclass: "class"
+};
+
+/**
  * Multiclass prerequisites, read from the class items themselves.
  *
  * The 2024 rules ask for 13 in a class's primary ability before you may take a
@@ -278,7 +294,16 @@ export function abilitiesAssigned(actor) {
 
 export function checkCharacter(actor) {
   const checks = [];
-  const add = (ok, level, label, hint) => checks.push({ ok, level, label, hint });
+  // `step` says which step of the panel can do something about a finding, so
+  // the panel can put it under that step instead of collecting everything into
+  // one list at the bottom - where "no skills" sat a long way from the
+  // background that was supposed to grant them.
+  //
+  // Left empty where no single step owns the answer: skills and a pack come
+  // from the class AND the background, and naming one of them would send the
+  // player to fix it in the wrong place. Those show in the summary only.
+  const add = (ok, level, label, hint, step = "") =>
+    checks.push({ ok, level, label, hint, step });
 
   if (!actor || actor.type !== "character") {
     return { checks: [], errors: 0, warnings: 0, problems: 0, ready: false };
@@ -288,20 +313,22 @@ export function checkCharacter(actor) {
   const item = (types) => actor.items.find((i) => types.includes(i.type));
 
   const species = item(["race", "species"]);
-  add(!!species, ERROR, t("check.species"), t("check.speciesHint"));
+  add(!!species, ERROR, t("check.species"), t("check.speciesHint"), "species");
 
   const background = item(["background"]);
-  add(!!background, ERROR, t("check.background"), t("check.backgroundHint"));
+  add(!!background, ERROR, t("check.background"), t("check.backgroundHint"), "background");
 
   const cls = item(["class"]);
   const level = cls?.system?.levels ?? 0;
-  add(!!cls && level >= 1, ERROR, t("check.class"), t("check.classHint"));
+  add(!!cls && level >= 1, ERROR, t("check.class"), t("check.classHint"), "class");
 
   const hp = Number(system.attributes?.hp?.max ?? 0);
-  add(hp > 0, ERROR, t("check.hp"), t("check.hpHint"));
+  // Hit points come with the class, so that is where they can be fixed.
+  add(hp > 0, ERROR, t("check.hp"), t("check.hpHint"), "class");
 
   const speed = Number(system.attributes?.movement?.walk ?? 0);
-  add(speed > 0, ERROR, t("check.speed"), t("check.speedHint"));
+  // Speed comes with the species, for the same reason.
+  add(speed > 0, ERROR, t("check.speed"), t("check.speedHint"), "species");
 
   // The sheet decides, not our flag - a character imported by another tool has
   // scores but none of our flags. The flag is still honoured on its own, for
@@ -310,12 +337,13 @@ export function checkCharacter(actor) {
     abilitiesAssigned(actor) || !!actor.getFlag(MODULE_ID, "abilities"),
     ERROR,
     t("check.abilities"),
-    t("check.abilitiesHint")
+    t("check.abilitiesHint"),
+    "abilities"
   );
 
   const languages = system.traits?.languages?.value;
   const languageCount = languages ? Array.from(languages).length : 0;
-  add(languageCount > 0, WARNING, t("check.language"), t("check.languageHint"));
+  add(languageCount > 0, WARNING, t("check.language"), t("check.languageHint"), "languages");
 
   const skills = Object.values(system.skills ?? {}).filter((s) => Number(s.value) > 0);
   add(skills.length > 0, WARNING, t("check.skills"), t("check.skillsHint"));
@@ -346,12 +374,13 @@ export function checkCharacter(actor) {
   );
   if (slots > 0) {
     const spells = actor.items.filter((i) => i.type === "spell").length;
-    add(spells > 0, WARNING, t("check.spells"), t("check.spellsHint"));
+    add(spells > 0, WARNING, t("check.spells"), t("check.spellsHint"), "class");
   }
 
   const portrait = actor.img ?? "";
   const hasPortrait = portrait && !portrait.includes("mystery-man") && !portrait.includes("svg/actors");
-  add(!!hasPortrait, WARNING, t("check.portrait"), t("check.portraitHint"));
+  // The portrait is set in the first block, beside the name.
+  add(!!hasPortrait, WARNING, t("check.portrait"), t("check.portraitHint"), "start");
 
   // Skipped choice dialogs. A warning rather than an error, and so not a bar to
   // finalising: the dialogs sometimes arrive a beat after the item does, so
@@ -363,7 +392,8 @@ export function checkCharacter(actor) {
       false,
       WARNING,
       t("check.skipped", problem.name),
-      t("check.skippedHint", t(`check.kindOf.${problem.type}`))
+      t("check.skippedHint", t(`check.kindOf.${problem.type}`)),
+      STEP_OF_TYPE[problem.type] ?? ""
     );
   }
 
@@ -382,7 +412,8 @@ export function checkCharacter(actor) {
         false,
         WARNING,
         t("check.multiclass", problem.name),
-        t("check.multiclassHint", abilityNames(problem))
+        t("check.multiclassHint", abilityNames(problem)),
+        "class"
       );
     }
   }
