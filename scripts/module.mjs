@@ -24,6 +24,7 @@ import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { selfTest, captureImporter, captureDialog } from "./selftest.mjs";
+import { DEFAULT_PORTRAIT_FOLDER } from "./portrait.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "defaultLanguage", {
@@ -157,6 +158,21 @@ Hooks.once("init", () => {
     config: true,
     type: Boolean,
     default: true
+  });
+
+  // One folder, decided here rather than by whatever the file browser happened
+  // to be showing. The old screen uploaded into the open directory, which meant
+  // portraits scattered across the data folder and a player who could not say
+  // where theirs went. Created on demand, so it does not have to exist first.
+  game.settings.register(MODULE_ID, "portraitFolder", {
+    name: "Where uploaded portraits go",
+    hint:
+      "A folder under the world's Data directory. The creator's portrait screen uploads here and " +
+      "makes the folder if it is not there. Players never see the path - it is set once, by you.",
+    scope: "world",
+    config: true,
+    type: String,
+    default: DEFAULT_PORTRAIT_FOLDER
   });
 
   game.settings.register(MODULE_ID, "showStepHelp", {

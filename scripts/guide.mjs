@@ -48,6 +48,7 @@ import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import { autoPickSingleLevel } from "./level-select.mjs";
 import { readGains, diffGains } from "./gains.mjs";
+import { choosePortrait } from "./portrait.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, wait } from "./sheet-actions.mjs";
@@ -1198,66 +1199,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
+  /**
+   * The portrait screen: upload a file, or paste a link. See portrait.mjs for
+   * why this is not Foundry's own file browser any more.
+   */
   static async onSetPortrait() {
     const actor = this.actor;
     if (!actor) return;
-
-    // The class moved namespaces across Foundry versions, so try each in turn.
-    const candidates = [
-      foundry.applications?.apps?.FilePicker?.implementation,
-      foundry.applications?.apps?.FilePicker,
-      globalThis.FilePicker
-    ].filter(Boolean);
-
-    if (!candidates.length) {
-      ui.notifications.warn("The file picker is not available in this version.");
-      return;
-    }
-
-    const apply = async (path) => {
-      if (!path) return;
-      try {
-        await actor.update({ img: path, "prototypeToken.texture.src": path });
-        ui.notifications.info("Portrait set.");
-        this.render();
-      } catch (err) {
-        console.error(`${MODULE_ID} | Could not set the portrait`, err);
-        ui.notifications.error(`Could not set the portrait: ${err.message}`);
-      }
-    };
-
-    console.log(`${MODULE_ID} | Opening the file picker, ${candidates.length} variant(s) available.`);
-
-    for (const [index, FP] of candidates.entries()) {
-      try {
-        const picker = new FP({ type: "image", current: actor.img, callback: apply });
-        picker.render(true);
-        console.log(`${MODULE_ID} | File picker opened using variant ${index + 1}.`);
-        return;
-      } catch (err) {
-        console.warn(`${MODULE_ID} | File picker variant ${index + 1} failed`, err);
-      }
-    }
-
-    // Every variant refused, so fall back to typing a path. Better than a dead
-    // button, and it keeps working whatever Foundry does with the picker class.
-    const DialogV2 = foundry.applications?.api?.DialogV2;
-    if (DialogV2?.prompt) {
-      try {
-        const path = await DialogV2.prompt({
-          window: { title: "Portrait" },
-          content: `<p>The file picker could not be opened. Paste an image path:</p>
-                    <input type="text" name="path" value="${actor.img ?? ""}" style="width:100%">`,
-          ok: { callback: (event, button) => button.form.elements.path.value.trim() }
-        });
-        await apply(path);
-        return;
-      } catch (err) {
-        console.warn(`${MODULE_ID} | Path prompt cancelled or unavailable`, err);
-        return;
-      }
-    }
-    ui.notifications.error("Could not open the file picker. See the console for details.");
+    if (await choosePortrait(actor)) this.render();
   }
 
   static async onRemoveStep(event, target) {
