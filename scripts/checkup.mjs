@@ -74,7 +74,10 @@ export async function rulesChecks(actor) {
       ok: false,
       level: WARNING,
       label: t("check.ruleMissing", feature.name),
-      hint: t("check.ruleMissingHint", feature.className, feature.level)
+      hint: t("check.ruleMissingHint", feature.className, feature.level),
+      // Everything this file compares comes from what a class grants, so the
+      // class step is where the panel can show it.
+      step: "class"
     });
   }
 
@@ -83,7 +86,8 @@ export async function rulesChecks(actor) {
       ok: false,
       level: WARNING,
       label: t("check.ruleChoice", choice.name),
-      hint: t("check.ruleChoiceHint", choice.taken, choice.required)
+      hint: t("check.ruleChoiceHint", choice.taken, choice.required),
+      step: "class"
     });
   }
 
@@ -97,7 +101,8 @@ export async function rulesChecks(actor) {
       ok: true,
       level: WARNING,
       label: t("check.ruleOk"),
-      hint: t("check.ruleOkHint", levels)
+      hint: t("check.ruleOkHint", levels),
+      step: "class"
     });
   }
 
