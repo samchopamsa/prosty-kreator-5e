@@ -1786,3 +1786,36 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   font-size: 12px;
   opacity: 0.75;
 }
+
+
+/* ---------------------------------------------------------------------------
+   The portrait screen
+
+   A dialog, not one of our windows, so it gets the panel's classes and only
+   the few rules a two-question form needs. The two halves are separated by a
+   rule rather than a heading: they are alternatives, and a heading over each
+   made a short form look like a settings page.
+   --------------------------------------------------------------------------- */
+
+.pk5e-portrait-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 380px;
+}
+
+.pk5e-portrait-dialog .pk5e-label { margin-top: 4px; }
+
+.pk5e-portrait-dialog .pk5e-label + input { width: 100%; }
+
+.pk5e-portrait-dialog input[type="file"] {
+  width: 100%;
+  padding: 4px;
+  font-size: 14px;
+}
+
+/* The second half of the choice, marked as such. */
+.pk5e-portrait-dialog .pk5e-label:nth-of-type(2) {
+  padding-top: 10px;
+  border-top: 1px solid var(--pk5e-line);
+}
