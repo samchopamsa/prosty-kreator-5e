@@ -169,7 +169,7 @@ Panel czytelniejszy, karta Tidy odblokowywana, nowy krok Bio.
   otwierac wybor - nie ma tam czego nacisnac. Panel nie nacisnie go wiec nigdy,
   tylko poprosi o przelaczenie na Quadrone albo karte dnd5e. Wczesniejszy
   komunikat radzil wlaczyc tryb edycji, co na tej karcie bylo nieprawda.
-- **Koniec pytania "Plutonium czy Compendium Browser?" przy kazdym kroku.**
+- **Koniec pytania "importer czy Compendium Browser?" przy kazdym kroku.**
   Panel nie oferuje juz drogi przez kompendium, wiec pytanie mialo jedna
   odpowiedz, a bylo zadawane raz na krok. Ustawienie importera przechodzi z
   Prompt na Always - u zrodla, bo dialog klikniety i tak mignalby na ekranie.
