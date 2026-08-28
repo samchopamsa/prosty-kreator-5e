@@ -15,7 +15,26 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { CompleteCharacter } from "./complete.mjs";
-import { LanguagePicker } from "./languages.mjs";
+import { LanguagePicker, announceRoll, confirmExtraLanguages, filterLanguages } from "./languages.mjs";
+import {
+  POINT_BUY_TOTAL,
+  abilityKeys,
+  applyAbilities,
+  buildRows,
+  isReady,
+  newState,
+  pointsSpent,
+  rollPool,
+  setMethod,
+  stateFor,
+  stepAbility
+} from "./abilities-core.mjs";
+import {
+  applyLanguages,
+  buildLanguageView,
+  rollLanguage,
+  selectionFor
+} from "./languages-core.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
@@ -141,6 +160,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._priorSheetMode = undefined;
     /** Step whose import is still running, if any. */
     this._importing = null;
+    /** Ability scores being assigned on the card, and who they were seeded from. */
+    this._abilities = null;
+    this._abilitiesFor = null;
+    /** Languages being ticked on the card, plus this session's rolls and query. */
+    this._languages = null;
+    this._languagesFor = null;
+    /** What the sheet itself listed last time we looked, to spot what it gained. */
+    this._languagesSeen = new Set();
+    this._languageRolls = [];
+    this._languageQuery = "";
     /** When something last landed on the actor, used to detect a finished import. */
     this._lastActivity = 0;
   }
@@ -176,6 +205,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       levelUp: CreationGuide.onLevelUp,
       setLanguage: CreationGuide.onSetLanguage,
       setTheme: CreationGuide.onSetTheme,
+      abilityPlus: CreationGuide.onAbilityPlus,
+      abilityMinus: CreationGuide.onAbilityMinus,
+      rollAbilities: CreationGuide.onRollAbilities,
+      resetAbilities: CreationGuide.onResetAbilities,
+      saveAbilities: CreationGuide.onSaveAbilities,
+      rollLanguage: CreationGuide.onRollLanguage,
+      clearRolls: CreationGuide.onClearRolls,
+      saveLanguages: CreationGuide.onSaveLanguages,
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
@@ -455,6 +492,27 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const activeAt = this._rail.indexOf(this._active);
     for (const step of steps) step.active = step.key === this._active;
 
+    // THE TWO STEPS ANSWERED HERE RATHER THAN IN A WINDOW
+    //
+    // Ability scores and languages are the only steps whose question is ours to
+    // ask - every other one hands over to the sheet's own button and lets the
+    // system run. They used to each open a window on top of the panel, which in
+    // a one-card-at-a-time layout is a second place to look for the same
+    // question, and a window the player then has to find and close.
+    //
+    // Built only for the card actually on screen: both walk the whole language
+    // list or every ability, and doing that for steps nobody is looking at is
+    // work per render for nothing.
+    //
+    // The sums and the writing are NOT here. They come from abilities-core.mjs
+    // and languages-core.mjs, which the two windows still use - so point buy is
+    // costed in one place whichever surface asked for it.
+    for (const step of steps) {
+      if (!step.active) continue;
+      if (step.key === "abilities") step.abilityPick = this.abilityContext(actor);
+      if (step.key === "languages") step.langPick = this.languageContext(actor);
+    }
+
     return {
       actorName: actor.name,
       actorImg: actor.img ?? "",
@@ -610,6 +668,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this.bindBioFields();
     this.bindOwnership();
     this.bindDisclosures();
+    this.bindInlineChoices();
 
     if (!this._hooks.length) this.registerWatchers();
 
@@ -1327,6 +1386,210 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = this.actor;
     this.close();
     actor?.sheet.render(true);
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Ability scores and languages, chosen on the card                     */
+  /* ------------------------------------------------------------------ */
+
+  /**
+   * The assignment being worked on, seeded from the character the first time.
+   *
+   * Held on the window rather than written as it is typed: an assignment is
+   * only half an answer until every score has one, and writing halves of it to
+   * the sheet would leave a character that reads as finished when it is not.
+   * Re-seeded when the panel is pointed at a different character.
+   */
+  abilityState(actor) {
+    if (!this._abilities || this._abilitiesFor !== (actor?.id ?? null)) {
+      this._abilities = stateFor(actor);
+      this._abilitiesFor = actor?.id ?? null;
+    }
+    return this._abilities;
+  }
+
+  /** Read per render: it is a world setting, so it can change under the panel. */
+  get bonusMode() {
+    return game.settings.get(MODULE_ID, "bonusMode") ?? "advancements";
+  }
+
+  abilityContext(actor) {
+    const state = this.abilityState(actor);
+    const method = state.method;
+    return {
+      isStandard: method === "standard",
+      isRoll: method === "roll",
+      isPointBuy: method === "pointbuy",
+      isManual: method === "manual",
+      usesPool: method === "standard" || method === "roll",
+      rows: buildRows(actor, state, this.bonusMode),
+      pointsLeft: POINT_BUY_TOTAL - pointsSpent(state),
+      pointsTotal: POINT_BUY_TOTAL,
+      canApply: isReady(state, actor)
+    };
+  }
+
+  /** The ticks being made, seeded from what the sheet already knows. */
+  languageState(actor) {
+    if (!this._languages || this._languagesFor !== (actor?.id ?? null)) {
+      this._languages = selectionFor(actor);
+      this._languagesFor = actor?.id ?? null;
+      this._languageRolls = [];
+      this._languagesSeen = new Set(this._languages);
+    }
+
+    // A language the sheet has gained since - a background granting one, most
+    // likely, since the panel stays open across every import - is ticked here
+    // too. Only the ones that are NEW to the sheet, which is what the second set
+    // is for: unioning the whole sheet on every render would put back a tick the
+    // player had just taken off, over and over.
+    const known = new Set(actor?.system?.traits?.languages?.value ?? []);
+    for (const key of known) {
+      if (!this._languagesSeen.has(key)) this._languages.add(key);
+    }
+    this._languagesSeen = known;
+
+    return this._languages;
+  }
+
+  languageContext(actor) {
+    return {
+      ...buildLanguageView(this.languageState(actor), this._languageRolls, {
+        standard: t("lang.standard"),
+        expanded: t("lang.expanded")
+      }),
+      query: this._languageQuery
+    };
+  }
+
+  /**
+   * The controls that are not buttons: radios, selects, number fields, ticks.
+   *
+   * Every one of them re-renders, which is what keeps the arithmetic column
+   * honest as the assignment changes. The search box is the exception - it
+   * filters the rows in place, because a render would put an empty box back
+   * under the cursor mid-word.
+   */
+  bindInlineChoices() {
+    const el = this.element;
+
+    el.querySelectorAll("[data-method]").forEach((input) => {
+      input.addEventListener("change", (ev) => {
+        setMethod(this.abilityState(this.actor), ev.currentTarget.dataset.method);
+        this.render();
+      });
+    });
+
+    el.querySelectorAll("select[data-assign]").forEach((sel) => {
+      sel.addEventListener("change", (ev) => {
+        const raw = ev.currentTarget.value;
+        this.abilityState(this.actor).assign[ev.currentTarget.dataset.assign] =
+          raw === "" ? null : Number(raw);
+        this.render();
+      });
+    });
+
+    el.querySelectorAll("input[data-manual]").forEach((input) => {
+      input.addEventListener("change", (ev) => {
+        const value = Math.min(20, Math.max(1, Number(ev.currentTarget.value) || 10));
+        this.abilityState(this.actor).direct[ev.currentTarget.dataset.manual] = value;
+        this.render();
+      });
+    });
+
+    el.querySelectorAll("input[data-language]").forEach((cb) => {
+      cb.addEventListener("change", (ev) => {
+        const selected = this.languageState(this.actor);
+        const key = ev.currentTarget.dataset.language;
+        if (ev.currentTarget.checked) selected.add(key);
+        else selected.delete(key);
+        this.render();
+      });
+    });
+
+    const search = el.querySelector("[data-language-search]");
+    if (search) {
+      // Re-applied after every render, not only when typed into: ticking a
+      // language redraws the list, and a filter that quietly reset itself would
+      // hand back the full list of every language the system knows.
+      if (this._languageQuery) filterLanguages(el, this._languageQuery);
+      search.addEventListener("input", (ev) => {
+        this._languageQuery = ev.currentTarget.value;
+        filterLanguages(el, this._languageQuery);
+      });
+    }
+  }
+
+  static onAbilityPlus(event, target) {
+    stepAbility(this.abilityState(this.actor), target.dataset.ability, 1);
+    this.render();
+  }
+
+  static onAbilityMinus(event, target) {
+    stepAbility(this.abilityState(this.actor), target.dataset.ability, -1);
+    this.render();
+  }
+
+  static async onRollAbilities() {
+    const state = this.abilityState(this.actor);
+    state.pool = await rollPool();
+    state.method = "roll";
+    for (const key of abilityKeys()) state.assign[key] = null;
+    ui.notifications.info(`Rolled: ${state.pool.join(", ")}`);
+    this.render();
+  }
+
+  static onResetAbilities() {
+    const method = this.abilityState(this.actor).method;
+    this._abilities = newState();
+    this._abilities.method = method;
+    this.render();
+  }
+
+  static async onSaveAbilities() {
+    const actor = this.actor;
+    if (!actor) {
+      ui.notifications.warn("That character no longer exists.");
+      return;
+    }
+    try {
+      if (!(await applyAbilities(actor, this.abilityState(actor), this.bonusMode))) return;
+      ui.notifications.info(`Updated "${actor.name}".`);
+      this.render();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not update actor`, err);
+      ui.notifications.error(`Character Creator: ${err.message}`);
+    }
+  }
+
+  static async onRollLanguage() {
+    const result = await rollLanguage(this.languageState(this.actor));
+    this._languageRolls.push(result.total);
+    announceRoll(result);
+    this.render();
+  }
+
+  static onClearRolls() {
+    this._languageRolls = [];
+    this.render();
+  }
+
+  static async onSaveLanguages() {
+    const actor = this.actor;
+    if (!actor) {
+      ui.notifications.warn("That character no longer exists.");
+      return;
+    }
+    const selected = this.languageState(actor);
+    if (!(await confirmExtraLanguages(selected))) return;
+    try {
+      await applyLanguages(actor, selected);
+      ui.notifications.info(`Languages saved for "${actor.name}".`);
+      this.render();
+    } catch (err) {
+      console.error(`${MODULE_ID} | Could not save languages`, err);
+      ui.notifications.error(`Could not save languages: ${err.message}`);
+    }
   }
 
   static onOpenSheet() {

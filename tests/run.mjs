@@ -56,6 +56,12 @@ const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
   await import("../scripts/rules-data.mjs");
+const { STANDARD_ARRAY, POINT_BUY_TOTAL, newState, setMethod, stepAbility, baseValue,
+  pointsSpent, isReady, existingBonus, buildRows, applyAbilities } =
+  await import("../scripts/abilities-core.mjs");
+const { flattenLanguages, keyForName, languageLabels, selectionFor, buildLanguageView,
+  applyLanguages } =
+  await import("../scripts/languages-core.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -74,9 +80,12 @@ function check(name, actual, expected) {
   }
 }
 
-function group(title, body) {
+// Async bodies are awaited, so a group that writes to a stand-in actor can be
+// checked here. A synchronous body runs to its end before this returns, so the
+// groups that do not await keep their order.
+async function group(title, body) {
   console.log(`\n${title}`);
-  body();
+  await body();
 }
 
 // --- matching importer entries to the compendium ----------------------------
@@ -1595,6 +1604,175 @@ group("gains: what a step put on the sheet", () => {
   // silently drops an item would be worse than an untidy one.
   const odd = gainSections(diff(empty, { items: [["shipwreck", "Sloop"]] }));
   check("an unknown item type is still shown", odd.map((s) => s.key), ["other"]);
+});
+
+// --- ability scores and languages, now that the arithmetic is testable --------
+//
+// These used to be methods on two ApplicationV2 subclasses, which meant point
+// buy could only be checked by opening a window in Foundry. Pulled out into
+// abilities-core.mjs and languages-core.mjs so the guide panel could draw the
+// same choice on a card, they can be checked here - which is the point of
+// having pulled them out.
+
+await group("ability scores", async () => {
+  // The stub declares no abilities, and every function here walks that list.
+  const savedAbilities = CONFIG.DND5E.abilities;
+  CONFIG.DND5E.abilities = {
+    str: { label: "Strength" }, dex: { label: "Dexterity" }, con: { label: "Constitution" },
+    int: { label: "Intelligence" }, wis: { label: "Wisdom" }, cha: { label: "Charisma" }
+  };
+
+  const actor = (over = {}) => ({
+    id: "a1",
+    items: over.items ?? [],
+    system: { abilities: over.abilities ?? {}, attributes: over.attributes ?? {} },
+    getFlag: () => over.flag ?? null,
+    update: over.update ?? (async () => {})
+  });
+
+  const assigned = () => {
+    const state = newState();
+    // The standard array in order, so each ability takes a different entry.
+    ["str", "dex", "con", "int", "wis", "cha"].forEach((key, i) => (state.assign[key] = i));
+    return state;
+  };
+
+  check("a fresh state is the standard array", newState().pool, STANDARD_ARRAY);
+  check("nothing assigned is not ready", isReady(newState(), actor()), false);
+  check("every ability assigned is ready", isReady(assigned(), actor()), true);
+  check("no character, never ready", isReady(assigned(), null), false);
+  check("the assigned value is the pool entry", baseValue(assigned(), "str"), 15);
+
+  // Point buy: eight everywhere costs nothing, and 15 costs 9 of the 27.
+  const pb = newState();
+  pb.method = "pointbuy";
+  check("all eights spend nothing", pointsSpent(pb), 0);
+  pb.direct.str = 15;
+  check("a 15 costs nine", pointsSpent(pb), 9);
+  check("under budget is ready", isReady(pb, actor()), true);
+  for (const key of ["dex", "con", "int", "wis", "cha"]) pb.direct[key] = 15;
+  check("over budget is not ready", isReady(pb, actor()), false);
+  check("the budget itself", POINT_BUY_TOTAL, 27);
+
+  // The stepper stops where the method says, not where the score could go.
+  const stepping = newState();
+  stepping.method = "pointbuy";
+  stepping.direct.str = 15;
+  stepAbility(stepping, "str", 1);
+  check("point buy stops at fifteen", stepping.direct.str, 15);
+  stepping.method = "manual";
+  stepAbility(stepping, "str", 1);
+  check("manual goes past it", stepping.direct.str, 16);
+  stepping.direct.dex = 1;
+  stepAbility(stepping, "dex", -1);
+  check("nothing goes below one", stepping.direct.dex, 1);
+
+  // Changing method drops the assignment: the pool it referred to is gone.
+  const switched = assigned();
+  setMethod(switched, "pointbuy");
+  check("switching method clears the assignment", switched.assign.str, null);
+
+  // The bonus already on the sheet. "advancements" reads the items and ignores
+  // the scores; "none" refuses to guess at all.
+  const withAsi = actor({
+    items: [{ system: { advancement: [{ type: "AbilityScoreImprovement", value: { assignments: { str: 2 } } }] } }],
+    abilities: { str: { value: 17 } }
+  });
+  check("an increase is read from the item", existingBonus(withAsi, "str", "advancements"), 2);
+  check("an ability with no increase gets none", existingBonus(withAsi, "dex", "advancements"), 0);
+  check("ignoring bonuses means zero", existingBonus(withAsi, "str", "none"), 0);
+  check("no items, nothing to read", existingBonus(actor(), "str", "advancements"), 0);
+
+  // The row is what the card and the popup both draw: base plus bonus, capped.
+  const rows = buildRows(withAsi, assigned(), "advancements");
+  const str = rows.find((r) => r.key === "str");
+  check("the row adds the bonus underneath", [str.base, str.bonus, str.final], [15, 2, 17]);
+  check("and states the modifier", str.modLabel, "+3");
+  check("a value used elsewhere is disabled here", rows[1].options[0].disabled, true);
+
+  // Twenty is the ceiling, however the arithmetic gets there.
+  const high = actor({
+    items: [{ system: { advancement: [{ type: "AbilityScoreImprovement", value: { assignments: { str: 8 } } }] } }]
+  });
+  check("nothing goes above twenty", buildRows(high, assigned(), "advancements")[0].final, 20);
+
+  // The write: scores, the flag that records the base, and no half-answers.
+  let written = null;
+  const target = actor({ update: async (data) => (written = data) });
+  check("an unfinished assignment writes nothing",
+    [await applyAbilities(target, newState(), "none"), written], [false, null]);
+  await applyAbilities(target, assigned(), "none");
+  check("the score is written", written["system.abilities.str.value"], 15);
+  check("and the base is remembered",
+    written["flags.prosty-kreator-5e.abilities"].base.str, 15);
+
+  CONFIG.DND5E.abilities = savedAbilities;
+});
+
+await group("languages", async () => {
+  const savedLanguages = CONFIG.DND5E.languages;
+  // Shaped the way dnd5e shapes it: groups with children, each child an object
+  // carrying a label. The bare-string form the flattener also accepts is a
+  // fallback for a flat config and deliberately not what is measured here.
+  CONFIG.DND5E.languages = {
+    standard: {
+      label: "Standard",
+      children: {
+        common: { label: "Common" },
+        elvish: { label: "Elvish" },
+        dwarvish: { label: "Dwarvish" }
+      }
+    },
+    exotic: { label: "Exotic", children: { draconic: { label: "Draconic" } } }
+  };
+
+  const flat = flattenLanguages();
+  check("a nested config is flattened", flat.length, 4);
+  check("and the parent is kept in the label",
+    flat.find((l) => l.key === "draconic").label, "Exotic / Draconic");
+  check("a name finds its key", keyForName("Elvish"), "elvish");
+  check("a name the system does not list finds nothing", keyForName("Thieves' Cant"), null);
+
+  // Common leads, whatever order the sheet stored them in.
+  check("Common is named first",
+    languageLabels(["elvish", "common", "dwarvish"]), ["Common", "Dwarvish", "Elvish"]);
+  check("an unknown key is shown rather than dropped",
+    languageLabels(["klingon"]), ["klingon"]);
+
+  const actor = (known = []) => ({
+    id: "a1",
+    system: { traits: { languages: { value: known } } },
+    update: async () => {}
+  });
+
+  check("Common is always in the selection",
+    Array.from(selectionFor(actor([]))), ["common"]);
+  check("what the sheet knows is carried in",
+    Array.from(selectionFor(actor(["elvish"]))).sort(), ["common", "elvish"]);
+
+  // Common does not count towards the two, and cannot be unticked.
+  const view = buildLanguageView(new Set(["common", "elvish", "dwarvish"]));
+  check("Common is not one of the two", view.extras, 2);
+  check("two is not over the limit", view.overLimit, false);
+  check("Common cannot be unticked",
+    view.groups.flatMap((g) => g.languages).find((l) => l.key === "common").locked, true);
+  check("three is", buildLanguageView(new Set(["common", "elvish", "dwarvish", "draconic"])).overLimit, true);
+
+  // A roll marks the row it landed on, and says how many times.
+  const rolled = buildLanguageView(new Set(["common"]), [5, 5]);
+  const elvishRow = rolled.table.find((row) => row.name === "Elvish");
+  check("the rolled row is marked", [elvishRow.highlight, elvishRow.hitCount], [true, 2]);
+
+  let written = null;
+  const target = { id: "a1", system: { traits: { languages: { value: [] } } },
+                   update: async (data) => (written = data) };
+  await applyLanguages(target, new Set(["elvish"]));
+  check("Common is put back before saving",
+    written["system.traits.languages.value"].sort(), ["common", "elvish"]);
+  check("and the count includes it",
+    written["flags.prosty-kreator-5e.languages"].count, 2);
+
+  CONFIG.DND5E.languages = savedLanguages;
 });
 
 // --- result ------------------------------------------------------------------

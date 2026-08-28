@@ -155,7 +155,143 @@
         </details>
         {{/if}}
 
-        {{#if bio}}
+        {{#if abilityPick}}
+        {{#with abilityPick}}
+          <div class="pk5e-inline-pick">
+            <div class="pk5e-methods">
+              <label><input type="radio" name="pk5e-method" data-method="standard"
+                            {{#if isStandard}}checked{{/if}}> {{pkT "abilities.methodStandard"}}</label>
+              <label><input type="radio" name="pk5e-method" data-method="pointbuy"
+                            {{#if isPointBuy}}checked{{/if}}> {{pkT "abilities.methodPointBuy"}}</label>
+              <label><input type="radio" name="pk5e-method" data-method="roll"
+                            {{#if isRoll}}checked{{/if}}> {{pkT "abilities.methodRoll"}}</label>
+              <label><input type="radio" name="pk5e-method" data-method="manual"
+                            {{#if isManual}}checked{{/if}}> {{pkT "abilities.methodManual"}}</label>
+            </div>
+
+            {{#if isRoll}}
+            <p class="pk5e-note">
+              <button type="button" class="pk5e-link" data-action="rollAbilities">{{pkT "abilities.rollButton"}}</button>
+            </p>
+            {{/if}}
+            {{#if isPointBuy}}
+            <p class="pk5e-note">{{pkT "abilities.pointsLeft"}}: <strong>{{pointsLeft}}</strong> {{pkT "abilities.of"}} {{pointsTotal}}.</p>
+            {{/if}}
+
+            <table class="pk5e-abilities">
+              <thead>
+                <tr>
+                  <th>{{pkT "abilities.colAbility"}}</th>
+                  <th>{{pkT "abilities.colNow"}}</th>
+                  <th>{{pkT "abilities.colAssign"}}</th>
+                  <th>{{pkT "abilities.colBonus"}}</th>
+                  <th>{{pkT "abilities.colResult"}}</th>
+                  <th>{{pkT "abilities.colMod"}}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{#each rows}}
+                <tr>
+                  <th scope="row">{{label}}</th>
+                  <td class="pk5e-mod">{{current}}</td>
+                  <td>
+                    {{#if ../usesPool}}
+                      <select data-assign="{{key}}">
+                        <option value="">&mdash;</option>
+                        {{#each options}}
+                        <option value="{{index}}" {{#if selected}}selected{{/if}}
+                                {{#if disabled}}disabled{{/if}}>{{value}}</option>
+                        {{/each}}
+                      </select>
+                    {{else if ../isPointBuy}}
+                      <span class="pk5e-stepper">
+                        <button type="button" data-action="abilityMinus" data-ability="{{key}}"
+                                {{#if minusDisabled}}disabled{{/if}}>&minus;</button>
+                        <span class="pk5e-stepper-value">{{value}}</span>
+                        <button type="button" data-action="abilityPlus" data-ability="{{key}}"
+                                {{#if plusDisabled}}disabled{{/if}}>+</button>
+                      </span>
+                    {{else}}
+                      <input type="number" data-manual="{{key}}" value="{{value}}" min="1" max="20">
+                    {{/if}}
+                  </td>
+                  <td class="pk5e-mod">{{bonusLabel}}</td>
+                  <td class="pk5e-mod"><strong>{{final}}</strong></td>
+                  <td class="pk5e-mod">{{modLabel}}</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+
+            <div class="pk5e-inline-actions">
+              <button type="button" class="pk5e-link" data-action="resetAbilities">{{pkT "abilities.reset"}}</button>
+              <button type="button" class="pk5e-primary" data-action="saveAbilities"
+                      {{#unless canApply}}disabled{{/unless}}>{{pkT "abilities.apply"}}</button>
+            </div>
+          </div>
+        {{/with}}
+
+        {{else if langPick}}
+        {{#with langPick}}
+          <div class="pk5e-inline-pick">
+            <table class="pk5e-lang-table">
+              <thead>
+                <tr><th>{{pkT "lang.colRoll"}}</th><th>{{pkT "lang.colLanguage"}}</th><th>{{pkT "lang.colOrigin"}}</th></tr>
+              </thead>
+              <tbody>
+                {{#each table}}
+                <tr class="{{#if known}}is-known{{/if}} {{#if highlight}}is-rolled{{/if}}">
+                  <td class="pk5e-mod">{{roll}}</td>
+                  <td>
+                    {{name}}
+                    {{#if automatic}}<span class="pk5e-abbr">{{pkT "lang.alwaysKnown"}}</span>{{/if}}
+                    {{#if highlight}}<span class="pk5e-roll-badge">{{pkT "lang.rolled" hits}}</span>{{/if}}
+                  </td>
+                  <td>{{origin}}</td>
+                </tr>
+                {{/each}}
+              </tbody>
+            </table>
+
+            <p class="pk5e-note">
+              <button type="button" class="pk5e-link" data-action="rollLanguage">{{pkT "lang.rollButton"}}</button>
+              {{#if rollCount}}
+                &middot; {{pkT "lang.rolledSoFar"}}: <strong>{{rolls}}</strong>
+                &middot; <button type="button" class="pk5e-link" data-action="clearRolls">{{pkT "lang.clear"}}</button>
+              {{/if}}
+            </p>
+
+            <p class="pk5e-note">
+              {{pkT "lang.commonNote"}} <strong>{{extras}}</strong>.
+              {{#if overLimit}} {{pkT "lang.overLimit"}}{{/if}}
+            </p>
+
+            <input type="search" data-language-search value="{{query}}"
+                   placeholder="{{pkT 'lang.search'}}" autocomplete="off">
+
+            <div class="pk5e-lang-groups">
+              {{#each groups}}
+              <section class="pk5e-lang-group">
+                <h4 class="pk5e-lang-heading">{{label}}</h4>
+                {{#each languages}}
+                <label class="pk5e-pack" data-search="{{search}}">
+                  <input type="checkbox" data-language="{{key}}"
+                         {{#if checked}}checked{{/if}} {{#if locked}}disabled{{/if}}>
+                  <span class="pk5e-pack-name">{{label}}</span>
+                  {{#if locked}}<span class="pk5e-pack-origin">{{pkT "lang.alwaysKnown"}}</span>{{/if}}
+                </label>
+                {{/each}}
+              </section>
+              {{/each}}
+            </div>
+
+            <div class="pk5e-inline-actions">
+              <button type="button" class="pk5e-primary" data-action="saveLanguages">{{pkT "lang.save"}}</button>
+            </div>
+          </div>
+        {{/with}}
+
+        {{else if bio}}
           <div class="pk5e-bio">
             <span class="pk5e-bio-heading">{{pkT "bio.details"}}</span>
             <div class="pk5e-bio-grid">

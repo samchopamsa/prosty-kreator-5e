@@ -1,90 +1,30 @@
 /**
  * languages.mjs
  * ---------------------------------------------------------------------------
- * Language selection, as its own step.
+ * Language selection, as its own window.
  *
  * This used to be tucked away inside the ability score screen, where players
- * simply did not find it. It is now a step of its own, with the rule text and
+ * simply did not find it. It became a step of its own, with the rule text and
  * the Standard Languages table from the Player's Handbook.
  *
- * Common is always known and cannot be unticked. Two further languages are the
- * expected number; taking more is allowed but asks for confirmation first, so
- * nobody grants themselves five languages by accident.
+ * The table, the lookup and the write are not here: they live in
+ * languages-core.mjs, which the guide panel's own inline step draws from as
+ * well. This file is the window.
  */
 
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { preserveScroll, applyTheme } from "./ui.mjs";
+import {
+  EXPECTED_EXTRAS,
+  applyLanguages,
+  buildLanguageView,
+  commonKey,
+  rollLanguage,
+  selectionFor
+} from "./languages-core.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
-
-/** The Standard Languages table (1d12). Common is automatic, hence no roll. */
-const STANDARD_TABLE = [
-  { roll: "—", name: "Common", origin: "Sigil", min: 0, max: 0 },
-  { roll: "1", name: "Common Sign Language", origin: "Sigil", min: 1, max: 1 },
-  { roll: "2", name: "Draconic", origin: "Dragons", min: 2, max: 2 },
-  { roll: "3-4", name: "Dwarvish", origin: "Dwarves", min: 3, max: 4 },
-  { roll: "5-6", name: "Elvish", origin: "Elves", min: 5, max: 6 },
-  { roll: "7", name: "Giant", origin: "Giants", min: 7, max: 7 },
-  { roll: "8", name: "Gnomish", origin: "Gnomes", min: 8, max: 8 },
-  { roll: "9", name: "Goblin", origin: "Goblinoids", min: 9, max: 9 },
-  { roll: "10-11", name: "Halfling", origin: "Halflings", min: 10, max: 11 },
-  { roll: "12", name: "Orc", origin: "Orcs", min: 12, max: 12 }
-];
-
-/** Languages the 2024 rules list as standard. Everything else is "Expanded". */
-const CORE_NAMES = STANDARD_TABLE.map((entry) => entry.name);
-
-const normalise = (value) => String(value ?? "").toLowerCase().replace(/[^a-z]/g, "");
-
-/** CONFIG.DND5E.languages may be flat or nested; flatten either shape. */
-function flattenLanguages(node = CONFIG.DND5E?.languages ?? {}, prefix = "") {
-  const out = [];
-  for (const [key, value] of Object.entries(node)) {
-    if (typeof value === "string") {
-      out.push({ key, label: value, plainLabel: value });
-      continue;
-    }
-    const label = value?.label ?? key;
-    if (value?.children) {
-      out.push(...flattenLanguages(value.children, `${prefix}${label} / `));
-    } else {
-      out.push({ key, label: `${prefix}${label}`, plainLabel: label });
-    }
-  }
-  return out.sort((a, b) => a.label.localeCompare(b.label));
-}
-
-/** Finds the config key matching a language name from the table. */
-function keyForName(name) {
-  const target = normalise(name);
-  const hit = flattenLanguages().find(
-    (entry) => normalise(entry.key) === target || normalise(entry.plainLabel) === target
-  );
-  return hit?.key ?? null;
-}
-
-/**
- * Readable names for stored language keys, with Common first.
- * Unknown keys fall back to the key itself rather than disappearing.
- */
-export function languageLabels(keys = []) {
-  const lookup = new Map(flattenLanguages().map((entry) => [entry.key, entry.plainLabel]));
-  const common = commonKey();
-  const list = Array.from(keys);
-
-  return list
-    .sort((a, b) => {
-      if (a === common) return -1;
-      if (b === common) return 1;
-      return String(lookup.get(a) ?? a).localeCompare(String(lookup.get(b) ?? b));
-    })
-    .map((key) => lookup.get(key) ?? key);
-}
-
-export function commonKey() {
-  return keyForName("Common");
-}
 
 async function confirmExtra(message) {
   const DialogV2 = foundry.applications?.api?.DialogV2;
@@ -100,6 +40,21 @@ async function confirmExtra(message) {
     }
   }
   return window.confirm(message);
+}
+
+/**
+ * Asks before saving more languages than a character normally knows.
+ *
+ * Shared with the panel's inline step - the guard belongs to the decision, not
+ * to the window it happens to be taken in.
+ */
+export async function confirmExtraLanguages(selected) {
+  const common = commonKey();
+  const extras = Array.from(selected).filter((key) => key !== common).length;
+  if (extras <= EXPECTED_EXTRAS) return true;
+  return confirmExtra(
+    `A character normally knows Common plus two more languages. You have chosen ${extras}. Keep them all?`
+  );
 }
 
 export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -134,52 +89,18 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Current selection, seeded from the sheet, with Common always included. */
   get languages() {
-    if (!this.selected) {
-      const known = this.actor?.system?.traits?.languages?.value;
-      this.selected = new Set(known ? Array.from(known) : []);
-      const common = commonKey();
-      if (common) this.selected.add(common);
-    }
+    if (!this.selected) this.selected = selectionFor(this.actor);
     return this.selected;
   }
 
   async _prepareContext() {
-    const common = commonKey();
-    const chosen = this.languages;
-
-    const all = flattenLanguages().map((entry) => ({
-      key: entry.key,
-      label: entry.label,
-      checked: chosen.has(entry.key),
-      locked: entry.key === common,
-      search: `${entry.label} ${entry.key}`.toLowerCase(),
-      core: CORE_NAMES.some((name) => normalise(name) === normalise(entry.plainLabel))
-    }));
-
-    const extras = Array.from(chosen).filter((key) => key !== common).length;
-
     return {
       actorName: this.actor?.name ?? "",
       hasActor: !!this.actor,
-      table: STANDARD_TABLE.map((entry) => {
-        const hits = this.rolls.filter((value) => value >= entry.min && value <= entry.max);
-        return {
-          ...entry,
-          automatic: entry.min === 0,
-          known: chosen.has(keyForName(entry.name)),
-          highlight: hits.length > 0,
-          hits: hits.join(", "),
-          hitCount: hits.length
-        };
-      }),
-      rolls: this.rolls.join(", "),
-      rollCount: this.rolls.length,
-      groups: [
-        { label: t("lang.standard"), languages: all.filter((l) => l.core) },
-        { label: t("lang.expanded"), languages: all.filter((l) => !l.core) }
-      ].filter((group) => group.languages.length),
-      extras,
-      overLimit: extras > 2
+      ...buildLanguageView(this.languages, this.rolls, {
+        standard: t("lang.standard"),
+        expanded: t("lang.expanded")
+      })
     };
   }
 
@@ -199,41 +120,13 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     });
 
     const search = el.querySelector("[data-language-search]");
-    if (search) {
-      search.addEventListener("input", (ev) => {
-        const query = ev.currentTarget.value.trim().toLowerCase();
-        el.querySelectorAll(".pk5e-lang-group").forEach((group) => {
-          let visible = 0;
-          group.querySelectorAll(".pk5e-pack").forEach((row) => {
-            const match = !query || row.dataset.search.includes(query);
-            row.style.display = match ? "" : "none";
-            if (match) visible += 1;
-          });
-          group.style.display = visible ? "" : "none";
-        });
-      });
-    }
+    if (search) search.addEventListener("input", (ev) => filterLanguages(el, ev.currentTarget.value));
   }
 
   static async onRoll() {
-    const roll = await new Roll("1d12").evaluate();
-    this.rolls.push(roll.total);
-
-    const entry = STANDARD_TABLE.find((row) => roll.total >= row.min && roll.total <= row.max);
-    if (!entry) return this.render();
-
-    const key = keyForName(entry.name);
-    if (!key) {
-      ui.notifications.warn(`Rolled ${roll.total}: ${entry.name}, which this system does not list.`);
-      return this.render();
-    }
-
-    if (this.languages.has(key)) {
-      ui.notifications.info(`Rolled ${roll.total}: ${entry.name} - already known, roll again.`);
-    } else {
-      this.languages.add(key);
-      ui.notifications.info(`Rolled ${roll.total}: ${entry.name} added.`);
-    }
+    const result = await rollLanguage(this.languages);
+    this.rolls.push(result.total);
+    announceRoll(result);
     this.render();
   }
 
@@ -247,27 +140,46 @@ export class LanguagePicker extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = this.actor;
     if (!actor) return;
 
-    const common = commonKey();
-    if (common) this.languages.add(common);
-
-    const extras = Array.from(this.languages).filter((key) => key !== common).length;
-    if (extras > 2) {
-      const ok = await confirmExtra(
-        `A character normally knows Common plus two more languages. You have chosen ${extras}. Keep them all?`
-      );
-      if (!ok) return;
-    }
+    if (!(await confirmExtraLanguages(this.languages))) return;
 
     try {
-      await actor.update({
-        "system.traits.languages.value": Array.from(this.languages),
-        [`flags.${MODULE_ID}.languages`]: { count: extras + 1, appliedAt: Date.now() }
-      });
+      await applyLanguages(actor, this.languages);
       ui.notifications.info(`Languages saved for "${actor.name}".`);
       this.close();
     } catch (err) {
       console.error(`${MODULE_ID} | Could not save languages`, err);
       ui.notifications.error(`Could not save languages: ${err.message}`);
     }
+  }
+}
+
+/**
+ * Hides the rows that do not match, and any group left with nothing in it.
+ *
+ * Done in the DOM rather than by re-rendering: the query lives in the input,
+ * and a render would put an empty box back under the player's cursor.
+ */
+export function filterLanguages(root, rawQuery) {
+  const query = String(rawQuery ?? "").trim().toLowerCase();
+  root.querySelectorAll(".pk5e-lang-group").forEach((group) => {
+    let visible = 0;
+    group.querySelectorAll(".pk5e-pack").forEach((row) => {
+      const match = !query || row.dataset.search.includes(query);
+      row.style.display = match ? "" : "none";
+      if (match) visible += 1;
+    });
+    group.style.display = visible ? "" : "none";
+  });
+}
+
+/** What a roll did, said out loud. */
+export function announceRoll(result) {
+  if (!result) return;
+  if (result.outcome === "unknown-to-system") {
+    ui.notifications.warn(`Rolled ${result.total}: ${result.name}, which this system does not list.`);
+  } else if (result.outcome === "already-known") {
+    ui.notifications.info(`Rolled ${result.total}: ${result.name} - already known, roll again.`);
+  } else if (result.outcome === "added") {
+    ui.notifications.info(`Rolled ${result.total}: ${result.name} added.`);
   }
 }

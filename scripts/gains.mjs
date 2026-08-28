@@ -42,7 +42,7 @@
 
 import { IMPORTER_FLAG } from "./constants.mjs";
 import { t } from "./i18n.mjs";
-import { languageLabels } from "./languages.mjs";
+import { languageLabels } from "./languages-core.mjs";
 
 /**
  * Item types that belong under equipment.

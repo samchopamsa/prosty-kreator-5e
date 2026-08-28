@@ -1986,3 +1986,52 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   height: 160px;
   flex: 0 0 160px;
 }
+
+/* ---------------------------------------------------------------------------
+   Ability scores and languages, answered on the card
+
+   The same controls the two popups use, drawn inside a step instead - so the
+   markup and nearly all of the styling are shared and only what the step around
+   them changes has to be said again.
+
+   Which is the width of a button. A step's own buttons are full-width blocks
+   (`.pk5e-guide-step button:not(.pk5e-link)`), and that is right for "Choose a
+   class" and absurd for a plus sign beside a number. The save button keeps that
+   weight on purpose: it is the step's answer being committed.
+
+   The language list gets a ceiling here that it does not have in its own window.
+   There it is the whole screen and should take the room; here the roll table
+   sits above it and the step's heading above that, and an uncapped list would
+   push both off the top of a card that is already scrolling.
+   --------------------------------------------------------------------------- */
+
+.pk5e-inline-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.pk5e-guide-step .pk5e-inline-pick button:not(.pk5e-link) { width: auto; }
+
+.pk5e-inline-pick .pk5e-lang-groups {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 280px;
+}
+
+.pk5e-inline-pick input[type="search"] { width: 100%; }
+
+.pk5e-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--pk5e-line);
+}
+
+.pk5e-guide-step .pk5e-inline-pick .pk5e-inline-actions .pk5e-primary {
+  flex: 1 1 auto;
+  min-width: 160px;
+}

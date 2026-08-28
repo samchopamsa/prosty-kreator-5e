@@ -18,7 +18,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { text, importFlowNote } from "./sheet-actions.mjs";
 import { itemsWithSkippedChoices, abilitiesAssigned } from "./validate.mjs";
-import { languageLabels } from "./languages.mjs";
+import { languageLabels } from "./languages-core.mjs";
 import { gainSections } from "./gains.mjs";
 
 /** Readable names for the ability score methods stored on the actor. */
