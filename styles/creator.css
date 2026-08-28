@@ -147,18 +147,28 @@
   gap: 2px;
 }
 
+/* Two lines inside a button, which Foundry sizes as one.
+   `button` there carries a fixed `height: var(--button-size)` and a line-height
+   to match, so a row holding a name AND an answer had content taller than its
+   own frame - the text sat outside the border rather than the border growing to
+   hold it. The same fix `.pk5e-option` already needed: take the height back and
+   state the line-height, and the row sizes to what is in it. */
 .pk5e-rail-step {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 5px 7px;
+  height: auto;
+  min-height: 0;
+  line-height: 1.25;
+  padding: 6px 8px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .pk5e-rail-step:hover { background: var(--pk5e-hover); }
