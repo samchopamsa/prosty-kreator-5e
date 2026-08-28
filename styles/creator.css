@@ -1808,10 +1808,37 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 
 .pk5e-portrait-dialog .pk5e-label + input { width: 100%; }
 
+/* The file field, which Foundry sizes like a text field and the browser does
+   not fill like one. Every input here is given a fixed height, and the native
+   "Choose file" button sits on the text baseline inside it - so the button rode
+   low in a bar it never filled. Height back to the content, and the button
+   styled as the button it is, centred by the flex box around it. */
 .pk5e-portrait-dialog input[type="file"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  padding: 4px;
+  height: auto;
+  min-height: 0;
+  padding: 5px 8px;
+  line-height: 1.4;
   font-size: 14px;
+}
+
+.pk5e-portrait-dialog input[type="file"]::file-selector-button {
+  flex: 0 0 auto;
+  padding: 3px 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  border: 1px solid var(--pk5e-line-strong);
+  border-radius: 4px;
+  background: var(--pk5e-hover);
+  color: inherit;
+  cursor: pointer;
+}
+
+.pk5e-portrait-dialog input[type="file"]::file-selector-button:hover {
+  border-color: var(--pk5e-accent);
 }
 
 /* The second half of the choice, marked as such. */
