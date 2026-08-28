@@ -471,6 +471,97 @@ await group("captureImporter: przycinanie listy do probki", async () => {
   );
 });
 
+// --- ekran wyboru poziomu ----------------------------------------------------
+//
+// Markup zbudowany z KODU importera (Charactermancer_Class_LevelSelect), nie z
+// wyobrazenia o nim: wiersz to <label class="veapp__list-row"> z inputem, ktory
+// nosi ve-no-events, numer poziomu w osobnym span, stopka z <button
+// class="ve-btn ve-btn-primary">OK</button>.
+//
+// Wiersze dostaja tu taka sama obsluge kliku, jaka ma importer: preventDefault()
+// i przelaczenie inputu recznie. To istotne, bo preventDefault na <label>
+// KASUJE natywne przelaczenie inputu - bez tego test sprawdzalby zachowanie
+// jsdom, a nie zachowanie importera.
+
+// group() zwraca to, co cialo - wiec cialo asynchroniczne trzeba tu doczekac.
+// Bez tego wynik drukuje sie przed testami i ich porazka nie wywraca przebiegu.
+await group("importer: ekran wyboru poziomu", async () => {
+  const { isLevelScreen, answerLevelScreen } = await import("../scripts/level-select.mjs");
+
+  const buildScreen = ({ title = "Select Class Levels", levels = 5, muted = 0,
+                         disabled = 0, ticked = [], type = "checkbox" } = {}) => {
+    const app = document.createElement("div");
+    app.className = "ve-app";
+    app.innerHTML = `<h1 class="window-title">${title}</h1><div class="veapp__list"></div>
+      <div><button class="ve-btn ve-btn-primary ve-mr-2">OK</button>
+           <button class="ve-btn ve-btn-default">Cancel</button></div>`;
+    const list = app.querySelector(".veapp__list");
+
+    for (let ix = 0; ix < levels; ix++) {
+      const row = document.createElement("label");
+      row.className = `ve-w-100 ve-flex veapp__list-row${ix < muted ? " ve-muted" : ""}`;
+      row.innerHTML = `<span class="ve-col-1"><input type="${type}" class="ve-no-events"></span>
+        <span class="ve-col-1-5 ve-text-center">${ix + 1}</span><span class="ve-col-9-5">Features</span>`;
+      const input = row.querySelector("input");
+      if (ix < disabled) input.disabled = true;
+      if (ticked.includes(ix)) input.checked = true;
+      row.addEventListener("click", (evt) => {
+        evt.preventDefault();
+        if (input.disabled) return;
+        input.checked = !input.checked;
+      });
+      list.append(row);
+    }
+    document.body.append(app);
+    return app;
+  };
+
+  const tickedIndexes = (app) =>
+    Array.from(app.querySelectorAll(".veapp__list-row"))
+      .map((row, ix) => (row.querySelector("input").checked ? ix : -1))
+      .filter((ix) => ix >= 0);
+
+  check("okno rozpoznane po tytule", isLevelScreen(buildScreen()), true);
+  check(
+    "wersja z podklasa tez",
+    isLevelScreen(buildScreen({ title: "Select Class and Subclass Levels" })),
+    true
+  );
+  check("inne okno importera nie", isLevelScreen(buildScreen({ title: "Select Cantrips" })), false);
+
+  // Nowa klasa: nic nie zaznaczone, ma wejsc dokladnie poziom 1.
+  const fresh = buildScreen();
+  check("swieza klasa zostaje odpowiedziana", answerLevelScreen(fresh), true);
+  check("i to jednym poziomem", tickedIndexes(fresh), [0]);
+
+  // Level up: poziomy juz posiadane sa wyszarzone, wiec "nastepny" to pierwszy
+  // niewyszarzony, a nie pierwszy w liscie.
+  const levelling = buildScreen({ muted: 3 });
+  answerLevelScreen(levelling);
+  check("przy level upie wchodzi pierwszy dostepny poziom", tickedIndexes(levelling), [3]);
+
+  // Tryb radio: poziomy ponizej sa disabled, nie wyszarzone.
+  const radio = buildScreen({ type: "radio", disabled: 2 });
+  answerLevelScreen(radio);
+  check("disabled liczy sie tak samo jak wyszarzony", tickedIndexes(radio), [2]);
+
+  // Gdyby importer zdazyl zaznaczyc wiecej, nadmiar schodzi.
+  const many = buildScreen({ ticked: [0, 1, 2] });
+  answerLevelScreen(many);
+  check("nadmiarowe poziomy sa odklikiwane", tickedIndexes(many), [0]);
+
+  // Markup, ktorego nie rozpoznajemy, zostaje nietkniety - to jest cudze okno.
+  const noRows = buildScreen({ levels: 0 });
+  check("okno bez wierszy nie jest zatwierdzane", answerLevelScreen(noRows), false);
+
+  const noOk = buildScreen();
+  noOk.querySelector("button.ve-btn-primary").remove();
+  check("brak przycisku OK to rezygnacja", answerLevelScreen(noOk), false);
+  check("ale zaznaczenie juz zostaje", tickedIndexes(noOk), [0]);
+
+  document.querySelectorAll(".ve-app").forEach((app) => app.remove());
+});
+
 // --- wynik -------------------------------------------------------------------
 
 console.log("");

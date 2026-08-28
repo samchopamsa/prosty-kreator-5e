@@ -268,7 +268,10 @@ export function buildSteps(actor, { importing = false } = {}) {
   // already the headline of their step, drawn with a picture and a description,
   // and a card repeating them underneath reads as a bug.
   const gainRecords = actor.getFlag(MODULE_ID, "gains") ?? {};
-  const gainsFor = (key, skipTypes) => gainSections(gainRecords[key], { skipTypes, kind: key });
+  // The actor goes in so each item pill can carry the sheet's own tooltip: the
+  // record holds names, and the item is found again from them at draw time.
+  const gainsFor = (key, skipTypes) =>
+    gainSections(gainRecords[key], { skipTypes, kind: key, actor });
 
   // Order follows D&D Beyond: class first, because it is the decision the
   // rest of the character is built around, and the one a new player arrives

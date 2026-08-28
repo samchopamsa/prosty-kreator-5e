@@ -347,11 +347,11 @@
                   {{pkT "option.delevelShort"}}
                 </button>
                 {{/if}}
-                {{#if @last}}{{#if ../levelUp}}
+                {{#if @last}}{{#unless ../groupLevelUp}}{{#if ../levelUp}}
                 <button type="button" class="pk5e-link" data-action="levelUp">
                   {{pkT "guide.levelUp"}}
                 </button>
-                {{/if}}{{/if}}
+                {{/if}}{{/unless}}{{/if}}
               </div>
 
               {{#if skipped}}
@@ -366,6 +366,14 @@
               {{/if}}
             </div>
             {{/each}}
+
+            {{#if groupLevelUp}}
+            <div class="pk5e-guide-actions pk5e-group-actions">
+              <button type="button" class="pk5e-link" data-action="levelUp">
+                {{pkT "guide.levelUp"}}
+              </button>
+            </div>
+            {{/if}}
           {{else}}
             <div class="pk5e-guide-chosen">
               <div class="pk5e-guide-empty-art is-done" aria-hidden="true">&#10003;</div>
@@ -392,11 +400,21 @@
               <span class="pk5e-gain-label">{{label}}</span>
               <span class="pk5e-gain-chips">
                 {{#each entries}}
+                {{#if uuid}}
+                <span class="pk5e-gain-chip is-readable"
+                      data-tooltip="<section class='loading' data-uuid='{{uuid}}'><i class='fas fa-spinner fa-spin-pulse'></i></section>"
+                      data-tooltip-direction="LEFT">
+                  {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                  <span class="pk5e-gain-name">{{label}}</span>
+                  {{#if detail}}<em>{{detail}}</em>{{/if}}
+                </span>
+                {{else}}
                 <span class="pk5e-gain-chip">
                   {{#if img}}<img src="{{img}}" alt="">{{/if}}
                   <span class="pk5e-gain-name">{{label}}</span>
                   {{#if detail}}<em>{{detail}}</em>{{/if}}
                 </span>
+                {{/if}}
                 {{/each}}
               </span>
             </div>

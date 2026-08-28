@@ -23,7 +23,6 @@ import { debugRules, debugVerify } from "./rules-data.mjs";
 import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
-import { ReferenceConfig } from "./reference-config.mjs";
 import { selfTest, captureImporter, captureDialog } from "./selftest.mjs";
 
 Hooks.once("init", () => {
@@ -117,19 +116,43 @@ Hooks.once("init", () => {
     }
   });
 
+  // Defaults to experience, not milestone, because the milestone setting is
+  // what a stuck multiclass looks like: dnd5e refuses to advance a character
+  // that has not earned the level, so the panel announced "the import is
+  // starting" and then nothing happened at all - no error, no window, and no
+  // way to tell from the panel that the button had simply declined. Topping the
+  // experience up first costs a milestone table nothing: experience it does not
+  // use gets a number in it.
   game.settings.register(MODULE_ID, "levelUpMode", {
     name: "How levelling works at your table",
-    hint: "Milestone: the level-up button is pressed straight away. Experience: you are asked which level to reach, experience is topped up to match, and only then does the button run. Match this to the system's own Leveling Mode.",
+    hint: "Experience: the character's experience is topped up to the next level before the level-up button is pressed, so the system does not refuse it. Milestone: the button is pressed straight away, which needs the system's own Leveling Mode set to milestone or the press is silently blocked.",
     scope: "world",
     config: true,
     type: String,
-    default: "milestone",
+    default: "xp",
     choices: {
-      milestone: "Milestone - no experience needed",
-      xp: "Experience - top it up to the chosen level first"
+      xp: "Experience - top it up to the next level first (recommended)",
+      milestone: "Milestone - press the button as it is"
     }
   });
 
+
+  // Intrusive enough to be switchable: it presses OK on somebody else's window.
+  // On by default all the same, because the alternative is a screen that lets
+  // the player take five levels at once and then silently skips the choices
+  // those levels would have asked for - a subclass, most visibly.
+  game.settings.register(MODULE_ID, "singleLevelPerImport", {
+    name: "Take one level at a time",
+    hint:
+      "The importer's level screen lets several levels be ticked at once, and then runs them as a " +
+      "batch without asking for the choices they carry - a subclass, a fighting style. With this " +
+      "on, the panel ticks the next level only and confirms the screen, so every level goes " +
+      "through its own dialogs. Add further levels with the level-up button.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
 
   game.settings.register(MODULE_ID, "showStepHelp", {
     name: "Show 'What is this?' explanations",
@@ -147,22 +170,22 @@ Hooks.once("init", () => {
     default: []
   });
 
+  // OFF THE SETTINGS SCREEN, NOT DELETED
+  //
+  // The creator does not build characters out of compendiums any more - that
+  // route was dropped and left to modules that do it properly - so a pair of
+  // settings about which compendiums to read was asking the GM to configure
+  // something the creator no longer does. Both stay registered, because the
+  // reference window still honours them and someone's world still has values in
+  // them; they are simply no longer offered.
+  //
+  // The chooser itself is still reachable from the reference window's own
+  // button, which is where it belongs: beside the thing it configures.
   game.settings.register(MODULE_ID, "referenceGmSeesAll", {
-    name: "Reference: GM sees every compendium",
-    hint: "The compendium selection then applies to players only, so you can read anything while they see a curated set.",
     scope: "world",
-    config: true,
+    config: false,
     type: Boolean,
     default: true
-  });
-
-  game.settings.registerMenu(MODULE_ID, "referenceMenu", {
-    name: "Reference: compendiums to read",
-    label: "Choose compendiums",
-    hint: "Which compendiums the class and subclass reference window reads. Leave empty to read them all.",
-    icon: "fa-solid fa-book-open",
-    type: ReferenceConfig,
-    restricted: true
   });
 
   // Stored as a plain id and chosen in the panel, where the folder list is

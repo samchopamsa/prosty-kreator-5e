@@ -238,7 +238,21 @@ const armourLabel = (key) =>
 
 const signed = (value) => (value > 0 ? `+${value}` : String(value));
 
-const itemEntry = (item) => ({ label: item.name, img: item.img || "" });
+/**
+ * A pill for one item, with the sheet's own tooltip attached where we can.
+ *
+ * THE UUID IS LOOKED UP, NOT STORED. The record deliberately holds plain values
+ * and no document references - it has to survive the item being deleted, and a
+ * stored uuid would be a reference that rots. So the item is found again on the
+ * character by type and name at the moment the card is drawn: still there, the
+ * pill can be hovered for the same description the sheet shows; gone or renamed,
+ * it is a pill without a tooltip, which is the right way for this to fail.
+ */
+const itemEntryFor = (actor) => (item) => ({
+  label: item.name,
+  img: item.img || "",
+  uuid: actor?.items?.find((i) => i.type === item.type && i.name === item.name)?.uuid ?? ""
+});
 
 /**
  * The record, grouped into the sections a card draws.
@@ -251,8 +265,10 @@ const itemEntry = (item) => ({ label: item.name, img: item.img || "" });
  * they can do, then what they carry - and an empty one is dropped rather than
  * drawn as a heading with nothing under it.
  */
-export function gainSections(record, { skipTypes = [], kind = "" } = {}) {
+export function gainSections(record, { skipTypes = [], kind = "", actor = null } = {}) {
   if (!record) return [];
+
+  const itemEntry = itemEntryFor(actor);
 
   const sections = [];
   const push = (key, entries, label = null) => {

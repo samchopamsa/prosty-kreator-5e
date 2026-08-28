@@ -46,6 +46,7 @@ import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./optio
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
+import { autoPickSingleLevel } from "./level-select.mjs";
 import { readGains, diffGains } from "./gains.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
@@ -384,6 +385,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // Marks the step head, so the problem is visible before scrolling down.
       step.hasSkipped = (step.entries ?? []).some((entry) => entry.skipped);
       step.folded = !!this._folded[step.key];
+
+      // WHERE "ADD A LEVEL" SITS ONCE THERE ARE TWO CLASSES
+      //
+      // It used to be drawn inside the last entry's own row of links, which is
+      // right while there is one class and wrong the moment a second arrives:
+      // the offer then sat under Wizard and read as "add a level of Wizard",
+      // while the button does no such thing - it opens the importer's level-up,
+      // which asks which class itself. Worse, it vanished from under the first
+      // class, so the player who had just multiclassed saw the option move.
+      //
+      // With more than one class it moves out from under any of them, to a row
+      // of its own below the group.
+      step.groupLevelUp = !!step.levelUp && (step.entries ?? []).length > 1;
 
       // What the head says once the step is folded. A folded step showing only
       // its own name has hidden the answer, which is the one thing the panel is
@@ -1007,6 +1021,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
+    // Armed before the button, because the screen it waits for is one the
+    // button brings up. Not awaited: it resolves when that screen has been
+    // answered, which is in the middle of the import, not before it.
+    if (step === "class") this.armSingleLevel();
+
     // Read before the button is pressed, not after: everything the importer
     // does from here on is what this step will be credited with.
     const before = readGains(this.actor);
@@ -1141,6 +1160,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // through onAddStep, so it was missing that protection entirely.
     this._importing = "class";
     this.render();
+
+    // One level per press here as well. Adding a level and multiclassing both
+    // arrive at the same screen, and taking several at once costs the same
+    // dialogs it costs on the class step.
+    this.armSingleLevel();
 
     try {
       await pressLevelUp(actor);
@@ -1590,6 +1614,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       console.error(`${MODULE_ID} | Could not save languages`, err);
       ui.notifications.error(`Could not save languages: ${err.message}`);
     }
+  }
+
+  /**
+   * Starts watching for the importer's level screen, to answer it with one
+   * level. Nothing is awaited: the answer happens part-way through an import
+   * this panel is already waiting on, and a failure here must not stop it.
+   */
+  armSingleLevel() {
+    if (!game.settings.get(MODULE_ID, "singleLevelPerImport")) return;
+    autoPickSingleLevel().catch((err) =>
+      console.warn(`${MODULE_ID} | Could not watch for the level screen`, err)
+    );
   }
 
   static onOpenSheet() {

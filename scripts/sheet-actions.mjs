@@ -439,17 +439,26 @@ export function experienceTable() {
 }
 
 /**
- * Asks which level the character should reach and tops up experience to match.
+ * Tops experience up to the level the character is about to reach.
  *
- * the importer's level-up button refuses to advance a character that has not earned
- * the experience, which is correct for play but pointless when building a
- * character that is meant to start at level five. Experience is only ever raised,
- * never lowered, so nothing already earned is thrown away.
- */
-/**
+ * The importer's level-up button refuses to advance a character that has not
+ * earned the experience, which is correct for play and pointless when building
+ * a character. It refuses quietly, too: the panel said the import was starting
+ * and then nothing happened, which is the shape a blocked multiclass took.
+ *
+ * Experience is only ever raised, never lowered, so nothing already earned is
+ * thrown away.
+ *
+ * NOBODY IS ASKED WHICH LEVEL. There used to be a dialog here offering every
+ * level in the table, which was a question with one sensible answer - a level is
+ * added one at a time, and the importer skips choices when several arrive at
+ * once. The level-up window still passes its own target, because there the
+ * player has already said where they are going.
+ *
  * @param {Actor}       actor
- * @param {number|null} wanted  Target level. When given, the player is not asked
- *                              again - the level-up window has already chosen.
+ * @param {number|null} wanted  Target level. Defaults to one above the current
+ *                              one, which is what adding a level means.
+ * @returns {Promise<boolean>}  Whether the button may now be pressed.
  */
 export async function grantExperienceFor(actor, wanted = null) {
   const table = experienceTable();
@@ -458,58 +467,22 @@ export async function grantExperienceFor(actor, wanted = null) {
     .filter((i) => i.type === "class")
     .reduce((sum, i) => sum + (i.system?.levels ?? 0), 0);
 
-  const options = table
-    .map((xp, index) => ({ level: index + 1, xp }))
-    .filter((entry) => entry.level > Math.max(1, currentLevel))
-    .map((entry) => `<option value="${entry.level}">Level ${entry.level} (${entry.xp} XP)</option>`)
-    .join("");
-
-  if (!options) {
+  const target = Number(wanted) || Math.max(1, currentLevel) + 1;
+  if (target > table.length) {
     ui.notifications.info("Already at the highest level in the table.");
     return true;
   }
 
-  const DialogV2 = foundry.applications?.api?.DialogV2;
-  if (!DialogV2?.prompt) {
-    ui.notifications.warn("Cannot ask for a target level in this version; set experience by hand.");
-    return true;
-  }
-
-  let target = Number(wanted) || null;
-  if (target) {
-    const needed = table[target - 1] ?? 0;
-    if (needed > currentXp) {
-      await actor.update({ "system.details.xp.value": needed });
-      ui.notifications.info(`Experience set to ${needed} for level ${target}.`);
-    }
-    return true;
-  }
+  const needed = table[target - 1] ?? 0;
+  if (needed <= currentXp) return true;
 
   try {
-    target = await DialogV2.prompt({
-      window: { title: "Level up" },
-      content: `<p>Currently level ${currentLevel || 1}, ${currentXp} XP.
-                Choose the level to reach - experience will be topped up to match.</p>
-                <select name="level" style="width:100%">${options}</select>`,
-      ok: { callback: (event, button) => Number(button.form.elements.level.value) }
-    });
+    await actor.update({ "system.details.xp.value": needed });
+    ui.notifications.info(`Experience set to ${needed} for level ${target}.`);
   } catch (err) {
-    // Dialog cancelled: leave the sheet alone entirely.
+    console.error(`${MODULE_ID} | Could not set experience`, err);
+    ui.notifications.error(`Could not set experience: ${err.message}`);
     return false;
-  }
-
-  if (!target) return false;
-
-  const needed = table[target - 1] ?? 0;
-  if (needed > currentXp) {
-    try {
-      await actor.update({ "system.details.xp.value": needed });
-      ui.notifications.info(`Experience set to ${needed} for level ${target}.`);
-    } catch (err) {
-      console.error(`${MODULE_ID} | Could not set experience`, err);
-      ui.notifications.error(`Could not set experience: ${err.message}`);
-      return false;
-    }
   }
   return true;
 }
