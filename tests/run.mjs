@@ -62,7 +62,6 @@ const { STANDARD_ARRAY, POINT_BUY_TOTAL, newState, setMethod, stepAbility, baseV
 const { flattenLanguages, keyForName, languageLabels, selectionFor, buildLanguageView,
   applyLanguages } =
   await import("../scripts/languages-core.mjs");
-const { isRemote, copyNameFor } = await import("../scripts/portrait.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -1605,40 +1604,6 @@ group("gains: what a step put on the sheet", () => {
   // silently drops an item would be worse than an untidy one.
   const odd = gainSections(diff(empty, { items: [["shipwreck", "Sloop"]] }));
   check("an unknown item type is still shown", odd.map((s) => s.key), ["other"]);
-});
-
-group("portraits", () => {
-  // The world's own address, so a path already inside it is not treated as
-  // something to go and fetch.
-  const savedLocation = globalThis.location;
-  globalThis.location = { origin: "https://example.invalid" };
-
-  check("a link to somewhere else is fetched", isRemote("https://cdn.example.com/a.png"), true);
-  check("the world's own address is not", isRemote("https://example.invalid/assets/a.png"), false);
-  check("a stored path is not", isRemote("assets/portrety/a.png"), false);
-  check("nor is a system path", isRemote("systems/dnd5e/icons/svg/mystery-man.svg"), false);
-  check("nonsense is not", isRemote("not a url at all"), false);
-
-  // One file per character. The far end's own filename is not used: those are
-  // "image.png" often enough that two characters would overwrite each other.
-  const actor = { id: "abcdefgh12345678", name: "Zorg the Unready" };
-  check("named for the character and its id",
-    copyNameFor(actor, "image/webp"), "zorg-the-unready-abcdefgh.webp");
-  check("the extension comes from the type",
-    copyNameFor(actor, "image/jpeg"), "zorg-the-unready-abcdefgh.jpeg");
-  check("no type means png", copyNameFor(actor, ""), "zorg-the-unready-abcdefgh.png");
-  check("punctuation and accents leave the name",
-    copyNameFor({ id: "x1", name: "Ælfric, the \"Bold\"!" }, "image/png"), "lfric-the-bold-x1.png");
-  check("a nameless character still gets a name",
-    copyNameFor({ id: "x1", name: "" }, "image/png"), "portrait-x1.png");
-
-  // Two characters that share a name do not share a file.
-  check("the id keeps two of the same name apart",
-    copyNameFor({ id: "aaaa1111", name: "Bob" }, "image/png") !==
-      copyNameFor({ id: "bbbb2222", name: "Bob" }, "image/png"),
-    true);
-
-  globalThis.location = savedLocation;
 });
 
 group("gains: proficiency pills", () => {

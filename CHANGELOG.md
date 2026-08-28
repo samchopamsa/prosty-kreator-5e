@@ -8,7 +8,86 @@ git checkout v1.50.1     # podejrzenie starej wersji
 git checkout main        # powrót do bieżącej
 ```
 
-Wersjonowanie semantyczne: **1.X.0** — nowa funkcja, **1.0.X** — poprawka.
+Wersjonowanie semantyczne: **X.0.0** — zmiana układu kreatora, **1.X.0** — nowa
+funkcja, **1.0.X** — poprawka. Linia 1.x to wariant A (wszystkie kroki na jednym
+ekranie, gałąź `main`), linia 2.x to wariant B (szyna kroków, jedna karta na
+ekranie, gałąź `wariant-b`).
+
+---
+
+## 2.0.0
+
+Nowy układ kreatora. Numer główny się zmienia, bo zmienia się sposób
+poruszania po panelu — dane na karcie postaci i flagi zostają te same, więc
+postać zrobiona w 1.63.0 otwiera się bez migracji.
+
+**Szyna kroków zamiast jednego długiego ekranu.** Po lewej lista wszystkich
+kroków, każdy z numerem, nazwą i jednolinijkową odpowiedzią (jaka klasa, jakie
+pochodzenie, ile języków). Po prawej wyłącznie karta aktywnego kroku.
+Pierwszy krok to „Start" — imię i portret. Zwijanie kroków znika: szyna
+pokazuje wszystkie odpowiedzi naraz, więc zwinięcie niczego już nie chowało.
+
+**Podsumowanie jako ostatni krok.** Lista „do poprawienia" i pominięte wybory
+importera zeszły z dołu każdej karty na własną, ostatnią kartę. Tam też stoi
+„Finalizuj" — obok listy tego, co jeszcze nie gra, czyli tam, gdzie ta decyzja
+naprawdę zapada.
+
+**Uwaga pokazuje się przy kroku, który ją naprawia.** „Brak języków" ląduje pod
+krokiem języków, brak portretu pod kartą Start. Dopiero gdy krok jest zrobiony
+i gdy jego import nie trwa: nietknięty krok zgłaszający „brak klasy" opowiada,
+po co ten krok jest, jak o usterce, a sprawdzenie w trakcie importu wypisuje
+braki, które za chwilę same znikną.
+
+**Atrybuty i języki wybierane na karcie, bez osobnych okien.** Metoda, tabela z
+sumą na bieżąco, rzut 4k6, przyciski point buy; przy językach tabela 1d12,
+rzut, wyszukiwarka i lista. Arytmetyka i zapis wyprowadzone do
+`abilities-core.mjs` i `languages-core.mjs`, żeby point buy był wyceniany w
+jednym miejscu — okna `complete.mjs` i `languages.mjs` zostają i rysują
+dokładnie to samo.
+
+**Jeden poziom na import.** Ekran „Select Class Levels" pozwala zaznaczyć kilka
+poziomów naraz, a wtedy importer przepuszcza je hurtem i pomija dialogi, które
+by o wybory zapytały — najwidoczniej podklasę. Panel zaznacza teraz najniższy
+dostępny poziom i zatwierdza; kolejne poziomy dodaje się przyciskiem level up.
+Do wyłączenia ustawieniem „Take one level at a time".
+
+**Multiclass przestaje się blokować.** `levelUpMode` startuje na „xp": dnd5e
+odmawia awansu postaci bez doświadczenia i odmawia po cichu, więc panel mówił,
+że import się zaczyna, i nie działo się nic. Znika też pytanie „do którego
+poziomu" — poziomy idą po jednym.
+
+**Panel z opisem klasy działa przy level upie i multiclassie.** Ta sama lista
+przychodzi tam pod innym tytułem („Filter/Search for Class and Subclass"
+zamiast „Import Classes & Subclasses"), więc panel otwierał się i siedział
+pusty obok okna, na które patrzył.
+
+**Opisy pod kursorem.** Cechy, zaklęcia i przedmioty w spisie tego, co krok
+dołożył, niosą ten sam dymek co karta postaci. Umiejętności i rzuty obronne
+wskazują na stronę reguł, którą dnd5e samo podaje w konfiguracji, narzędzia na
+przedmiot z kompendium. Bronie i pancerze nie mają czego wskazać, więc mówią,
+czym są: „Weapon: Martial", „Armor: Heavy".
+
+**Portret: wgraj plik albo wklej odnośnik.** Zamiast pełnej przeglądarki plików
+Foundry — źródło, drzewo katalogów, pole ścieżki — dwa pytania. Wgrany plik
+trafia do folderu z ustawienia `portraitFolder`, domyślnie `assets/portrety`,
+tworzonego w razie potrzeby. Portret ląduje na karcie i na prototypie tokena.
+
+**„Dodaj poziom" przy dwóch klasach** stoi w osobnym wierszu pod całą grupą, a
+nie pod ostatnią klasą, gdzie czytał się jak „dodaj poziom tej klasy".
+
+**Wybór źródeł importera przeklikiwany graczom.** `autoAdvance` startuje na
+„players": ekran pyta, które z piętnastu podręczników czytać — MG ma na to
+zdanie, gracz nie ma jak odpowiedzieć. MG-owi zostaje.
+
+**Wybór kompendiów znika z ustawień.** Kreator nie buduje postaci z kompendiów;
+to zostaje modułom, które robią to porządnie.
+
+**Czytelność.** Pismo w całym kreatorze o stopień wyżej, pigułki w rozmiarze
+nazwy, pod którą stoją, grafika kroku 96 → 128 px, portret 128 → 160 px, ikona
+kroku 16 → 22 px. Wiersz szyny rośnie do swojej treści — Foundry nadaje
+przyciskom stałą wysokość, więc napisy wychodziły poza ramkę.
+
+**Sekcja „Zanim zaczniesz" jest zawsze zwinięta**, także na nowej postaci.
 
 ---
 
