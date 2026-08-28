@@ -416,10 +416,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           : step.result || "";
     }
 
-    // Open the first time this character's panel is opened, folded away after
-    // that. Worked out once per window rather than per render: setting the flag
-    // updates the actor, which redraws, and the notice would collapse under the
-    // reader mid-sentence.
     // Once per window, before anything reads the flags: a character made by an
     // older version may still be carrying the old shape of them.
     if (!this._migrated) {
@@ -427,14 +423,19 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       migrateActor(actor);
     }
 
-    if (this._disclaimerOpen === undefined) {
-      this._disclaimerOpen = !actor.getFlag(MODULE_ID, "disclaimerSeen");
-      if (this._disclaimerOpen) {
-        actor
-          .setFlag(MODULE_ID, "disclaimerSeen", true)
-          .catch((err) => console.warn(`${MODULE_ID} | Could not record the notice`, err));
-      }
-    }
+    // FOLDED, ALWAYS, INCLUDING ON A BRAND NEW CHARACTER
+    //
+    // It used to open itself the first time a character's panel was opened, and
+    // fold away afterwards - which put four paragraphs of preamble between the
+    // player and the first step at exactly the moment they were trying to
+    // start. The summary line says what is behind it, and anyone who wants it
+    // opens it.
+    //
+    // Opened by hand it stays open for the rest of the session: the toggle
+    // writes to `_disclaimerOpen`, and only the initial value is decided here.
+    // The `disclaimerSeen` flag is no longer written - nothing reads it now,
+    // and characters that carry it are left alone rather than cleaned up.
+    if (this._disclaimerOpen === undefined) this._disclaimerOpen = false;
 
     // Read here as well as in steps.mjs: the delevel offer below needs a class
     // to act on, and the split left this reference pointing at nothing.
