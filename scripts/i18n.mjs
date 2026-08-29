@@ -37,14 +37,6 @@ const STRINGS = {
     "levelup.failed": "The level-up did not complete. The console (F12) has the details.",
     "levelup.changeLevel": "{0}: level {1}",
     "levelup.changeNewClass": "New class: {0} (level {1})",
-    "levelup.changeHp": "Hit points: {0}",
-    "levelup.changeSlots": "Spell slots, level {0}: {1}",
-    "levelup.changeSpell": "Spell: {0}",
-    "levelup.changeSkill": "Skill proficiency: {0}",
-    "levelup.changeSave": "Saving throw proficiency: {0}",
-    "levelup.changeAbility": "{0}: {1}",
-    "levelup.changeLanguage": "Language: {0}",
-    "levelup.changeItem": "{0}",
     "guide.disclaimerTitle": "Before you start - how this creator works",
     "guide.disclaimerSource": "Species, background and class come from the importer, which is not part of this creator. Its windows open on top of this panel and ask their own questions.",
     "guide.disclaimerComplete": "Work through every one of those windows to the end. Closing one with Skip, Cancel or the X leaves that choice unmade, and the step will be incomplete.",
@@ -71,7 +63,7 @@ const STRINGS = {
     "guide.steps": "Steps",
     "guide.back": "Back",
     "guide.next": "Next",
-    "guide.abort": "Stop",
+    "guide.abort": "Close",
     "step.species": "Species",
     "step.background": "Background",
     "step.class": "Class",
@@ -110,6 +102,8 @@ const STRINGS = {
     "gains.save": "{0} save",
     "gains.weaponOf": "Weapon: {0}",
     "gains.armourOf": "Armor: {0}",
+    "gains.slotLevel": "Spell slots, level {0}",
+    "gains.slotPact": "Pact slots",
     "bio.filledOf": "{0} of {1} filled",
     "bio.details": "Description",
     "bio.personality": "Personality",
@@ -322,6 +316,9 @@ const STRINGS = {
     "abilities.reset": "Reset",
     "abilities.footer": "Only ability scores are touched.",
     "abilities.apply": "Apply",
+    "abilities.applyRequired":
+      "Nothing is written to the character sheet until you press Apply. The button turns on once the assignment is complete.",
+    "abilities.applyReady": "Press Apply to write these scores onto the character sheet.",
 
     "lang.title": "Languages",
     "lang.lead":
@@ -341,6 +338,7 @@ const STRINGS = {
     "lang.standard": "Standard Languages",
     "lang.expanded": "Expanded",
     "lang.footer": "Only languages are changed. Nothing else on the sheet is touched.",
+    "lang.saveRequired": "Nothing is written to the sheet until you press Save.",
     "lang.save": "Save"
   },
 
@@ -365,14 +363,6 @@ const STRINGS = {
     "levelup.failed": "Awans się nie dokończył. Szczegóły są w konsoli (F12).",
     "levelup.changeLevel": "{0}: poziom {1}",
     "levelup.changeNewClass": "Nowa klasa: {0} (poziom {1})",
-    "levelup.changeHp": "Punkty życia: {0}",
-    "levelup.changeSlots": "Komórki zaklęć, poziom {0}: {1}",
-    "levelup.changeSpell": "Zaklęcie: {0}",
-    "levelup.changeSkill": "Biegłość w umiejętności: {0}",
-    "levelup.changeSave": "Biegłość w rzucie obronnym: {0}",
-    "levelup.changeAbility": "{0}: {1}",
-    "levelup.changeLanguage": "Język: {0}",
-    "levelup.changeItem": "{0}",
     "guide.disclaimerTitle": "Zanim zaczniesz - sprawdź, jak działa kreator postaci",
     "guide.disclaimerSource": "Gatunek, pochodzenie i klasa pochodzą z importera, który nie jest częścią kreatora. Jego okna otwierają się nad tym panelem i zadają własne pytania.",
     "guide.disclaimerComplete": "Przejdź każde z tych okien do końca. Zamknięcie przyciskiem Skip, Cancel albo krzyżykiem zostawia wybór niedokonany, a krok będzie niepełny.",
@@ -399,7 +389,7 @@ const STRINGS = {
     "guide.steps": "Kroki",
     "guide.back": "Wstecz",
     "guide.next": "Dalej",
-    "guide.abort": "Przerwij",
+    "guide.abort": "Zamknij",
     "step.species": "Gatunek",
     "step.background": "Pochodzenie",
     "step.class": "Klasa",
@@ -438,6 +428,8 @@ const STRINGS = {
     "gains.save": "rzut obronny: {0}",
     "gains.weaponOf": "Broń: {0}",
     "gains.armourOf": "Pancerz: {0}",
+    "gains.slotLevel": "Komórki zaklęć, poziom {0}",
+    "gains.slotPact": "Komórki paktu",
     "bio.filledOf": "wypełnione {0} z {1}",
     "bio.details": "Opis",
     "bio.personality": "Osobowość",
@@ -645,6 +637,9 @@ const STRINGS = {
     "abilities.reset": "Wyczyść",
     "abilities.footer": "Zmieniane są wyłącznie atrybuty.",
     "abilities.apply": "Zatwierdź",
+    "abilities.applyRequired":
+      "Dopóki nie naciśniesz \"Zatwierdź\", na karcie postaci nic się nie zmienia. Przycisk włączy się, gdy przydział będzie kompletny.",
+    "abilities.applyReady": "Naciśnij \"Zatwierdź\", żeby zapisać te wartości na karcie postaci.",
 
     "lang.title": "Języki",
     "lang.lead":
@@ -664,6 +659,7 @@ const STRINGS = {
     "lang.standard": "Języki standardowe",
     "lang.expanded": "Języki rozszerzone",
     "lang.footer": "Zmieniane są wyłącznie języki. Reszta karty pozostaje nietknięta.",
+    "lang.saveRequired": "Dopóki nie naciśniesz \"Zapisz\", na karcie postaci nic się nie zmienia.",
     "lang.save": "Zapisz"
   }
 };

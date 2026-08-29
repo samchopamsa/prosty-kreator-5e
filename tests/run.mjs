@@ -49,8 +49,9 @@ const { DIALOGS, actorNameFromTitle } = await import("../scripts/option-watch.mj
 const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scripts/migrate.mjs");
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
-const { takeSnapshot, compareSnapshots } = await import("../scripts/snapshot.mjs");
-const { readGains, diffGains, gainSections } = await import("../scripts/gains.mjs");
+const { takeSnapshot, levelChange } = await import("../scripts/snapshot.mjs");
+const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups } =
+  await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
@@ -587,92 +588,61 @@ group("guide: when a character counts as named", () => {
   check("no actor at all", hasPlaceholderName(null), true);
 });
 
-// --- what a level-up changed -------------------------------------------------
+// --- which class went up ----------------------------------------------------
+//
+// What a level brought is read by gains.mjs now, and checked with the rest of
+// the pills. What is left here is the one thing that reading cannot say: a
+// class item is edited when its level goes up, not gained, so no diff of items
+// will ever mention it - and it is the heading the pills sit under.
 
-group("snapshot: reporting what actually changed", () => {
-  const actor = ({ level = 1, hp = 12, items = [], classes = {}, slots = {}, skills = [], abilities = {}, saves = [], languages = [] }) => ({
-    system: {
-      details: { level },
-      attributes: { hp: { max: hp } },
-      spells: Object.fromEntries(Object.entries(slots).map(([k, v]) => [k, { max: v }])),
-      skills: Object.fromEntries(skills.map((k) => [k, { value: 1 }])),
-      abilities: Object.fromEntries(
-        Object.entries(abilities).map(([k, v]) => [k, { value: v, proficient: saves.includes(k) ? 1 : 0 }])
-      ),
-      traits: { languages: { value: languages } }
-    },
-    items: [
-      ...items.map((n) => ({ type: n.startsWith("spell/") ? "spell" : "feat", name: n.replace("spell/", "") })),
-      ...Object.entries(classes).map(([name, levels]) => ({ type: "class", name, system: { levels } }))
-    ]
+group("snapshot: which class went up", () => {
+  const actor = ({ level = 1, classes = {} }) => ({
+    system: { details: { level } },
+    items: Object.entries(classes).map(([name, levels]) => ({
+      type: "class",
+      name,
+      system: { levels }
+    }))
   });
 
-  const labels = (before, after) =>
-    compareSnapshots(takeSnapshot(before), takeSnapshot(after)).map((c) => `${c.kind}:${c.label}`);
+  const change = (before, after) =>
+    levelChange(takeSnapshot(actor(before)), takeSnapshot(actor(after)));
 
+  // Numbers, not a phrase: the heading is rebuilt every time the footer's
+  // language switch is used, so nothing recorded here may be a sentence.
   check(
-    "a plain level: the class and the hit points",
-    labels(
-      actor({ hp: 12, classes: { Barbarian: 1 } }),
-      actor({ hp: 19, classes: { Barbarian: 2 } })
+    "a class the character already had",
+    change({ classes: { Barbarian: 2 } }, { classes: { Barbarian: 3 } }),
+    { name: "Barbarian", from: 2, to: 3 }
+  );
+  check(
+    "a second class starts from nothing",
+    change({ classes: { Barbarian: 3 } }, { classes: { Barbarian: 3, Wizard: 1 } }),
+    { name: "Wizard", from: 0, to: 1 }
+  );
+  check(
+    "the class that moved, not the one that did not",
+    change(
+      { classes: { Barbarian: 3, Wizard: 1 } },
+      { classes: { Barbarian: 3, Wizard: 2 } }
     ),
-    ["level:Barbarian", "hp:hp"]
+    { name: "Wizard", from: 1, to: 2 }
   );
   check(
-    "a level that grants a feature",
-    labels(
-      actor({ hp: 12, classes: { Barbarian: 1 }, items: ["Rage"] }),
-      actor({ hp: 19, classes: { Barbarian: 2 }, items: ["Rage", "Reckless Attack"] })
-    ),
-    ["level:Barbarian", "hp:hp", "item:Reckless Attack"]
+    "nothing moved, no answer",
+    change({ classes: { Barbarian: 3 } }, { classes: { Barbarian: 3 } }),
+    null
   );
+  // A level undone is not a level gained. The card this feeds says what
+  // arrived, and "Bard 3 to 2" under that heading would be a lie.
   check(
-    "taking a second class is reported as new, not as a level change",
-    labels(
-      actor({ classes: { Barbarian: 3 } }),
-      actor({ classes: { Barbarian: 3, Cleric: 1 } })
-    ),
-    ["newClass:Cleric"]
+    "a level going back is not a level change",
+    change({ classes: { Bard: 3 } }, { classes: { Bard: 2 } }),
+    null
   );
-  check(
-    "new spell slots",
-    labels(
-      actor({ classes: { Cleric: 1 }, slots: { spell1: 2 } }),
-      actor({ classes: { Cleric: 2 }, slots: { spell1: 3 } })
-    ),
-    ["level:Cleric", "slots:spell1"]
-  );
-  check(
-    "an ability increase",
-    labels(
-      actor({ classes: { Fighter: 3 }, abilities: { str: 15 } }),
-      actor({ classes: { Fighter: 4 }, abilities: { str: 17 } })
-    ),
-    ["level:Fighter", "ability:str"]
-  );
-  check(
-    "nothing changed, nothing reported",
-    labels(actor({ classes: { Bard: 2 } }), actor({ classes: { Bard: 2 } })),
-    []
-  );
-  // The case a set-difference would hide: a second copy of something already
-  // held is still something gained.
-  check(
-    "a second copy of a feature already held",
-    labels(
-      actor({ classes: { Fighter: 1 }, items: ["Fighting Style"] }),
-      actor({ classes: { Fighter: 1 }, items: ["Fighting Style", "Fighting Style"] })
-    ),
-    ["item:Fighting Style"]
-  );
-  check(
-    "hit points going down are reported too",
-    compareSnapshots(
-      takeSnapshot(actor({ hp: 20, classes: { Bard: 3 } })),
-      takeSnapshot(actor({ hp: 14, classes: { Bard: 2 } }))
-    ).map((c) => c.detail),
-    ["-6"]
-  );
+  check("nothing to compare", levelChange(null, null), null);
+  check("the character's own level is read too", takeSnapshot(actor({ level: 5 })).level, 5);
+  check("no actor at all", takeSnapshot(null), null);
 });
 
 // --- waiting for the importer ------------------------------------------------
@@ -1499,6 +1469,7 @@ group("gains: what a step put on the sheet", () => {
     languages = [],
     abilities = {},
     currency = {},
+    slots = {},
     hp = 0,
     speed = 30,
     size = "med"
@@ -1514,6 +1485,7 @@ group("gains: what a step put on the sheet", () => {
       ),
       traits: { languages: { value: new Set(languages) }, weaponProf: { value: [] }, size },
       attributes: { hp: { max: hp }, movement: { walk: speed } },
+      spells: Object.fromEntries(Object.entries(slots).map(([k, v]) => [k, { max: v }])),
       currency
     }
   });
@@ -1604,6 +1576,106 @@ group("gains: what a step put on the sheet", () => {
   // silently drops an item would be worse than an untidy one.
   const odd = gainSections(diff(empty, { items: [["shipwreck", "Sloop"]] }));
   check("an unknown item type is still shown", odd.map((s) => s.key), ["other"]);
+
+  // --- spell slots ------------------------------------------------------------
+  //
+  // Read for the level-up card, which is drawn from this same record: "two more
+  // second-level slots" is most of what a caster's level actually gave, and
+  // without it that card was hit points and a feature.
+
+  const slots = diff({ slots: { spell1: 2 } }, { slots: { spell1: 4, spell2: 2 } });
+  check("slots that went up, by how much", slots.spellSlots, { spell1: 2, spell2: 2 });
+  check(
+    "slots that did not move are not a gain",
+    diff({ slots: { spell1: 2 } }, { slots: { spell1: 2 } }),
+    null
+  );
+  check(
+    "a slot lost is not a gain either",
+    diff({ slots: { spell1: 4 } }, { slots: { spell1: 2 } }),
+    null
+  );
+
+  const slotPills = gainSections(slots).find((s) => s.key === "stats").entries;
+  check(
+    "slots are named by their level, not by their key",
+    slotPills.map((e) => `${e.label} ${e.detail}`),
+    ["Spell slots, level 1 +2", "Spell slots, level 2 +2"]
+  );
+  check(
+    "a warlock's slots have a name of their own",
+    gainSections(diff(empty, { slots: { pact: 2 } }))
+      .find((s) => s.key === "stats").entries[0].label,
+    "Pact slots"
+  );
+
+  // A recording written before slots were part of this file has no such key.
+  // An old card must still draw rather than throwing on the way past.
+  check(
+    "a record from before slots existed",
+    gainSections({ items: [], skills: [], saves: [], tools: [], weapons: [], armour: [],
+      languages: [], abilities: {}, currency: {}, hp: 3 }).map((s) => s.key),
+    ["stats"]
+  );
+});
+
+// --- the levels taken after creation -----------------------------------------
+//
+// The level-up window used to hold its report in memory and lose it on close,
+// and the creation panel had never heard of it. Both draw the same pills now,
+// from a record on the actor - so what is checked here is the heading (which
+// has to survive the footer's language switch) and the grouping.
+
+group("gains: levels taken after creation", () => {
+  const entry = (over = {}) => ({ class: "Barbarian", from: 2, to: 3, level: 3, record: null, ...over });
+
+  check(
+    "a level of a class already held",
+    levelGainTitle(entry()),
+    "Barbarian: level 2 → 3"
+  );
+  check(
+    "a class taken for the first time",
+    levelGainTitle(entry({ from: 0, to: 1, class: "Wizard" })),
+    "New class: Wizard (level 1)"
+  );
+  // Nothing about the record says which class it was - a level gained outside
+  // any of the windows that record one, or a homebrew shape we could not read.
+  // The character's own level is still true, so that is what it says.
+  check(
+    "a level that cannot be pinned on a class",
+    levelGainTitle(entry({ class: "", level: 7 })),
+    "Level 7"
+  );
+
+  const stub = (list) => ({ getFlag: (scope, key) => (key === "levelGains" ? list : null) });
+  const record = {
+    items: [{ type: "class", name: "Barbarian", img: "" },
+            { type: "subclass", name: "Path of the Berserker", img: "" },
+            { type: "feat", name: "Frenzy", img: "" }],
+    skills: [], saves: [], tools: [], weapons: [], armour: [],
+    languages: [], abilities: {}, currency: {}, spellSlots: {}, hp: 7
+  };
+
+  const groups = levelGainGroups(stub([{ ...entry(), record }]));
+  check("one block per level", groups.length, 1);
+  check("headed by the level it was", groups[0].title, "Barbarian: level 2 → 3");
+
+  const byKey = Object.fromEntries(
+    groups[0].sections.map((s) => [s.key, s.entries.map((e) => e.label)])
+  );
+  // The class item is the heading; repeating it as a pill under its own
+  // heading reads as a bug. The subclass is not - picking one is the most
+  // interesting thing level 3 ever does.
+  check("the class is not repeated as a pill", byKey.other, ["Path of the Berserker"]);
+  check("the feature the level granted", byKey.features, ["Frenzy"]);
+  check("and the hit points", byKey.stats, ["Hit points"]);
+
+  // A level whose record came out empty leaves no heading behind: a heading
+  // with nothing under it claims the level gave nothing.
+  check("an empty level is dropped", levelGainGroups(stub([{ ...entry(), record: null }])), []);
+  check("a character with no record at all", levelGainGroups(stub(null)), []);
+  check("no actor at all", levelGainGroups(null), []);
 });
 
 group("gains: proficiency pills", () => {

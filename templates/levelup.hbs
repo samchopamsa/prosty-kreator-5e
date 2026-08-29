@@ -44,17 +44,38 @@
           {{/if}}
         {{/if}}
 
-        {{#if changes}}
+        {{#if levels}}
         <section class="pk5e-levelup-changes">
           <h3 class="pk5e-gained-title">{{pkT "levelup.gained"}}</h3>
-          {{#each changes}}
+          {{#each levels}}
           <div class="pk5e-gained-group">
             <h4>{{title}}</h4>
-            <ul>
-              {{#each entries}}
-              <li class="pk5e-change is-{{kind}}">{{text}}</li>
+            <div class="pk5e-gains">
+              {{#each sections}}
+              <div class="pk5e-gain-group">
+                <span class="pk5e-gain-label">{{label}}</span>
+                <span class="pk5e-gain-chips">
+                  {{#each entries}}
+                  {{#if uuid}}
+                  <span class="pk5e-gain-chip is-readable"
+                        data-tooltip="<section class='loading' data-uuid='{{uuid}}'><i class='fas fa-spinner fa-spin-pulse'></i></section>"
+                        data-tooltip-direction="LEFT">
+                    {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                    <span class="pk5e-gain-name">{{label}}</span>
+                    {{#if detail}}<em>{{detail}}</em>{{/if}}
+                  </span>
+                  {{else}}
+                  <span class="pk5e-gain-chip">
+                    {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                    <span class="pk5e-gain-name">{{label}}</span>
+                    {{#if detail}}<em>{{detail}}</em>{{/if}}
+                  </span>
+                  {{/if}}
+                  {{/each}}
+                </span>
+              </div>
               {{/each}}
-            </ul>
+            </div>
           </div>
           {{/each}}
         </section>

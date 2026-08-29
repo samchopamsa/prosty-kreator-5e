@@ -16,22 +16,23 @@
  * starts and again after the importer says it has finished, and reports the
  * difference. Whatever actually arrived is what gets shown, homebrew included.
  *
- * WHY NOT snapshot.mjs
- * --------------------
- * Same idea, different answer. A level-up report is a flat list of sentences
- * and its reading throws away everything but names; a step card is grouped -
- * proficiencies apart from features apart from equipment - and needs each
- * item's type and picture to draw a row. Widening one reading to serve both
- * shapes would have meant changing what the level-up report is tested against
- * in order to add a card, so the two are kept apart on purpose.
+ * WHAT snapshot.mjs IS STILL FOR
+ * ------------------------------
+ * A level-up is the same question - what arrived - so it is answered by this
+ * file now, and the pills are the same pills. What this reading cannot say is
+ * which class went up: it holds item names and numbers, and "Barbarian 2 to 3"
+ * is neither. That one sentence is what snapshot.mjs is asked for (levelChange),
+ * and it is the heading over the pills rather than one of them.
  *
  * WHAT IS STORED, AND AS WHAT
  * ---------------------------
- * The difference goes onto the actor (flag `gains`), not into the window: the
- * panel is closed and reopened constantly, and the card has to survive that.
- * It is stored as raw keys rather than finished labels, because the footer
- * carries a language switch - a card recorded in Polish would stay Polish for
- * a reader who switches to English. Labels are resolved at render time.
+ * The difference goes onto the actor - flag `gains` for a creation step, flag
+ * `levelGains` for the list of levels taken afterwards - not into the window:
+ * the panel is closed and reopened constantly, and the card has to survive
+ * that. It is stored as raw keys rather than finished labels, because the
+ * footer carries a language switch - a card recorded in Polish would stay
+ * Polish for a reader who switches to English. Labels are resolved at render
+ * time.
  *
  * WHAT IT DOES NOT CLAIM
  * ----------------------
@@ -40,9 +41,10 @@
  * the whole of the promise. No card ever says "this is everything".
  */
 
-import { IMPORTER_FLAG } from "./constants.mjs";
+import { IMPORTER_FLAG, MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { languageLabels } from "./languages-core.mjs";
+import { takeSnapshot, levelChange } from "./snapshot.mjs";
 
 /**
  * Item types that belong under equipment.
@@ -111,6 +113,13 @@ export function readGains(actor) {
     armour: traitKeys(system.traits?.armorProf),
     languages: Array.from(system.traits?.languages?.value ?? []),
     abilities: numbers(system.abilities, (ability) => ability?.value),
+    // Read for the level-up card more than for the creation steps. A class
+    // taken at level 1 hands its first slots over along with everything else,
+    // but it is levelling that makes "two more second-level slots" the answer
+    // the player came looking for - and the level-up card is drawn from this
+    // same record, so it has to be in here. Harmless on a character with no
+    // spellcasting: `raised()` keeps only what went up, which is nothing.
+    spellSlots: numbers(system.spells, (slot) => slot?.max),
     currency: numbers(system.currency, (value) => value),
     hp: Number(system.attributes?.hp?.max ?? 0),
     speed: Number(system.attributes?.movement?.walk ?? 0),
@@ -159,6 +168,9 @@ function isEmpty(record) {
     !record.armour.length &&
     !record.languages.length &&
     !Object.keys(record.abilities).length &&
+    // Read defensively: a recording written before spell slots were part of
+    // this file has no such key, and an old card must still draw.
+    !Object.keys(record.spellSlots ?? {}).length &&
     !Object.keys(record.currency).length &&
     !record.hp &&
     !record.speed &&
@@ -184,6 +196,7 @@ export function diffGains(before, after) {
     armour: addedKeys(before.armour, after.armour),
     languages: addedKeys(before.languages, after.languages),
     abilities: raised(before.abilities, after.abilities),
+    spellSlots: raised(before.spellSlots, after.spellSlots),
     currency: raised(before.currency, after.currency),
     hp: Math.max(0, after.hp - before.hp),
     speed: Math.max(0, after.speed - before.speed),
@@ -235,6 +248,20 @@ const weaponLabel = (key) =>
   configLabel("weaponProficiencies", key) ?? traitLabel("weapon", key) ?? key;
 const armourLabel = (key) =>
   configLabel("armorProficiencies", key) ?? traitLabel("armor", key) ?? key;
+
+/**
+ * A spell-slot key as a player would say it.
+ *
+ * dnd5e names them `spell1`..`spell9`, with `pact` beside them for a warlock.
+ * Anything else the system grows later falls through as its own key rather
+ * than being dropped: an unrecognised row of the card is still true.
+ */
+function slotLabel(key) {
+  const level = String(key).match(/^spell(\d+)$/);
+  if (level) return t("gains.slotLevel", level[1]);
+  if (key === "pact") return t("gains.slotPact");
+  return String(key);
+}
 
 const signed = (value) => (value > 0 ? `+${value}` : String(value));
 
@@ -303,6 +330,9 @@ export function gainSections(record, { skipTypes = [], kind = "", actor = null }
   for (const [key, value] of Object.entries(record.abilities ?? {})) {
     stats.push({ label: abilityLabel(key), detail: signed(value) });
   }
+  for (const [key, value] of Object.entries(record.spellSlots ?? {})) {
+    stats.push({ label: slotLabel(key), detail: signed(value) });
+  }
   push("stats", stats);
 
   // "Weapon: Martial" rather than "Martial", and the same for armour. On their
@@ -358,4 +388,146 @@ export function gainSections(record, { skipTypes = [], kind = "", actor = null }
   );
 
   return sections;
+}
+
+/* ---------------------------------------------------------------------------
+   Levels gained after creation
+
+   The card above answers "what did this step put on the sheet". A level-up
+   asks exactly the same question of exactly the same reading, so it is
+   answered here rather than in a second place: one diff, one set of pills, one
+   set of section headings, whichever window is doing the asking.
+
+   WHY THE RECORD GOES ON THE ACTOR
+   --------------------------------
+   The level-up window used to hold its report in memory, which meant closing it
+   threw the report away - and the creation panel, which is where the player
+   goes back to look at their character, had never heard of it at all. On the
+   actor it survives both, and the panel can show levels 2 and 3 under the class
+   that gained them.
+
+   A LIST, NOT A MAP
+   -----------------
+   Steps are keyed by name because there is one class step; levels arrive one
+   after another and all of them stay. So this is an ordered list, appended to,
+   and each entry carries the numbers its heading is built from rather than a
+   finished sentence - the footer has a language switch, and a heading recorded
+   in Polish would stay Polish for a reader who switches to English.
+   --------------------------------------------------------------------------- */
+
+/** Where the list of levels lives on the actor. */
+export const LEVEL_GAINS_FLAG = "levelGains";
+
+/**
+ * The two readings a level-up has to be diffed against, taken together.
+ *
+ * Two of them because they answer different halves: the snapshot says which
+ * class went up, which is the heading, and the gains reading says what arrived,
+ * which is the pills. Taken at the same moment so they cannot disagree.
+ */
+export function readLevelBefore(actor) {
+  if (!actor) return null;
+  return { snapshot: takeSnapshot(actor), gains: readGains(actor) };
+}
+
+/**
+ * Appends what one level brought to the actor's own record of them.
+ *
+ * Nothing is written when nothing arrived: a cancelled import, or a level read
+ * before the importer had finished with it, would otherwise leave an empty
+ * heading claiming a level gave nothing.
+ *
+ * @returns {object|null} The entry as stored, so a window can show it at once.
+ */
+export async function recordLevelGains(actor, before) {
+  if (!actor || !before) return null;
+
+  try {
+    const record = diffGains(before.gains, readGains(actor));
+    if (!record) return null;
+
+    const after = takeSnapshot(actor);
+    const change = levelChange(before.snapshot, after);
+    const entry = {
+      // "" when the levelling cannot be attributed to a class - the heading
+      // then falls back to the character's own level, which is always true.
+      class: change?.name ?? "",
+      from: Number(change?.from ?? 0),
+      to: Number(change?.to ?? 0),
+      level: Number(after?.level ?? 0),
+      record
+    };
+
+    const list = [...(actor.getFlag(MODULE_ID, LEVEL_GAINS_FLAG) ?? []), entry];
+    await actor.setFlag(MODULE_ID, LEVEL_GAINS_FLAG, list);
+    return entry;
+  } catch (err) {
+    // The same rule as the step card: never worth interrupting a level-up
+    // over. The character gained the level either way.
+    console.warn(`${MODULE_ID} | Could not record what the level added`, err);
+    return null;
+  }
+}
+
+/** Forgets every recorded level. For when the class they belong to has gone. */
+export async function clearLevelGains(actor) {
+  if (!actor?.getFlag?.(MODULE_ID, LEVEL_GAINS_FLAG)?.length) return;
+
+  try {
+    await actor.unsetFlag(MODULE_ID, LEVEL_GAINS_FLAG);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not clear the recorded levels`, err);
+  }
+}
+
+/**
+ * Forgets the most recent level. For a delevel, which undoes exactly one.
+ *
+ * The last entry, not the one matching the class: the importer levels one
+ * class per press and the delevel button undoes the press that came last.
+ */
+export async function dropLastLevelGain(actor) {
+  const list = actor?.getFlag?.(MODULE_ID, LEVEL_GAINS_FLAG) ?? [];
+  if (!list.length) return;
+
+  try {
+    await actor.setFlag(MODULE_ID, LEVEL_GAINS_FLAG, list.slice(0, -1));
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not forget the last recorded level`, err);
+  }
+}
+
+/**
+ * The heading over one level's pills, resolved now rather than when recorded.
+ *
+ * Same three sentences the level-up window has always used, so the panel and
+ * the window read alike - which is the whole point of moving this here.
+ */
+export function levelGainTitle(entry) {
+  if (entry?.class && Number(entry.from) > 0) {
+    return t("levelup.changeLevel", entry.class, `${entry.from} \u2192 ${entry.to}`);
+  }
+  if (entry?.class) return t("levelup.changeNewClass", entry.class, entry.to);
+  return t("levelup.groupLevel", entry?.level ?? "?");
+}
+
+/**
+ * Every recorded level as a heading and a set of pill sections.
+ *
+ * `skipTypes` leaves the class item itself out, exactly as the class step does:
+ * "Barbarian: level 2 to 3" is already the heading. A subclass is NOT skipped -
+ * choosing one at level 3 is the most interesting thing that level did.
+ *
+ * Entries whose sections all came out empty are dropped, so a level that only
+ * moved a number nothing draws does not leave a bare heading behind.
+ */
+export function levelGainGroups(actor, { skipTypes = ["class"], kind = "class" } = {}) {
+  const list = actor?.getFlag?.(MODULE_ID, LEVEL_GAINS_FLAG) ?? [];
+
+  return list
+    .map((entry) => ({
+      title: levelGainTitle(entry),
+      sections: gainSections(entry.record, { skipTypes, kind, actor })
+    }))
+    .filter((group) => group.sections.length);
 }

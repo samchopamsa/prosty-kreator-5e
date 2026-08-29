@@ -15,6 +15,49 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.1.0
+
+**Multiclass mieści się w szynie.** Odpowiedź kroku była jedną linią uciętą
+wielokropkiem, co jest dobre dla jednej klasy i złe dla dwóch: „Wojownik 3 -
+Mistrz, Czarodziej 2 - Ewokacja" zamieniało się w „Wojownik 3 - Mist...", czyli
+znikała ta klasa, którą właśnie dodano. Teraz każda klasa dostaje własny wiersz.
+Szyna jest kolumną — ma wysokość do wydania, a szerokości nie ma.
+
+**Widać, że „Zatwierdź" trzeba nacisnąć.** Atrybuty i języki to jedyne kroki,
+w których to panel zapisuje odpowiedź; wszędzie indziej klika się przycisk karty
+i pisze importer, więc nie ma wątpliwości, że coś się stało. Tutaj tabela
+wyglądała na skończoną — liczby na ekranie, kwadraciki zaznaczone — a przycisk,
+który to naprawdę zapisuje, był szarym klawiszem nie do odróżnienia od
+„Wyczyść". Zdarzały się postacie z pełną tabelą cech i pustą kartą. Teraz
+przycisk ma akcent, ptaszka i zdanie nad sobą mówiące wprost, że dopóki się go
+nie naciśnie, na karcie nic się nie zmienia.
+
+**„Zapisz" w językach przeniesione pod tabelę.** Stało pod listą kwadracików,
+czyli za przewijaną listą wysoką na 280px i za przewijaniem samej karty — jedyny
+przycisk kończący krok był jedyną rzeczą, której nie dało się znaleźć bez
+szukania. Teraz jest na ekranie od otwarcia kroku, a listę pod nim można
+przechodzić w dowolnej kolejności.
+
+**Awans pokazuje zdobycze tak samo jak kreator.** Okno awansu wypisywało płaską
+listę zdań („Punkty życia: +7", „Zaklęcie: Tarcza") obok panelu, który na to samo
+pytanie odpowiadał pigułkami z obrazkiem i opisem pod kursorem. Dwa kształty na
+jedną odpowiedź, a ten z regułami pod kursorem był akurat tym, którego gracz po
+zakończeniu kreacji nigdy nie oglądał. Teraz oba rysują te same pigułki z tego
+samego odczytu. Doszły komórki zaklęć — dla postaci rzucającej zaklęcia to
+większość tego, co daje poziom.
+
+**Zdobycze z awansów widać też w kreatorze.** Raport okna awansu ginął w chwili
+jego zamknięcia, a panel — czyli miejsce, do którego wraca się oglądać postać —
+nigdy o nim nie słyszał. Zapis idzie teraz na postać (flaga `levelGains`), więc
+poziomy 2, 3, 4 stoją pod krokiem klasy, każdy z własnym nagłówkiem. Dotyczy to
+także awansu klikniętego z samego panelu, który wcześniej nie zapisywał niczego.
+Usunięcie klasy kasuje zapis, cofnięcie poziomu zdejmuje ostatni wpis.
+
+**„Przerwij" to teraz „Zamknij".** Przycisk zawsze tylko zamykał okno — niczego
+nie przerywał i nie cofał. Nazwa sugerowała, że praca przepadnie.
+
+---
+
 ## 2.0.0
 
 Nowy układ kreatora. Numer główny się zmienia, bo zmienia się sposób

@@ -47,7 +47,14 @@ import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import { autoPickSingleLevel } from "./level-select.mjs";
-import { readGains, diffGains } from "./gains.mjs";
+import {
+  readGains,
+  diffGains,
+  readLevelBefore,
+  recordLevelGains,
+  clearLevelGains,
+  dropLastLevelGain
+} from "./gains.mjs";
 import { choosePortrait } from "./portrait.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
@@ -415,6 +422,23 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         : step.bio
           ? t("bio.filledOf", step.bio.filled, bioTotal)
           : step.result || "";
+
+      // ONE LINE PER CLASS, NOT ONE LINE PER STEP
+      //
+      // The rail is 210-280px wide and its answer was a single line cut with an
+      // ellipsis. That is right for one class and wrong for two: the moment a
+      // character multiclassed, "Fighter 3 - Champion, Wizard 2 - Evocation"
+      // became "Fighter 3 - Champi..." and the second class - the thing that
+      // had just been added - was the half that disappeared.
+      //
+      // So the entries are handed over as a list and the rail draws a row each.
+      // The rail is a column; it has height to spend and no width. Every other
+      // step has exactly one entry, so nothing else changes shape.
+      step.foldLines = chosen.length
+        ? chosen
+        : step.foldResult
+          ? [step.foldResult]
+          : [];
     }
 
     // Once per window, before anything reads the flags: a character made by an
@@ -612,6 +636,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           label: t("step.start"),
           done: named,
           summary: named ? actor.name : "",
+          lines: named ? [actor.name] : [],
           active: this._active === "start"
         },
         ...steps.map((step) => ({
@@ -625,7 +650,10 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           // skipped choice is: the player should not have to open every card to
           // learn that one of them has something wrong with it.
           hasSkipped: step.hasSkipped || step.failures.length > 0,
+          // Both: the string is the row's hover title, one line being right
+          // there, and the list is what the row actually draws.
           summary: step.foldResult,
+          lines: step.foldLines,
           active: step.active
         })),
         {
@@ -635,6 +663,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
           label: t("step.report"),
           done: report.ready,
           summary: report.ready ? t("guide.ready") : t("guide.toFix", report.problems),
+          lines: [report.ready ? t("guide.ready") : t("guide.toFix", report.problems)],
           active: this._active === "report"
         }
       ],
@@ -1000,6 +1029,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         // is better than keeping a wrong one - taking the class again writes a
         // fresh one anyway.
         await this.clearGains(step);
+        // And the levels taken on top of it. Those are recorded as a flat list
+        // with no class attached to each entry, so there is no honest way to
+        // keep the ones belonging to a class that is staying - and a list of
+        // levels under a class that has gone is a card describing somebody
+        // else. Levelling again records them afresh.
+        if (step === "class") await clearLevelGains(this.actor);
       }
       return true;
     } catch (err) {
@@ -1168,6 +1203,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // dialogs it costs on the class step.
     this.armSingleLevel();
 
+    // Read before the button is pressed, exactly as a step is. The level-up
+    // window has always reported what a level brought; pressing the button from
+    // here recorded nothing at all, so a character levelled from the panel had
+    // a step card for level 1 and silence above it.
+    const before = readLevelBefore(actor);
+
     try {
       await pressLevelUp(actor);
       await watchImportEnd({ timeout: 120000 });
@@ -1175,6 +1216,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
       await wait(600);
+      await recordLevelGains(actor, before);
       this.render();
     }
   }
@@ -1250,6 +1292,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         label: target.dataset.label,
         level: Number(target.dataset.level) || null
       });
+      // Same reasoning for the card of what that level brought: one press of
+      // the importer's button is one level, so undoing one drops one entry.
+      await dropLastLevelGain(actor);
     } catch (err) {
       console.warn(`${MODULE_ID} | Could not step the level back`, err);
       ui.notifications.warn(t("option.noDelevel"));

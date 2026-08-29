@@ -14,7 +14,13 @@
             {{#if icon}}<i class="fa-solid {{icon}}" aria-hidden="true"></i>{{/if}}
             {{label}}
           </span>
-          <span class="pk5e-rail-summary">{{#if summary}}{{summary}}{{else}}&mdash;{{/if}}</span>
+          {{#if lines}}
+            {{#each lines}}
+            <span class="pk5e-rail-summary">{{this}}</span>
+            {{/each}}
+          {{else}}
+            <span class="pk5e-rail-summary">&mdash;</span>
+          {{/if}}
         </span>
         {{#if hasSkipped}}
           <span class="pk5e-guide-alert">!</span>
@@ -223,10 +229,18 @@
               </tbody>
             </table>
 
-            <div class="pk5e-inline-actions">
+            <p class="pk5e-required-note">
+              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              {{#if canApply}}{{pkT "abilities.applyReady"}}{{else}}{{pkT "abilities.applyRequired"}}{{/if}}
+            </p>
+
+            <div class="pk5e-inline-actions is-required">
               <button type="button" class="pk5e-link" data-action="resetAbilities">{{pkT "abilities.reset"}}</button>
               <button type="button" class="pk5e-primary" data-action="saveAbilities"
-                      {{#unless canApply}}disabled{{/unless}}>{{pkT "abilities.apply"}}</button>
+                      {{#unless canApply}}disabled{{/unless}}>
+                <i class="fa-solid fa-check" aria-hidden="true"></i>
+                {{pkT "abilities.apply"}}
+              </button>
             </div>
           </div>
         {{/with}}
@@ -266,6 +280,24 @@
               {{#if overLimit}} {{pkT "lang.overLimit"}}{{/if}}
             </p>
 
+            {{!-- Under the table, not below the list of tick boxes. Down there
+                  it sat past a 280px scrolling list AND the card's own scroll,
+                  so the one button that commits the step was the one thing on
+                  the step nobody found without hunting for it. Here it is on
+                  screen from the moment the step opens, and the list under it
+                  can be worked through in any order before pressing it. --}}
+            <p class="pk5e-required-note">
+              <i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i>
+              {{pkT "lang.saveRequired"}}
+            </p>
+
+            <div class="pk5e-inline-actions is-required">
+              <button type="button" class="pk5e-primary" data-action="saveLanguages">
+                <i class="fa-solid fa-check" aria-hidden="true"></i>
+                {{pkT "lang.save"}}
+              </button>
+            </div>
+
             <input type="search" data-language-search value="{{query}}"
                    placeholder="{{pkT 'lang.search'}}" autocomplete="off">
 
@@ -283,10 +315,6 @@
                 {{/each}}
               </section>
               {{/each}}
-            </div>
-
-            <div class="pk5e-inline-actions">
-              <button type="button" class="pk5e-primary" data-action="saveLanguages">{{pkT "lang.save"}}</button>
             </div>
           </div>
         {{/with}}
@@ -417,6 +445,48 @@
                 {{/if}}
                 {{/each}}
               </span>
+            </div>
+            {{/each}}
+          </div>
+          {{/if}}
+
+          {{!-- What the levels taken after creation brought, in the same pills.
+                Recorded by whichever window did the levelling (gains.mjs) and
+                shown here because this is where a player comes back to look at
+                their character - the level-up window's own report used to
+                vanish the moment that window was closed. One block per level,
+                headed by the level it was. --}}
+          {{#if levelGains}}
+          <div class="pk5e-level-gains">
+            {{#each levelGains}}
+            <div class="pk5e-level-gain">
+              <span class="pk5e-level-gain-title">{{title}}</span>
+              <div class="pk5e-gains">
+                {{#each sections}}
+                <div class="pk5e-gain-group">
+                  <span class="pk5e-gain-label">{{label}}</span>
+                  <span class="pk5e-gain-chips">
+                    {{#each entries}}
+                    {{#if uuid}}
+                    <span class="pk5e-gain-chip is-readable"
+                          data-tooltip="<section class='loading' data-uuid='{{uuid}}'><i class='fas fa-spinner fa-spin-pulse'></i></section>"
+                          data-tooltip-direction="LEFT">
+                      {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                      <span class="pk5e-gain-name">{{label}}</span>
+                      {{#if detail}}<em>{{detail}}</em>{{/if}}
+                    </span>
+                    {{else}}
+                    <span class="pk5e-gain-chip">
+                      {{#if img}}<img src="{{img}}" alt="">{{/if}}
+                      <span class="pk5e-gain-name">{{label}}</span>
+                      {{#if detail}}<em>{{detail}}</em>{{/if}}
+                    </span>
+                    {{/if}}
+                    {{/each}}
+                  </span>
+                </div>
+                {{/each}}
+              </div>
             </div>
             {{/each}}
           </div>

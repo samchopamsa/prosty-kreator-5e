@@ -19,7 +19,7 @@ import { t } from "./i18n.mjs";
 import { text, importFlowNote } from "./sheet-actions.mjs";
 import { itemsWithSkippedChoices, abilitiesAssigned } from "./validate.mjs";
 import { languageLabels } from "./languages-core.mjs";
-import { gainSections } from "./gains.mjs";
+import { gainSections, levelGainGroups } from "./gains.mjs";
 
 /** Readable names for the ability score methods stored on the actor. */
 const METHOD_KEYS = {
@@ -297,6 +297,13 @@ export function buildSteps(actor, { importing = false } = {}) {
       multiclass: classes.length > 1,
       totalLevel,
       gains: gainsFor("class", ["class", "subclass"]),
+      // The levels taken after creation, under the step that owns them. The
+      // level-up window reports the same thing while it is open and then
+      // closes; the panel is where a player comes back to read their
+      // character, so the record is shown here as well rather than only there.
+      // Only the class step: a level belongs to a class, and hanging it under
+      // species or background would be putting it wherever there was room.
+      levelGains: levelGainGroups(actor),
       blurb: text("textClass", "blurb.class")
     },
     {

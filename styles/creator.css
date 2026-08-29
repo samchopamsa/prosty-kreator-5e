@@ -207,16 +207,27 @@
   margin-right: 5px;
 }
 
-/* The answer. One line, cut with an ellipsis rather than wrapped: a
-   multiclassed character would otherwise push the rest of the rail down the
-   window every time a second class was added. */
+/* The answer. One row per entry rather than one row per step, because the rail
+   is 210-280px wide and a multiclassed character does not fit across it:
+   "Fighter 3 - Champion, Wizard 2 - Evocation" was cut to "Fighter 3 - Champi..."
+   and the class that had just been added was the half that vanished.
+
+   Each row is still a single line cut with an ellipsis - wrapping a long
+   subclass name would make one step three rows tall for no gain, and the rail
+   has to stay scannable. Growing by a row per class is affordable; a character
+   has two or three of them, not ten. */
 .pk5e-rail-summary {
+  display: block;
   font-size: 13px;
   opacity: 0.65;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Second and later classes sit under the first, marked as continuations rather
+   than as a second answer to the same question. */
+.pk5e-rail-summary + .pk5e-rail-summary { margin-top: 1px; }
 
 .pk5e-rail-step.is-done .pk5e-guide-num {
   border-color: var(--pk5e-accent);
@@ -964,6 +975,46 @@
   color: var(--pk5e-accent);
 }
 
+/* ---------------------------------------------------------------------------
+   The levels taken after creation
+
+   Same pills, one block per level, under the class step. Kept visually apart
+   from the step's own card - that one says what level 1 gave, these say what
+   each level since gave, and running them together would read as one list in
+   which level 3's subclass sat beside level 1's starting equipment.
+
+   A heading per level rather than a shared one: "Barbarian: level 2 to 3" is
+   the only thing that says which of them a pill belongs to.
+   --------------------------------------------------------------------------- */
+
+.pk5e-level-gains {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.pk5e-level-gain {
+  padding-left: 8px;
+  border-left: 2px solid var(--pk5e-line-strong);
+}
+
+.pk5e-level-gain-title {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pk5e-accent);
+}
+
+/* The heading and the rule already frame it, so the pills drop the tinted
+   panel they carry inside a step's own card. */
+.pk5e-level-gain .pk5e-gains {
+  margin-top: 0;
+  padding: 0;
+  background: none;
+}
+
 .pk5e-step-toplink { align-self: flex-start; margin-bottom: 2px; }
 
 /* No accent bar here. The skipped-choices warning uses the same callout shape
@@ -1288,14 +1339,21 @@
   font-weight: 700;
   color: var(--pk5e-accent);
 }
-.pk5e-levelup-changes ul { margin: 0; padding-left: 16px; }
+.pk5e-levelup-notes ul { margin: 0; padding-left: 16px; }
 
-/* The gains are the point of the window, so they are marked out from the rest
-   of the text rather than left as a plain list. */
+/* What is left of the old flat list: the "worth checking" notes, which are
+   sentences rather than things gained and stay sentences. The gains themselves
+   are pills now, drawn by the same rules the creation panel uses. */
 .pk5e-change { margin: 3px 0; font-size: 14px; }
-.pk5e-change.is-level,
-.pk5e-change.is-newClass { font-weight: 700; }
-.pk5e-change.is-hp { color: var(--pk5e-accent); }
+
+/* The pills inside a level's block. The block already has a heading and a rule
+   down its left edge, so the tinted panel the creation panel gives them would
+   be a second frame around the same thing. */
+.pk5e-gained-group .pk5e-gains {
+  margin-top: 0;
+  padding: 0;
+  background: none;
+}
 
 /* the importer's own level-up button, hidden by setting.
    Hidden, not removed: this module levels a character by pressing that very
@@ -2034,6 +2092,65 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 .pk5e-guide-step .pk5e-inline-pick .pk5e-inline-actions .pk5e-primary {
   flex: 1 1 auto;
   min-width: 160px;
+}
+
+/* ---------------------------------------------------------------------------
+   The two buttons that have to be pressed
+
+   Ability scores and languages are the only steps whose answer this panel
+   writes itself. Everything else is the sheet's own button and the importer
+   doing the writing, so the player is never in doubt that something happened.
+   These two looked finished the moment the table read correctly - the numbers
+   were on screen, the boxes were ticked - and the button that actually commits
+   them was a plain grey one at the bottom, indistinguishable from Reset.
+
+   Measured on a live world: characters left with a full table of scores and
+   nothing on the sheet, because "Apply" never read as required.
+
+   So it gets the accent the footer's Finalise button gets, a tick, and a line
+   of text above it saying in words that nothing is saved yet. Disabled it goes
+   plain, the same rule as the footer: a greyed-out accent reads as broken
+   rather than as blocked.
+   --------------------------------------------------------------------------- */
+
+.pk5e-required-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--pk5e-accent);
+}
+
+.pk5e-required-note i {
+  margin-top: 2px;
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.pk5e-inline-actions.is-required { border-top-color: var(--pk5e-accent); }
+
+.pk5e-guide-step .pk5e-inline-pick .pk5e-inline-actions.is-required .pk5e-primary:not(:disabled) {
+  background: var(--pk5e-accent);
+  color: var(--pk5e-accent-ink);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.pk5e-guide-step
+  .pk5e-inline-pick
+  .pk5e-inline-actions.is-required
+  .pk5e-primary:not(:disabled):hover {
+  filter: brightness(1.12);
+}
+
+/* The tick sits on the label rather than beside the button, so a wide button
+   keeps the two together in the middle instead of parking the icon at the
+   left edge of an empty bar. */
+.pk5e-guide-step .pk5e-inline-pick .pk5e-inline-actions.is-required .pk5e-primary i {
+  margin-right: 6px;
 }
 
 /* ---------------------------------------------------------------------------

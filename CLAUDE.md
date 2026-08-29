@@ -114,9 +114,14 @@ They are blind in different places and all are kept on purpose (see the header o
   source of truth. `import-end.mjs` watches the same "Import Complete" window for a
   different reason (has the import finished), and the two are kept apart.
 
-`snapshot.mjs` supports the level-up report: before/after readings of an actor,
-diffed to say what was gained, rather than predicting from the rules (which would
-be wrong for homebrew). Plain values only, no document references.
+`gains.mjs` answers "what arrived" for both a creation step and a level taken
+afterwards — before/after readings of an actor, diffed, rather than predicting
+from the rules (which would be wrong for homebrew). Plain values only, no
+document references, so a record survives the items it describes. The panel and
+the level-up window draw the same pills from it. `snapshot.mjs` is what is left
+of the older, sentence-shaped reading: it still answers the one question the
+gains reading cannot, which class went up (`levelChange`), and that is the
+heading over the pills.
 
 ### Reaching into other packages
 
@@ -148,7 +153,10 @@ why skipped choices cannot be detected from Advancement data at all).
 ### Actor flags and migration
 
 The module writes flags under `prosty-kreator-5e` (abilities, languages,
-guideDismissed, disclaimerSeen, skippedOptions, gains) plus a schema number. To change a
+guideDismissed, disclaimerSeen, skippedOptions, gains, levelGains) plus a schema
+number. `gains` is keyed by step; `levelGains` is an ordered list, one entry per
+level taken after creation, written by both the level-up window and the panel's
+own level-up button. To change a
 flag's shape: write the migration function, push it onto `MIGRATIONS` in
 `migrate.mjs`, raise `SCHEMA`. Never renumber or remove existing entries — someone's
 character is still at that version and needs every step from there to here.

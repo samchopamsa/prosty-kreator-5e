@@ -14,7 +14,11 @@
  * 1. It says what changed. Foundry is oddly silent about this: the player
  *    clicks through several windows and lands back on a sheet that is different
  *    in ways nobody lists. We take a reading before and after and report the
- *    difference, so nothing has to be remembered.
+ *    difference, so nothing has to be remembered. Reported as the creation
+ *    panel's own pills, from the same reading (gains.mjs) - the two windows
+ *    answer the same question and used to answer it in two different shapes,
+ *    only one of which carried the rules text on hover. The record goes on the
+ *    actor as well, so the panel can show it long after this window is closed.
  *
  * 2. It notices skipped choices. The watcher that catches a closed-too-early
  *    dialog only runs while a panel of ours is open - so a player levelling up
@@ -33,7 +37,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
-import { takeSnapshot, compareSnapshots } from "./snapshot.mjs";
+import { readLevelBefore, recordLevelGains, levelGainTitle, gainSections } from "./gains.mjs";
 import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { watchImportEnd } from "./import-end.mjs";
@@ -74,8 +78,14 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._remaining = 0;
     this._total = 0;
     this._busy = false;
-    /** Everything gained so far, accumulated across levels. */
-    this._changes = [];
+    /**
+     * Everything gained so far, accumulated across levels.
+     *
+     * Raw records as gains.mjs stores them, not finished text: the footer
+     * carries a language switch, and a report built into sentences at the
+     * moment the level landed would stay in the language it landed in.
+     */
+    this._levels = [];
     this._notes = [];
     /** Levels that finished without anything visibly changing. */
     this._emptyLevels = 0;
@@ -163,12 +173,24 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       total: this._total,
       inProgress: this._total > 0,
       progress: this._total > 0 ? t("levelup.progress", this._total - this._remaining, this._total) : "",
-      changes: this._changes.map((group) => ({
-        title: group.title,
-        entries: group.changes.map((change) => ({
-          ...change,
-          text: describeChange(change)
-        }))
+      // THE SAME PILLS THE CREATION PANEL DRAWS
+      //
+      // This used to be a flat list of sentences - "Hit points: +7", "Spell:
+      // Shield" - beside a panel that answered the identical question with
+      // pictured, hoverable pills. Two shapes for one answer, and the one with
+      // the rules text attached was the one the player never saw after
+      // creation. Built here rather than stored built, so the language switch
+      // in the footer reaches these too.
+      //
+      // The class item is skipped: its level is the heading. A subclass is not
+      // - picking one is the most interesting thing level 3 ever does.
+      levels: this._levels.map((entry) => ({
+        title: levelGainTitle(entry),
+        sections: gainSections(entry.record, {
+          skipTypes: ["class"],
+          kind: "class",
+          actor
+        })
       })),
       // Only the problems. The "everything matches" line belongs on the
       // creation panel, where the player is deciding whether they are done;
@@ -234,7 +256,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this._busy = true;
     this.render();
 
-    const before = takeSnapshot(actor);
+    const before = readLevelBefore(actor);
 
     try {
       if (game.settings.get(MODULE_ID, "levelUpMode") === "xp") {
@@ -262,19 +284,16 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // The sheet settles a moment after the importer reports itself done.
       await wait(600);
 
-      const after = takeSnapshot(actor);
-      const changes = compareSnapshots(before, after);
-      trace("level-up changes:", changes);
+      // Written to the actor, not just to this window. Closing the window used
+      // to throw the report away, and the creation panel - where a player goes
+      // back to look at their character - had never heard of it at all.
+      const entry = await recordLevelGains(actor, before);
+      trace("level-up gains:", entry);
 
-      if (changes.length) {
-        // One group per level, headed by whatever that level actually was.
-        // Run together, a three-level gain was one long list in which the
-        // second level's hit points sat next to the first level's features.
-        this._changes.push({
-          title: groupTitle(changes, after),
-          changes
-        });
-      }
+      // One group per level, headed by whatever that level actually was. Run
+      // together, a three-level gain was one long list in which the second
+      // level's hit points sat next to the first level's features.
+      if (entry) this._levels.push(entry);
 
       // Compared against the rules once the level has settled, so a choice
       // left unmade is said out loud here rather than discovered weeks later.
@@ -283,7 +302,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // two halves of the same answer.
       this._notes = await rulesChecks(actor);
 
-      if (!changes.length) {
+      if (!entry) {
         // Nothing moved. Either the import was cancelled, or the character was
         // read before the importer had finished with it. Reported, but the run is
         // not abandoned: the level may simply have been slow, and stopping
@@ -313,7 +332,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     this._total = target - level;
     this._remaining = this._total;
-    this._changes = [];
+    this._levels = [];
     this._emptyLevels = 0;
 
     // One level at a time, because that is how the importer works. The window
@@ -353,54 +372,6 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.close();
     this.actor?.sheet?.render(true);
   }
-}
-
-/**
- * A heading for one level's worth of gains.
- *
- * Taken from the level change itself where there is one - "Barbarian: level 2
- * to 3" says more than "Level 2" - and falling back to the character's total
- * level otherwise.
- */
-function groupTitle(changes, after) {
-  const levelled = changes.find((c) => c.kind === "level" || c.kind === "newClass");
-  if (levelled) return describeChange(levelled);
-  return t("levelup.groupLevel", after?.level ?? "?");
-}
-
-/** Turns one change into a line a player can read. */
-function describeChange(change) {
-  const ability = (key) => CONFIG.DND5E?.abilities?.[key]?.label ?? key.toUpperCase();
-  const skill = (key) => CONFIG.DND5E?.skills?.[key]?.label ?? key;
-
-  switch (change.kind) {
-    case "level":
-      return t("levelup.changeLevel", change.label, change.detail);
-    case "newClass":
-      return t("levelup.changeNewClass", change.label, change.detail);
-    case "hp":
-      return t("levelup.changeHp", change.detail);
-    case "slots":
-      return t("levelup.changeSlots", slotLabel(change.label), change.detail);
-    case "spell":
-      return t("levelup.changeSpell", change.label);
-    case "skill":
-      return t("levelup.changeSkill", skill(change.label));
-    case "save":
-      return t("levelup.changeSave", ability(change.label));
-    case "ability":
-      return t("levelup.changeAbility", ability(change.label), change.detail);
-    case "language":
-      return t("levelup.changeLanguage", change.label);
-    default:
-      return t("levelup.changeItem", change.label);
-  }
-}
-
-/** "spell3" -> "3", "pact" left alone. */
-function slotLabel(key) {
-  const found = String(key).match(/^spell(\d+)$/);
-  return found ? found[1] : key;
 }
 
 export function openLevelUp(actorId) {
