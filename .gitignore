@@ -6,3 +6,6 @@ package-lock.json
 # Paczka wydania powstaje w workflow, nie w drzewie roboczym.
 module.zip
 release-notes.md
+
+# Paczka rozdawana z reki powstaje w dist/ i nie nalezy do repozytorium.
+dist/
