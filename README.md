@@ -8,7 +8,7 @@ Advancement i importer działają dokładnie tak, jak zostały zbudowane. Kreato
 dokłada trzy rzeczy, których brakuje: **kolejność**, **to, o co importer nigdy
 nie pyta** (punktacja cech, języki) i **wykrywanie tego, co zostało pominięte**.
 
-Wersja **2.1.0**.
+Wersja **2.1.1**.
 
 ---
 
@@ -23,7 +23,7 @@ https://github.com/samchopamsa/prosty-kreator-5e/releases/latest/download/module
 
 Ten adres zawsze wskazuje najnowsze wydanie, więc Foundry sam zaproponuje
 aktualizację. Żeby zostać na starszej wersji, wklej adres konkretnego tagu:
-`.../releases/download/v2.1.0/module.json`.
+`.../releases/download/v2.1.1/module.json`.
 
 ### Wymagania
 
@@ -246,7 +246,7 @@ popraw pole `download` na nowy tag (`check.sh` przypilnuje wszystkich trzech),
 a potem:
 
 ```bash
-git tag v2.1.0 && git push origin main v2.1.0
+git tag v2.1.1 && git push origin main v2.1.1
 ```
 
 Paczkę, opis wydania z changeloga i sam release tworzy workflow.

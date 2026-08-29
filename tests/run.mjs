@@ -50,8 +50,8 @@ const { planMigration, SCHEMA, SCHEMA_FLAG, MIGRATIONS } = await import("../scri
 const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, levelChange } = await import("../scripts/snapshot.mjs");
-const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups } =
-  await import("../scripts/gains.mjs");
+const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups, classesIn,
+  dropLevelGainsFor } = await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
@@ -1676,6 +1676,63 @@ group("gains: levels taken after creation", () => {
   check("an empty level is dropped", levelGainGroups(stub([{ ...entry(), record: null }])), []);
   check("a character with no record at all", levelGainGroups(stub(null)), []);
   check("no actor at all", levelGainGroups(null), []);
+});
+
+// Removing one class of a multiclass used to empty the panel: the recorded
+// levels were cleared wholesale, so dropping the class taken first took the
+// second class's pills with it. Every entry names the class that went up, so
+// the ones that belong to a class still on the sheet are kept.
+await group("gains: removing one class of a multiclass", async () => {
+  const classRecord = (name) => ({
+    items: [{ type: "class", name, img: "" }, { type: "feat", name: "Rage", img: "" }],
+    skills: [], saves: [], tools: [], weapons: [], armour: [],
+    languages: [], abilities: {}, currency: {}, spellSlots: {}, hp: 12
+  });
+
+  check("the class a recording is about", classesIn(classRecord("Barbarian")), ["Barbarian"]);
+  check("a recording with no class in it", classesIn({ items: [{ type: "feat", name: "Rage" }] }), []);
+  check("nothing recorded at all", classesIn(null), []);
+
+  // A stand-in actor holding just the flag, with the two writes the real
+  // Document offers. Enough to say which entries survived.
+  const flagActor = (list) => {
+    const state = { list, unset: false };
+    return {
+      state,
+      getFlag: (scope, key) => (key === "levelGains" ? state.list : null),
+      setFlag: async (scope, key, value) => { state.list = value; },
+      unsetFlag: async () => { state.list = null; state.unset = true; }
+    };
+  };
+
+  const levels = [
+    { class: "Barbarian", from: 1, to: 2, level: 2, record: classRecord("Barbarian") },
+    { class: "Wizard", from: 0, to: 1, level: 3, record: classRecord("Wizard") },
+    { class: "Wizard", from: 1, to: 2, level: 4, record: classRecord("Wizard") }
+  ];
+
+  const dropped = flagActor(levels.slice());
+  await dropLevelGainsFor(dropped, ["Barbarian"]);
+  check("the other class keeps its levels", dropped.state.list.map((e) => e.level), [3, 4]);
+
+  const emptied = flagActor(levels.slice());
+  await dropLevelGainsFor(emptied, ["Barbarian", "Wizard"]);
+  // Nothing left to keep, so the flag goes rather than being left as [] - an
+  // empty list and no list have to read the same to whatever draws them.
+  check("removing every class unsets the flag", emptied.state.list, null);
+  check("and says so through unsetFlag", emptied.state.unset, true);
+
+  const untouched = flagActor(levels.slice());
+  await dropLevelGainsFor(untouched, ["Cleric"]);
+  check("a class that was never levelled changes nothing", untouched.state.list.length, 3);
+
+  // "" is what a level the reading could not pin on a class records. Its
+  // heading names the character's own level, so no removal makes it a lie.
+  const unattributed = flagActor([{ class: "", from: 0, to: 0, level: 5, record: classRecord("Bard") }]);
+  await dropLevelGainsFor(unattributed, ["Barbarian"]);
+  check("an unattributed level is kept", unattributed.state.list.length, 1);
+
+  check("no actor", await dropLevelGainsFor(null, ["Barbarian"]), undefined);
 });
 
 group("gains: proficiency pills", () => {

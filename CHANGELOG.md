@@ -15,6 +15,20 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.1.1
+
+**Usunięcie jednej klasy z multiclassy nie kasuje pigułek drugiej.** Panel
+zapominał wszystko, co zapisał o klasach, kiedy znikała którakolwiek z nich —
+razem z listą awansów. Postać z Wojownikiem 3 i Czarodziejem 2, której zdjęto
+Wojownika, traciła też wszystkie pigułki Czarodzieja, choć ten nadal był na
+karcie. Każdy zapisany awans od początku nosi nazwę klasy, która poszła w górę,
+więc teraz usuwane są tylko wpisy tej klasy, której już nie ma; karta kroku
+znika wtedy, gdy opisuje usuniętą klasę albo gdy nie została żadna. Awans,
+którego nie dało się przypisać do klasy, zostaje — jego nagłówek mówi o poziomie
+postaci, a ten się nie zmienił.
+
+---
+
 ## 2.1.0
 
 **Multiclass mieści się w szynie.** Odpowiedź kroku była jedną linią uciętą

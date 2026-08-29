@@ -209,6 +209,21 @@ export function diffGains(before, after) {
 }
 
 /**
+ * Which classes a recording is about.
+ *
+ * The class item itself is in the record even though the card skips drawing it
+ * ("Barbarian" is already the heading), and that is what makes a record
+ * attributable. Needed when one class of a multiclass is removed: the
+ * recording is only wrong if it describes the class that has gone.
+ */
+export function classesIn(record) {
+  return (record?.items ?? [])
+    .filter((item) => item?.type === "class")
+    .map((item) => String(item.name ?? ""))
+    .filter(Boolean);
+}
+
+/**
  * A label out of the system's own configuration, whatever shape it keeps.
  *
  * Some of these maps hold strings, some hold objects with a label, and which is
@@ -494,6 +509,33 @@ export async function dropLastLevelGain(actor) {
     await actor.setFlag(MODULE_ID, LEVEL_GAINS_FLAG, list.slice(0, -1));
   } catch (err) {
     console.warn(`${MODULE_ID} | Could not forget the last recorded level`, err);
+  }
+}
+
+/**
+ * Forgets the levels taken in one particular class.
+ *
+ * Every entry records which class went up, so removing one class of a
+ * multiclass does not have to cost the other one its levels - which is what
+ * clearing the whole list used to do.
+ *
+ * Entries the reading could not attribute to any class (`class` empty) are
+ * kept: their heading names the character's own level rather than a class, so
+ * they say nothing that the removal has made untrue.
+ */
+export async function dropLevelGainsFor(actor, names = []) {
+  const list = actor?.getFlag?.(MODULE_ID, LEVEL_GAINS_FLAG) ?? [];
+  if (!list.length) return;
+
+  const gone = new Set(names.filter(Boolean));
+  const kept = list.filter((entry) => !gone.has(entry?.class));
+  if (kept.length === list.length) return;
+
+  try {
+    if (kept.length) await actor.setFlag(MODULE_ID, LEVEL_GAINS_FLAG, kept);
+    else await actor.unsetFlag(MODULE_ID, LEVEL_GAINS_FLAG);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not forget the levels of a removed class`, err);
   }
 }
 

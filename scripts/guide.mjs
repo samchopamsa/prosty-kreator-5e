@@ -53,7 +53,9 @@ import {
   readLevelBefore,
   recordLevelGains,
   clearLevelGains,
-  dropLastLevelGain
+  dropLastLevelGain,
+  dropLevelGainsFor,
+  classesIn
 } from "./gains.mjs";
 import { choosePortrait } from "./portrait.mjs";
 import { trace } from "./trace.mjs";
@@ -1013,6 +1015,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!ok) return false;
     }
 
+    // Read now, not after the loop: by then the documents are gone and their
+    // names with them, and the names are how a recording is matched to what it
+    // describes.
+    const gone = items.map((i) => i.name);
+
     try {
       // One at a time: each may open its own advancement reversal window.
       for (const item of items) {
@@ -1023,18 +1030,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // through the same dialogs, so the record rebuilds itself if it should.
       if (["species", "background", "class"].includes(step)) {
         await clearSkippedOptions(this.actor);
-        // Including the card of what it added. Removing one of two classes is
-        // the awkward case: the recording covers both, so what is left would be
-        // a card listing features the character no longer has. Losing the card
-        // is better than keeping a wrong one - taking the class again writes a
-        // fresh one anyway.
-        await this.clearGains(step);
-        // And the levels taken on top of it. Those are recorded as a flat list
-        // with no class attached to each entry, so there is no honest way to
-        // keep the ones belonging to a class that is staying - and a list of
-        // levels under a class that has gone is a card describing somebody
-        // else. Levelling again records them afresh.
-        if (step === "class") await clearLevelGains(this.actor);
+        await this.clearRecordsFor(step, gone);
       }
       return true;
     } catch (err) {
@@ -1042,6 +1038,45 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.error(`Could not remove the ${step}: ${err.message}`);
       return false;
     }
+  }
+
+  /**
+   * Forgets the cards belonging to what was just removed - and only those.
+   *
+   * Clearing everything was the old rule, and on a multiclass it was wrong in
+   * the way the player notices: dropping one class took the other class's
+   * level pills with it, so the panel went blank about a character that had
+   * lost nothing of the sort.
+   *
+   * So the step's own card goes only when it is about a class that has gone,
+   * or when the last class has, and the recorded levels are filtered by the
+   * class each one names. A card that still describes something the character
+   * has is left alone.
+   */
+  async clearRecordsFor(step, removed = []) {
+    const actor = this.actor;
+    if (!actor) return;
+
+    if (step !== "class") {
+      await this.clearGains(step);
+      return;
+    }
+
+    // Nothing left to attribute anything to: the whole reading goes.
+    if (!this.itemsFor("class").length) {
+      await this.clearGains("class");
+      await clearLevelGains(actor);
+      return;
+    }
+
+    const record = actor.getFlag(MODULE_ID, "gains")?.class ?? null;
+    const covered = classesIn(record);
+    // No class name in the record at all - an older recording, or one written
+    // before the class item landed. Unattributable, so it stays: a card that
+    // might be right beats a panel that has emptied itself.
+    if (covered.some((name) => removed.includes(name))) await this.clearGains("class");
+
+    await dropLevelGainsFor(actor, removed);
   }
 
   static async onAddStep(event, target) {
