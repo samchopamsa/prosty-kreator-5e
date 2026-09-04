@@ -4,11 +4,12 @@
  * Keeps the flags this module writes on an actor readable as their shape
  * changes.
  *
- * There are seven of them now - abilities, languages, guideDismissed,
- * disclaimerSeen, skippedOptions, gains, levelGains - and no way to tell an old
- * one from a new one. The first time any of them needs a different shape, every character made
- * before that day would be read wrongly, and the failure would be quiet: a
- * warning that does not appear, an ability bonus counted twice.
+ * There are eight of them now - abilities, languages, guideDismissed,
+ * disclaimerSeen, skippedOptions, gains, levelGains, review - and no way to
+ * tell an old one from a new one. The first time any of them needs a different
+ * shape, every character made before that day would be read wrongly, and the
+ * failure would be quiet: a warning that does not appear, an ability bonus
+ * counted twice.
  *
  * So each actor carries a schema number, and a migration is a function that
  * takes it from N to N+1. Cheap while there is nothing to migrate; the point is
@@ -20,6 +21,12 @@
  *   3. Raise SCHEMA to match.
  * Do not renumber or remove entries: someone's character is still at that
  * version and needs every step from where they are to here.
+ *
+ * A NEW FLAG IS NOT A MIGRATION
+ *   `review` was added without touching SCHEMA. A migration exists to keep an
+ *   OLD SHAPE readable, and a flag that is simply absent already reads
+ *   correctly as "never sent to the GM". Raising the number would have stamped
+ *   every character in the world without changing a single value.
  */
 
 import { MODULE_ID } from "./constants.mjs";

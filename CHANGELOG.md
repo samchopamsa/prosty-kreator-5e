@@ -15,6 +15,88 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.2.0
+
+**Zgłoszenie gotowej postaci do akceptacji MG.** Nowe ustawienie świata
+(domyślnie wyłączone) dokłada w stopce panelu przycisk „Zgłoś do MG”. Postać
+idzie do MG jako szept na czacie — wizytówka jak w podsumowaniu, a pod nią to,
+czego MG nie odczyta z karty: **wybory pominięte w oknach importera**. Takie
+pominięcie nie zostawia w danych postaci żadnego śladu (wygenerowane przez
+importer wpisy `ItemGrant` mają `optional: false`, więc pytanie bez odpowiedzi
+wygląda tak samo jak pytanie, którego nigdy nie zadano), a moduł widział je na
+żywo i zapisał. Dalej idą zwykłe usterki z listy kontrolnej, porównanie z
+regułami klasy i to, co przyszło na każdym kroku tworzenia.
+
+Kiedy porównania z regułami nie dało się wykonać — bo dane reguł importera nie
+były wczytane — karta mówi to wprost. Pusta lista uwag i brak sprawdzenia
+wyglądają identycznie, a znaczą coś przeciwnego.
+
+MG zatwierdza albo odsyła z uwagą jednym z dwóch przycisków, które doklejają się
+do **jego** kopii wiadomości; gracz nie ma ich nawet w swoim DOM-ie. Decyzja
+wraca szeptem do właścicieli postaci i jest widoczna w panelu, razem z uwagą.
+Stan czyta się w chwili rysowania, więc karta sprzed tygodnia pokazuje, co się z
+postacią od tego czasu stało.
+
+Czat, a nie socket: zgłoszenie przeczeka nieobecność MG. Karta nie jest w żaden
+sposób blokowana — to zapis ustaleń przy stole, nie kontrola dostępu, i flagę
+stanu może nadpisać każdy, kto ma dostęp do konsoli.
+
+Na karcie postaci, zaraz za imieniem, stan widać jako kółko: puste — nie
+zgłoszona, wypełnione do połowy — czeka na MG, zielony ptaszek — zatwierdzona,
+czerwony wykrzyknik — odesłana. Cztery stany, a nie dwa, bo odesłana postać z
+szarym kółkiem wyglądałaby jak nigdy niezgłoszona, a to jedyny stan, w którym
+gracz ma coś do zrobienia. Pod kursorem to samo zdanie, które pokazuje panel,
+budowane przez tę samą funkcję. Kółko pojawia się wyłącznie przy włączonym
+ustawieniu i widzą je wszyscy, którzy mogą otworzyć kartę — także MG, który
+nie jest właścicielem żadnej postaci gracza, a któremu ten znak przydaje się
+najbardziej. Na kartach Tidy 5e kółko siedzi w tym samym miejscu — za
+imieniem — ale wchodzi tam przez `registerCharacterContent`, bo cokolwiek
+wstawionego wprost w markup Tidy znika przy najbliższym przerysowaniu.
+Selektory nazwy odczytane z arkuszy stylów Tidy 13.9.3, osobno dla układu
+klasycznego i „quadrone”.
+
+Ten sam znak stoi teraz przy każdej postaci na liście aktorów, a MG dostaje w
+nagłówku listy licznik oczekujących — kliknięcie zwija katalog do samych
+zgłoszonych postaci, ponowne przywraca całość. To odpowiedź na pytanie, którego
+czat nie umie udzielić: kto czeka **teraz**. Karty zgłoszeń przewijają się w
+górę i po tygodniu są nie do znalezienia, a stan na karcie postaci trzeba
+otwierać po jednej. Osobnego okna z kolejką MG celowo nie ma — decyzja dalej
+zapada na karcie na czacie, a drugie miejsce pokazujące to samo byłoby drugim
+miejscem, które może się z flagą rozjechać. Licznika nie widać, gdy nic nie
+czeka, i nie widzi go gracz, dla którego byłby liczbą cudzych postaci. Markup
+paska odczytany z żywego Foundry v14 (build 367), łącznie z tym, jak zwinięty
+folder chowa swoją zawartość — filtr otwiera foldery klasą, której używa samo
+Foundry, i zamyka po sobie tylko te, które sam otworzył.
+
+Karta na czacie wie, do której rundy należy. Wcześniej pytała tylko „jaki jest
+stan teraz” i myliła się w obie strony: po odesłaniu i ponownym zgłoszeniu nowa
+karta nie miała przycisków (flaga jest zapisywana **po** wiadomości, celowo, więc
+w chwili rysowania na postaci wisiała jeszcze poprzednia decyzja), a stara karta
+odzyskiwała komplet przycisków i MG mógł zatwierdzić postać z nieaktualnego
+raportu. Teraz zgłoszenie niesie znacznik czasu, rekord na postaci też, i
+porównanie obu mówi, czy ta karta jest tą właściwą. Przy okazji znika to samo
+w wydaniu sieciowym: u drugiego MG wiadomość i flaga przychodzą jako dwa osobne
+rozgłoszenia, bez gwarancji kolejności. Nieaktualna karta mówi wprost, że
+nowsza jest niżej.
+
+W konsoli: `characterCreator.submitReview(actorId)` i
+`characterCreator.reviewState(actorId)`.
+
+**Opisy klas przy drugiej i kolejnej klasie.** Panel z opisami rozpoznawał okno
+importera po dwóch tytułach, ale dokowanie — po jednym. Przy multiclassie okno
+nazywa się inaczej („Filter/Search for Class and Subclass” zamiast „Import
+Classes & Subclasses”), więc panel nie znajdował gospodarza, a wtedy chowa się
+sam — z założenia, żeby nie wisieć obok okna, do którego nic mu nie jest. W
+efekcie gracz dobierający drugą klasę wybierał z listy gołych nazw, dokładnie
+tam, gdzie opis jest najbardziej potrzebny. Reguła tytułu jest teraz jedna,
+wspólna z tą, która czyta zaznaczone wiersze, a test markupu przechodzi przez
+oba okna.
+
+Panel otwiera się też z okna awansu, nie tylko z panelu kreatora — to druga
+droga do tej samej listy klas.
+
+---
+
 ## 2.1.1
 
 **Usunięcie jednej klasy z multiclassy nie kasuje pigułek drugiej.** Panel

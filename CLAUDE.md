@@ -123,6 +123,62 @@ of the older, sentence-shaped reading: it still answers the one question the
 gains reading cannot, which class went up (`levelChange`), and that is the
 heading over the pills.
 
+### Handing a character to the GM
+
+`review.mjs` (off by default, world setting `reviewFlow`) is the only place in
+the module where two users talk to each other. A player sends the character as a
+whisper to the GM; the GM approves it or sends it back with a note from buttons
+that are added to their copy of the message as it renders, never written into
+the message body.
+
+It composes the three readings above rather than adding a fourth, and the reason
+it is worth having is the third one: a choice skipped inside an importer dialog
+leaves nothing at all in the actor's data, so a GM reading the sheet cannot
+recover it, while `option-watch.mjs` saw it happen. The card puts those first,
+above the ordinary checklist.
+
+Two rules that are the opposite of the ones elsewhere in this file, both
+deliberate and both explained at length in the file header:
+
+- **It fails loudly.** A silent failure here means the player believes the GM is
+  looking at something the GM never received. The flag is written only after the
+  message exists, and every failure raises a notification.
+- **It is not a permission system.** The flag lives on the actor, which the
+  player owns. It is a record of a table's agreement, not access control, and
+  nothing about the character is locked.
+
+Chat rather than a socket, so a submission waits for a GM who is not logged in.
+
+The state also shows on the sheet itself: one circle after the character's name,
+four faces (not sent / waiting / approved / returned). `sheet-button.mjs` finds
+an anchor in the dnd5e header and appends it; `tidy.mjs` registers it through
+Tidy's `registerCharacterContent`, whose whole point is that Tidy re-injects
+registered content on every render - an element appended to Tidy's Svelte markup
+by hand would be gone at the next update. The name selectors there were read out
+of Tidy 13.9.3's own stylesheets (`.actor-name` classic, `.actor-name-row`
+quadrone), not guessed. It is the only thing this module draws outside its own
+windows, so its stylesheet rules use literal colours - the `--pk5e-*` variables
+are declared on `.pk5e-creator` and are not in scope there. Four faces rather
+than two because a returned character wearing the empty circle would read as one
+nobody had ever submitted, which is the one state the player has to act on.
+
+`review-directory.mjs` puts the same four faces on every row of the Actors
+sidebar and gives the GM a count of what is waiting, which filters the list down
+to it. Both come from `reviewMark(actor)` in `review.mjs`, the one builder the
+sheet also uses, so the two places cannot drift; the Tidy path cannot use it,
+because its content is a fixed string registered at load time - that is what
+`REVIEW_FACES` is for. A queue window was considered and dropped: a submission
+already has one place where it is decided, and a second view of the same state
+is a second thing that can disagree with the flag. The sidebar therefore shows
+no verdict and offers no button. The mark goes on the row, not inside
+`a.entry-name`, which carries `.ellipsis` and would clip it off exactly the long
+names a crowded sidebar is full of. Filtering opens folders by adding the class
+core CSS uses (`expanded`) and takes it off only where it put it, rather than
+out-specifying `.directory li.folder:not(.expanded) .subdirectory` - a rule that
+can move. The row and header markup was read out of a live Foundry v14 build 367
+(`templates/sidebar/partials/document-partial.hbs`, `directory/header.hbs`), and
+`tests/markup.mjs` rebuilds it in jsdom.
+
 ### Reaching into other packages
 
 `importer-watch.mjs`, `dock.mjs`, `browser-tweaks.mjs` and `sheet-actions.mjs` all
@@ -153,13 +209,15 @@ why skipped choices cannot be detected from Advancement data at all).
 ### Actor flags and migration
 
 The module writes flags under `prosty-kreator-5e` (abilities, languages,
-guideDismissed, disclaimerSeen, skippedOptions, gains, levelGains) plus a schema
-number. `gains` is keyed by step; `levelGains` is an ordered list, one entry per
-level taken after creation, written by both the level-up window and the panel's
-own level-up button. To change a
-flag's shape: write the migration function, push it onto `MIGRATIONS` in
-`migrate.mjs`, raise `SCHEMA`. Never renumber or remove existing entries — someone's
-character is still at that version and needs every step from there to here.
+guideDismissed, disclaimerSeen, skippedOptions, gains, levelGains, review) plus a
+schema number. `gains` is keyed by step; `levelGains` is an ordered list, one
+entry per level taken after creation, written by both the level-up window and the
+panel's own level-up button; `review` is one object holding the state, who acted,
+when, and the note. Adding a NEW flag needs no migration - its absence already
+reads correctly. To change an existing flag's shape: write the migration
+function, push it onto `MIGRATIONS` in `migrate.mjs`, raise `SCHEMA`. Never
+renumber or remove existing entries — someone's character is still at that
+version and needs every step from there to here.
 
 ### Compendium matching
 
@@ -175,7 +233,8 @@ Exposed as `characterCreator` (and `game.modules.get("prosty-kreator-5e").api`) 
 `ready`. Useful when verifying in a live world: `guide()`, `resume(actorId)`,
 `complete(actorId)`, `levelUp(actorId)`, `debug(actorId)`, `debugCompendiums()`,
 `rules(className, level)`, `verify(actorRef, className, level)`, `fluff(kind, name)`,
-`tidy()`, `setDebug(true)` (turns on `trace()` logging).
+`tidy()`, `setDebug(true)` (turns on `trace()` logging), `submitReview(actorId)`,
+`reviewState(actorId)`.
 
 ## Conventions
 

@@ -19,6 +19,8 @@ import { MODULE_ID } from "./constants.mjs";
 import { CreationGuide, isIncomplete, missingSteps } from "./guide.mjs";
 import { LevelUpGuide } from "./levelup.mjs";
 import { LEVEL_UP_SELECTORS } from "./sheet-actions.mjs";
+import { reviewMark } from "./review.mjs";
+import { trace } from "./trace.mjs";
 
 /** Actors whose panel has already been offered in this browser session. */
 const OFFERED = new Set();
@@ -54,6 +56,64 @@ const ANCHORS = [
   ".tab.details",
   ".sheet-body"
 ];
+
+/**
+ * Where the character's name sits in the sheet header.
+ *
+ * Ordered, and every one of them optional: dnd5e has moved this element between
+ * versions, and Tidy shares none of these anchors at all (its own path is in
+ * tidy.mjs). If none match, no mark is drawn and nothing else is affected -
+ * the same rule every other reach into someone else's markup follows here.
+ *
+ * The last entry is the window frame's own title rather than the sheet's, which
+ * is not where we would choose to put it. It is there because a mark that ends
+ * up slightly out of place still tells the player where their character stands,
+ * and no mark at all tells them nothing.
+ */
+const NAME_ANCHORS = [
+  ".sheet-header .document-name",
+  ".document-name",
+  ".sheet-header h1.charname",
+  "h1.charname",
+  ".sheet-header .name-stacked",
+  ".window-header .window-title"
+];
+
+/**
+ * Draws the review state as one circle after the character's name.
+ *
+ * AFTER, not before. The mark is a statement about the character, and reading
+ * it before the name puts a verdict in front of the thing it is about; it also
+ * pushes the name out of the position players find it in on every other sheet.
+ *
+ * Not gated on ownership, unlike the creation button. This is read-only, and
+ * the person who most wants it at a glance is the GM opening somebody else's
+ * character - the one user who is never its owner.
+ */
+function injectReviewBadge(root, actor) {
+  if (!root || !actor) return;
+
+  // Re-rendered sheets would otherwise collect one mark per render.
+  root.querySelectorAll(".pk5e-review-badge").forEach((el) => el.remove());
+
+  const mark = reviewMark(actor);
+  if (!mark) return;
+
+  let anchor = null;
+  for (const selector of NAME_ANCHORS) {
+    anchor = root.querySelector(selector);
+    if (anchor) break;
+  }
+  if (!anchor) {
+    trace("no anchor for the review mark - sheet header markup is unfamiliar");
+    return;
+  }
+
+  // In edit mode the name is an <input>, which cannot hold a child. Sitting
+  // beside it is the same place on screen.
+  if (anchor instanceof HTMLInputElement) anchor.insertAdjacentElement("afterend", mark);
+  else anchor.appendChild(mark);
+}
 
 function inject(app, html) {
   if (!game.settings.get(MODULE_ID, "sheetButton")) return;
@@ -338,6 +398,16 @@ export function registerSheetButton() {
 
   for (const hook of SHEET_HOOKS) {
     Hooks.on(hook, (app, html) => {
+      try {
+        const actor = app.document ?? app.actor;
+        const root = html instanceof HTMLElement ? html : html?.[0];
+        // Its own try block: the mark is decoration, and a sheet that failed to
+        // draw it should still get its button.
+        injectReviewBadge(root, actor);
+      } catch (err) {
+        console.warn(`${MODULE_ID} | Could not mark the review state via ${hook}`, err);
+      }
+
       try {
         inject(app, html);
         maybeAutoOpen(app.document ?? app.actor);

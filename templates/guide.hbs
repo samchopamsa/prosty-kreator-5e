@@ -571,6 +571,14 @@
             {{#if ready}}{{pkT "guide.ready"}}{{else}}{{pkT "guide.toFix" report.problems}}{{/if}}
           </span>
         </div>
+        {{#if review.enabled}}
+        <div class="pk5e-review-state is-{{review.state}}">
+          <span class="pk5e-report-label">{{review.label}}</span>
+          {{#if review.note}}
+          <span class="pk5e-report-hint">{{pkT "review.note" review.note}}</span>
+          {{/if}}
+        </div>
+        {{/if}}
         {{#if failures}}
         <ul class="pk5e-report-list">
           {{#each failures}}
@@ -606,6 +614,10 @@
       {{/each}}
     </span>
     <button type="button" data-action="postSummary">{{pkT "guide.postToChat"}}</button>
+    {{#if review.enabled}}
+    <button type="button" class="pk5e-review-send" data-action="submitReview"
+            {{#unless review.canSubmit}}disabled{{/unless}}>{{review.button}}</button>
+    {{/if}}
     <span class="pk5e-hint">{{progress}}</span>
 
     <span class="pk5e-nav">

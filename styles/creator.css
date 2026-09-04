@@ -2211,3 +2211,141 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   padding-top: 10px;
   border-top: 1px solid var(--pk5e-line);
 }
+
+/* handing a character to the GM (review.mjs) */
+
+/* In the panel: one line above the checklist saying where the character
+   stands. The colours are the ones the checklist already uses, so "waiting"
+   does not read as a fault. */
+.pk5e-review-state {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--pk5e-line);
+  border-radius: 3px;
+  background: var(--pk5e-sunken-soft);
+  font-size: 14px;
+}
+.pk5e-review-state.is-pending { border-left-color: #c08a3e; }
+.pk5e-review-state.is-approved { border-left-color: #4d8a4d; }
+.pk5e-review-state.is-returned { border-left-color: #b34747; }
+
+/* The card in chat. It sits under the summary card, which brings its own
+   layout, so this only spaces the blocks added underneath it. */
+.pk5e-review-card { display: flex; flex-direction: column; gap: 6px; }
+.pk5e-review-card .pk5e-report-list { margin: 0; padding: 0; list-style: none; }
+.pk5e-review-headline { margin: 0; font-weight: 600; }
+.pk5e-review-block { display: flex; flex-direction: column; gap: 3px; }
+.pk5e-review-block h4 {
+  margin: 4px 0 0;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  border-bottom: 1px solid var(--pk5e-line);
+}
+.pk5e-review-gain { margin: 0; font-size: 14px; }
+.pk5e-review-foot { margin: 2px 0 0; font-size: 12px; opacity: 0.7; font-style: italic; }
+
+/* Added to the GM's copy of the message as it renders, never written into the
+   message body - see the header of review.mjs. */
+.pk5e-review-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--pk5e-line);
+}
+.pk5e-review-actions button { flex: 1 1 auto; }
+
+.pk5e-review-decision .pk5e-review-headline { margin-bottom: 2px; }
+.pk5e-review-decision.is-approved { border-left: 2px solid #4d8a4d; padding-left: 6px; }
+.pk5e-review-decision.is-returned { border-left: 2px solid #b34747; padding-left: 6px; }
+
+/* The review state, beside the character's name on the sheet (sheet-button.mjs).
+
+   Sized in em rather than px so it follows whatever the sheet sets for the
+   name - the dnd5e header name is large, the window title is small, and this
+   sits in both depending on which anchor matched. */
+.pk5e-review-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Deliberately small: a status mark, not something to look at. The two
+     numbers are not independent - the gap is in the mark's OWN em, already
+     shrunk by the font-size below - so shrinking the icon pulls it back
+     towards the name, and the margin has to grow to stand still. Both were
+     retuned together to keep the gap where it was at 0.55em.
+
+     The floor matters because the mark lands in three different contexts: the
+     large dnd5e header name, Tidy's smaller one, and - as a last resort - the
+     window title, where a plain 0.42em would come out at about five pixels. */
+  margin-left: 1.18em;
+  font-size: max(0.42em, 0.6rem);
+  line-height: 1;
+  vertical-align: middle;
+  /* The name is a link or an input on some sheets; the mark is neither. */
+  pointer-events: auto;
+  cursor: help;
+}
+.pk5e-review-badge i { font-size: inherit; }
+
+/* Colour is the second signal, never the only one: the four icons differ in
+   shape as well, because a player who cannot tell green from grey would
+   otherwise be reading an unlabelled dot.
+
+   Literal colours, not the module's variables. Those are declared on
+   .pk5e-creator, and this mark is the one thing the module draws outside its
+   own windows - on a sheet where none of them are in scope. "Not sent" takes
+   the sheet's own text colour instead of a grey of ours, so it reads as muted
+   on a dark header and on a light one alike. */
+.pk5e-review-badge.is-none { color: currentColor; opacity: 0.45; }
+.pk5e-review-badge.is-pending { color: #c08a3e; }
+.pk5e-review-badge.is-approved { color: #4d8a4d; }
+.pk5e-review-badge.is-returned { color: #b34747; }
+
+/* ---------------------------------------------------------------------------
+   The review state in the Actors sidebar.
+
+   The same four faces as on the sheet, one per row, plus a count in the
+   directory header that narrows the list to what is waiting. Both are drawn
+   into Foundry's own markup, so everything here is scoped to .directory-item
+   and stays out of the way of core styling.
+   --------------------------------------------------------------------------- */
+
+/* Pushed to the right edge and held there: the row is a flexrow whose name
+   anchor grows, so without this the mark would be squashed against a long
+   name instead of forming a column. The margin from the sheet header would be
+   meaningless here and is reset. */
+.directory-item > .pk5e-review-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-left: 0.5em;
+  cursor: help;
+}
+
+/* Only the waiting rows and the folders holding them survive the filter.
+   Nothing is removed from the page - the filter is a view, and the next
+   render brings the whole list back. */
+.pk5e-pending-only .directory-item.entry:not(.pk5e-pending),
+.pk5e-pending-only .directory-item.folder:not(.pk5e-has-pending) {
+  display: none;
+}
+
+/* The counter sits among Foundry's own small search-row controls, so it
+   borrows their size rather than declaring one. The number is the point of
+   it, and needs to stay legible next to the icon. */
+.pk5e-review-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  flex: 0 0 auto;
+  color: #c08a3e;
+}
+.pk5e-review-filter > span { font-weight: bold; }
+.pk5e-review-filter[aria-pressed="true"] {
+  color: var(--color-text-hyperlink, #78a9d0);
+}

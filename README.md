@@ -8,7 +8,7 @@ Advancement i importer działają dokładnie tak, jak zostały zbudowane. Kreato
 dokłada trzy rzeczy, których brakuje: **kolejność**, **to, o co importer nigdy
 nie pyta** (punktacja cech, języki) i **wykrywanie tego, co zostało pominięte**.
 
-Wersja **2.1.1**.
+Wersja **2.2.0**.
 
 ---
 
@@ -23,7 +23,7 @@ https://github.com/samchopamsa/prosty-kreator-5e/releases/latest/download/module
 
 Ten adres zawsze wskazuje najnowsze wydanie, więc Foundry sam zaproponuje
 aktualizację. Żeby zostać na starszej wersji, wklej adres konkretnego tagu:
-`.../releases/download/v2.1.1/module.json`.
+`.../releases/download/v2.2.0/module.json`.
 
 ### Wymagania
 
@@ -152,6 +152,32 @@ dwa pytania: obrazek z dysku albo odnośnik. Wgrany plik trafia do jednego
 folderu ustalonego przez MG, a portret ląduje na karcie **i** na prototypie
 żetonu.
 
+### Zgłoszenie postaci do akceptacji MG
+
+Wyłączone domyślnie; włącza je jedno ustawienie świata. Gracz kończy kreatora i
+naciska „Zgłoś do MG”. Postać idzie szeptem na czat — wizytówka, a pod nią to,
+czego MG nie odczyta z karty: **okna wyboru pominięte w importerze**. Pominięty
+wybór nie zostawia w danych żadnego śladu, więc bez tego zapisu nie da się go
+odtworzyć; moduł widział, jak okno się zamyka, i zapisał to.
+
+MG zatwierdza albo odsyła z uwagą — przyciski są tylko na jego kopii wiadomości.
+Decyzja wraca do gracza i widać ją w panelu.
+
+Stan widać w trzech miejscach: w panelu, na kroku „Podsumowanie”, na karcie
+postaci — kółko za imieniem, puste / do połowy / zielony ptaszek / czerwony
+wykrzyknik — i przy każdej postaci na liście aktorów. Tylko przy włączonym
+ustawieniu, i widoczne dla każdego, kto może otworzyć kartę.
+
+W nagłówku listy aktorów MG ma dodatkowo licznik oczekujących. Kliknięcie zwija
+listę do samych zgłoszonych postaci, ponowne przywraca całość. Licznika nie ma,
+gdy nic nie czeka, i nie widzi go gracz. Osobnego okna z kolejką nie ma —
+decyzja zapada tam, gdzie zawsze, na karcie na czacie.
+
+Karta postaci **nie jest blokowana**. To zapis ustaleń z papierowym śladem, a nie
+kontrola dostępu: flaga stanu siedzi na postaci, której właścicielem jest gracz,
+więc ktoś z otwartą konsolą może ją sobie nadpisać. Przy stole to nie jest
+problem, który ten mechanizm ma rozwiązywać.
+
 ---
 
 ## Ustawienia
@@ -170,6 +196,7 @@ Najważniejsze (pełna lista w *Konfiguracja modułu*):
 | Panel opisów wewnątrz okna importera | włączone | wyłącz na małym ekranie, gdzie dwie kolumny zwężają listę |
 | Ukryj przycisk awansu importera | wyłączone | tylko stylowanie — przycisk zostaje na karcie, moduł nadal go naciska |
 | Gracze mogą zakładać postacie | wyłączone | wymaga też uprawnienia `ACTOR_CREATE` |
+| Zgłaszanie postaci do akceptacji MG | wyłączone | dokłada przycisk w stopce panelu; MG dostaje szept z tym, co moduł zauważył, i dwa przyciski. Karty nie blokuje |
 
 Jeśli gracze mają sami wgrywać portrety, potrzebują uprawnienia
 `FILES_UPLOAD` (*Konfiguracja* → *Uprawnienia*). Bez niego ekran portretu
@@ -186,6 +213,8 @@ characterCreator.guide()                    // nowa postać
 characterCreator.resume(actorId)            // wróć do zaczętej
 characterCreator.complete(actorId)          // punktacja cech na gotowej karcie
 characterCreator.levelUp(actorId)
+characterCreator.submitReview(actorId)      // zgłoś postać do MG
+characterCreator.reviewState(actorId)       // gdzie stoi zgłoszenie
 
 characterCreator.debug(actorId)             // wszystko, co moduł sądzi o postaci
 characterCreator.debugCompendiums()
@@ -246,7 +275,7 @@ popraw pole `download` na nowy tag (`check.sh` przypilnuje wszystkich trzech),
 a potem:
 
 ```bash
-git tag v2.1.1 && git push origin main v2.1.1
+git tag v2.2.0 && git push origin main v2.2.0
 ```
 
 Paczkę, opis wydania z changeloga i sam release tworzy workflow.

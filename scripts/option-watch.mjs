@@ -39,6 +39,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
+import { t } from "./i18n.mjs";
 
 /**
  * One entry per kind of dialog the importer can put up.
@@ -388,6 +389,27 @@ export function watchOptionDialogs(actor, onChange, onImportEnd) {
 /** Skipped options recorded on this character. */
 export function skippedOptions(actor) {
   return actor?.getFlag?.(MODULE_ID, SKIPPED_FLAG) ?? [];
+}
+
+/**
+ * One line describing a skipped or half-finished choice.
+ *
+ * It lives here rather than where it is drawn, because two windows say it now -
+ * the panel and the card the GM is handed (review.mjs) - and the entry shapes
+ * it reads are this file's own. Each kind reads differently: spells count what
+ * was learned, an ability increase counts the points left over, a dropdown just
+ * sits unset. One generic sentence covered none of them well.
+ */
+export function skippedText(entry) {
+  if (!entry) return "";
+  if (entry.reason !== "partial") {
+    return entry.level
+      ? t("option.skippedAt", entry.label, entry.level)
+      : t("option.skipped", entry.label);
+  }
+  if (entry.total != null) return t("option.partial", entry.label, entry.learned, entry.total);
+  if (entry.remaining != null) return t("option.partialAsi", entry.label, entry.remaining);
+  return t("option.partialSelect", entry.label);
 }
 
 /**

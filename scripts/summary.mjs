@@ -7,7 +7,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 
-const escape = (value) =>
+export const escape = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]

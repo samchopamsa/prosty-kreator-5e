@@ -77,6 +77,8 @@ globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
 const { readRow, watchImporter, importerRect, matchesImporterTitle } =
   await import("../scripts/importer-watch.mjs");
+const { dockPanel, undockPanel } = await import("../scripts/dock.mjs");
+const { decorate: markDirectory } = await import("../scripts/review-directory.mjs");
 
 // --- harness, ten sam co w run.mjs ------------------------------------------
 
@@ -571,6 +573,225 @@ await group("importer: ekran wyboru poziomu", async () => {
   check("ale zaznaczenie juz zostaje", tickedIndexes(noOk), [0]);
 
   document.querySelectorAll(".ve-app").forEach((app) => app.remove());
+});
+
+// --- dokowanie panelu --------------------------------------------------------
+
+group("panel: okno, w ktore sie dokuje", () => {
+  // Ten sam tytul rozpoznawal importer-watch, a dock.mjs nie - trzymal swoja
+  // kopie wyrazenia, dopasowana tylko do "Import Classes". Skutek przy drugiej
+  // klasie byl gorszy niz brak dokowania: bez gospodarza watchForHost() nadaje
+  // panelowi klase pk5e-dock-waiting, ktora w stylach jest display:none. Panel
+  // otwieral sie i natychmiast znikal, wiec gracz nie widzial zadnych opisow.
+
+  // jsdom nie liczy layoutu i offsetParent jest w nim zawsze null, a hostWindow()
+  // pyta o to jako o "czy okno jest widoczne". Podstawiamy je, bo testowana jest
+  // zgodnosc tytulu, nie widocznosc.
+  const buildHost = (title) => {
+    const host = document.createElement("div");
+    host.className = "application ve-app";
+    host.innerHTML =
+      `<h1 class="window-title">${title}</h1>` +
+      '<div class="window-content"><div class="veapp__list"></div></div>';
+    document.body.appendChild(host);
+    Object.defineProperty(host, "offsetParent", { get: () => document.body });
+    return host;
+  };
+
+  const fakePanel = () => {
+    const element = document.createElement("div");
+    element.className = "application";
+    document.body.appendChild(element);
+    return { element };
+  };
+
+  const first = buildHost("Import Classes &amp; Subclasses");
+  const panel = fakePanel();
+  check("panel dokuje sie przy pierwszej klasie", dockPanel(panel), true);
+  check("i element faktycznie siedzi w oknie importera", first.contains(panel.element), true);
+  undockPanel(panel);
+  first.remove();
+
+  const later = buildHost("Filter/Search for Class and Subclass");
+  const panel2 = fakePanel();
+  check("i tak samo przy drugiej klasie", dockPanel(panel2), true);
+  check("element jest w oknie multiclassu", later.contains(panel2.element), true);
+  undockPanel(panel2);
+  check("po oddokowaniu lista wraca na swoje miejsce",
+    later.querySelectorAll(".veapp__list").length, 1);
+  check("i nie zostaje po nas zaden wiersz dokujacy",
+    document.querySelectorAll(".pk5e-dock-row").length, 0);
+  later.remove();
+
+  // Ekran wyboru poziomow ma podobny tytul i wlasna robote (level-select.mjs).
+  // Doklejenie sie do niego byloby regresja w druga strone.
+  const levels = buildHost("Select Class and Subclass Levels");
+  const panel3 = fakePanel();
+  check("ekran poziomow nie jest gospodarzem", dockPanel(panel3), false);
+  levels.remove();
+
+  document.querySelectorAll(".ve-app, .application").forEach((el) => el.remove());
+});
+
+// --- katalog aktorow ---------------------------------------------------------
+
+group("katalog: stan zgloszenia w pasku bocznym", () => {
+  // Markup zgrany z zywego Foundry v14 (build 367):
+  // templates/sidebar/partials/document-partial.hbs i directory/header.hbs.
+  // Nie odtworzony z pamieci - o to samo chodzi, co przy fixture importera.
+  const buildDirectory = (entries) => {
+    const root = document.createElement("section");
+    root.className = "tab sidebar-tab directory flexcol";
+    root.innerHTML = `
+      <header class="directory-header flexcol">
+        <div class="header-actions action-buttons flexrow"></div>
+        <search><input type="search" name="search"></search>
+      </header>
+      <ol class="directory-list plain"></ol>`;
+    const list = root.querySelector(".directory-list");
+
+    const addRow = (into, id, name) => {
+      const li = document.createElement("li");
+      li.className = "directory-item entry document actor flexrow";
+      li.dataset.entryId = id;
+      li.innerHTML = `<a class="entry-name ellipsis">${name}</a>`;
+      into.appendChild(li);
+    };
+
+    for (const entry of entries) {
+      if (!entry.folder) {
+        addRow(list, entry.id, entry.name);
+        continue;
+      }
+      let folder = list.querySelector(`[data-folder-id="${entry.folder}"]`);
+      if (!folder) {
+        folder = document.createElement("li");
+        folder.className = "directory-item folder flexcol";
+        folder.dataset.folderId = entry.folder;
+        folder.innerHTML =
+          `<header class="folder-header"><span class="folder-name">${entry.folder}</span></header>
+           <ol class="subdirectory plain"></ol>`;
+        list.appendChild(folder);
+      }
+      addRow(folder.querySelector(".subdirectory"), entry.id, entry.name);
+    }
+
+    document.body.appendChild(root);
+    return root;
+  };
+
+  const actor = (id, state) => ({
+    id,
+    type: "character",
+    getFlag: (scope, key) =>
+      scope === "prosty-kreator-5e" && key === "review" && state
+        ? { state, at: Date.UTC(2026, 8, 1) }
+        : null
+  });
+
+  const world = (actors, { flow = true, gm = true } = {}) => {
+    const byId = new Map(actors.map((a) => [a.id, a]));
+    globalThis.game = {
+      user: { isGM: gm },
+      actors: { get: (id) => byId.get(id) ?? null },
+      settings: { get: (scope, key) => (key === "reviewFlow" ? flow : false) }
+    };
+  };
+
+  const faces = (root) =>
+    Array.from(root.querySelectorAll(".pk5e-review-badge")).map(
+      (el) => el.className.replace("pk5e-review-badge ", "")
+    );
+
+  // 1. Wylaczony przeplyw nie dotyka paska w ogole.
+  world([actor("a", "pending")], { flow: false });
+  let root = buildDirectory([{ id: "a", name: "Aria" }]);
+  markDirectory(root);
+  check("z wylaczona opcja pasek zostaje nietkniety", faces(root).length, 0);
+  check("i nie ma licznika", root.querySelectorAll(".pk5e-review-filter").length, 0);
+  root.remove();
+
+  // 2. Kazda postac dostaje swoja twarz, nie tylko oczekujace.
+  world([actor("a", "pending"), actor("b", "approved"), actor("c", "")]);
+  root = buildDirectory([
+    { id: "a", name: "Aria" },
+    { id: "b", name: "Borin" },
+    { id: "c", name: "Cyra" }
+  ]);
+  markDirectory(root);
+  check("kazdy wiersz dostaje swoja twarz",
+    faces(root), ["is-pending", "is-approved", "is-none"]);
+  check("znak siedzi na wierszu, nie w nazwie z wielokropkiem",
+    root.querySelector(".pk5e-review-badge").parentElement.classList.contains("entry"), true);
+  check("oczekujacy wiersz jest oznaczony",
+    root.querySelectorAll(".directory-item.pk5e-pending").length, 1);
+
+  // 3. Licznik: tylko dla MG, tylko gdy cos czeka, w rzedzie wyszukiwania.
+  check("licznik pokazuje liczbe oczekujacych",
+    root.querySelector(".pk5e-review-filter span")?.textContent, "1");
+  check("i siedzi w rzedzie wyszukiwania, nie wsrod duzych przyciskow",
+    !!root.querySelector("search .pk5e-review-filter"), true);
+
+  // 4. Filtr chowa wszystko poza oczekujacymi i wraca do stanu wyjsciowego.
+  root.querySelector(".pk5e-review-filter").dispatchEvent(new window.Event("click"));
+  check("filtr wlacza sie na katalogu",
+    root.classList.contains("pk5e-pending-only"), true);
+  root.querySelector(".pk5e-review-filter").dispatchEvent(new window.Event("click"));
+  check("i wylacza z powrotem",
+    root.classList.contains("pk5e-pending-only"), false);
+  root.remove();
+
+  // 5. Ponowne rysowanie nie mnozy znakow - pasek przerysowuje sie czesto.
+  world([actor("a", "pending")]);
+  root = buildDirectory([{ id: "a", name: "Aria" }]);
+  markDirectory(root);
+  markDirectory(root);
+  check("dwa przerysowania to dalej jeden znak", faces(root).length, 1);
+  check("i jeden licznik", root.querySelectorAll(".pk5e-review-filter").length, 1);
+  root.remove();
+
+  // 6. Gracz widzi twarze, ale nie licznik: to liczba cudzych postaci,
+  //    z ktorymi nic nie zrobi.
+  world([actor("a", "pending")], { gm: false });
+  root = buildDirectory([{ id: "a", name: "Aria" }]);
+  markDirectory(root);
+  check("gracz widzi znak", faces(root), ["is-pending"]);
+  check("ale nie licznik", root.querySelectorAll(".pk5e-review-filter").length, 0);
+  root.remove();
+
+  // 7. Nic nie czeka - licznika nie ma, choc znaki sa.
+  world([actor("b", "approved")]);
+  root = buildDirectory([{ id: "b", name: "Borin" }]);
+  markDirectory(root);
+  check("bez oczekujacych nie ma po co pokazywac licznika",
+    root.querySelectorAll(".pk5e-review-filter").length, 0);
+  check("ale zatwierdzona postac dalej ma swoj znak", faces(root), ["is-approved"]);
+  root.remove();
+
+  // 8. Folder z oczekujaca postacia otwiera sie na czas filtrowania
+  //    i zamyka po nim - inaczej filtr chowalby to, co ma pokazac.
+  world([actor("a", "pending"), actor("c", "")]);
+  root = buildDirectory([
+    { id: "a", name: "Aria", folder: "Gracze" },
+    { id: "c", name: "Cyra", folder: "BN" }
+  ]);
+  markDirectory(root);
+  const players = root.querySelector('[data-folder-id="Gracze"]');
+  const npcs = root.querySelector('[data-folder-id="BN"]');
+  check("folder z oczekujaca postacia jest oznaczony",
+    players.classList.contains("pk5e-has-pending"), true);
+  check("a folder bez niej nie", npcs.classList.contains("pk5e-has-pending"), false);
+  root.querySelector(".pk5e-review-filter").dispatchEvent(new window.Event("click"));
+  check("filtr otwiera folder, ktory ma co pokazac",
+    players.classList.contains("expanded"), true);
+  root.querySelector(".pk5e-review-filter").dispatchEvent(new window.Event("click"));
+  check("i zamyka go z powrotem", players.classList.contains("expanded"), false);
+  check("nie zostawiajac po sobie znacznika",
+    players.hasAttribute("data-pk5e-opened"), false);
+  root.remove();
+
+  // Zaslepka, ktora zastalismy - kolejne grupy jej oczekuja.
+  globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 });
 
 // --- wynik -------------------------------------------------------------------

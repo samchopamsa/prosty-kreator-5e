@@ -42,7 +42,7 @@ import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
 import { rulesChecks } from "./checkup.mjs";
 import { folderChoices, uniqueActorName, tokenNameUpdate } from "./naming.mjs";
-import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
+import { watchOptionDialogs, skippedOptions, clearSkippedOptions, skippedText } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
 import { buildSteps } from "./steps.mjs";
 import { watchImportEnd } from "./import-end.mjs";
@@ -60,6 +60,7 @@ import {
 import { choosePortrait } from "./portrait.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
+import { submitForReview, reviewContext } from "./review.mjs";
 import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, wait } from "./sheet-actions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -227,7 +228,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       finalise: CreationGuide.onFinalise,
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
-      recheck: CreationGuide.onRecheck
+      recheck: CreationGuide.onRecheck,
+      submitReview: CreationGuide.onSubmitReview
     }
   };
 
@@ -593,22 +595,14 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         // single level can be undone, which is far less destructive.
         canDelevel: Number(entry.level) > 1 && classes.length > 0,
         classId: classes[0]?.id ?? null,
-        // Each kind of unfinished choice reads differently: spells count what
-        // was learned, an ability increase counts points left, a dropdown just
-        // sits unset. One generic sentence covered none of them well.
-        text: (() => {
-          if (entry.reason !== "partial") {
-            return entry.level
-              ? t("option.skippedAt", entry.label, entry.level)
-              : t("option.skipped", entry.label);
-          }
-          if (entry.total != null) return t("option.partial", entry.label, entry.learned, entry.total);
-          if (entry.remaining != null) return t("option.partialAsi", entry.label, entry.remaining);
-          return t("option.partialSelect", entry.label);
-        })()
+        // Each kind of unfinished choice reads differently, so the wording
+        // lives with the entry shape it reads, in option-watch.mjs - the card
+        // sent to the GM says the same thing.
+        text: skippedText(entry)
       })),
       failures: report.checks.filter((c) => !c.ok),
       ready: report.ready,
+      review: reviewContext(actor, { problems: report.problems ?? 0 }),
       players: game.users
         .filter((u) => !u.isGM)
         .map((u) => ({
@@ -1376,6 +1370,20 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!this.actor) return;
     const message = await postSummary(this.actor);
     if (message) ui.notifications.info("Summary posted to chat.");
+  }
+
+  /**
+   * Hands the character to the GM (review.mjs).
+   *
+   * Deliberately allowed while the checklist still has findings on it: whether
+   * a warning matters is the GM's call, not this panel's, and a player who
+   * cannot hand in an imperfect character simply stops using the mechanism.
+   * The button says how many there are, so nobody sends one by accident.
+   */
+  static async onSubmitReview() {
+    if (!this.actor) return;
+    const record = await submitForReview(this.actor);
+    if (record) this.render();
   }
 
   static onRecheck() {

@@ -63,6 +63,9 @@ const { STANDARD_ARRAY, POINT_BUY_TOTAL, newState, setMethod, stepAbility, baseV
 const { flattenLanguages, keyForName, languageLabels, selectionFor, buildLanguageView,
   applyLanguages } =
   await import("../scripts/languages-core.mjs");
+const { reviewState, canSubmit, reviewPayload, buildReviewCard, gainLines, reviewBadge,
+  cardStance } =
+  await import("../scripts/review.mjs");
 
 // --- a tiny test harness ----------------------------------------------------
 
@@ -1943,6 +1946,198 @@ await group("languages", async () => {
     written["flags.prosty-kreator-5e.languages"].count, 2);
 
   CONFIG.DND5E.languages = savedLanguages;
+});
+
+// --- handing a character to the GM -------------------------------------------
+
+group("review: what the GM is told", () => {
+  // Only the parts that need no game: the state machine, what goes into the
+  // card, and that nothing a player typed reaches it as markup. Sending the
+  // message itself needs a live world and is checked there.
+  const actorWith = (flags = {}) => ({
+    id: "a1",
+    name: "Wren",
+    type: "character",
+    img: "icons/svg/mystery-man.svg",
+    items: [],
+    system: {
+      abilities: {},
+      attributes: { hp: { max: 8 }, ac: { value: 13 }, movement: { walk: 30 } }
+    },
+    getFlag: (scope, key) => flags[key] ?? null
+  });
+
+  check("a character nobody has sent anywhere", reviewState(actorWith()), "");
+  check("a state from some later version is not passed through",
+    reviewState(actorWith({ review: { state: "escalated" } })), "");
+  check("waiting", reviewState(actorWith({ review: { state: "pending" } })), "pending");
+
+  check("sending again while the GM has not answered would only spam them",
+    canSubmit("pending"), false);
+  check("a character sent back can be sent again", canSubmit("returned"), true);
+  check("and so can an approved one, after it changes", canSubmit("approved"), true);
+
+  const checks = [
+    { ok: true, level: "error", label: "Class", hint: "" },
+    { ok: false, level: "error", label: "Hit points", hint: "at zero" },
+    { ok: false, level: "warning", label: "Languages", hint: "none" }
+  ];
+
+  const skipped = actorWith({
+    skippedOptions: [{ label: "Fighting Style", level: 1 }]
+  });
+  const payload = reviewPayload(skipped, { checks, rulesRead: true });
+
+  check("passed checks are not findings", payload.failures.length, 2);
+  check("errors and warnings are counted apart",
+    [payload.counts.errors, payload.counts.warnings], [1, 1]);
+  check("a skipped dialog is carried separately", payload.counts.skipped, 1);
+
+  const card = buildReviewCard(skipped, payload);
+  check("the card names the dialog that was skipped",
+    card.includes("Fighting Style"), true);
+  check("and the ordinary findings too", card.includes("Hit points"), true);
+  // The whole point of the card: a skipped choice leaves nothing on the sheet,
+  // so it goes above the checklist rather than below it.
+  check("skipped choices come before the checklist",
+    card.indexOf("Fighting Style") < card.indexOf("Hit points"), true);
+
+  // "found nothing" and "could not look" are the same empty list (checkup.mjs),
+  // so the card has to say which one it was.
+  const quiet = reviewPayload(actorWith(), { checks: [], rulesRead: false });
+  check("a card built without rules data admits it",
+    buildReviewCard(actorWith(), quiet).includes("did not run"), true);
+  check("and one built with it does not",
+    buildReviewCard(actorWith(), reviewPayload(actorWith(), { checks: [], rulesRead: true }))
+      .includes("did not run"), false);
+
+  // The one string in this module that one user types and another one reads.
+  const hostile = actorWith({
+    skippedOptions: [{ label: '<img src=x onerror="alert(1)">', level: null }]
+  });
+  const hostileCard = buildReviewCard(hostile, reviewPayload(hostile, { rulesRead: true }));
+  check("a name from a dialog cannot bring markup with it",
+    hostileCard.includes("<img src=x"), false);
+  check("it arrives escaped instead", hostileCard.includes("&lt;img src=x"), true);
+
+  // What each step delivered, read from the gains flag rather than the sheet:
+  // the question is what arrived during creation, not what is there now.
+  const levelled = actorWith({
+    gains: { class: { hp: 10, items: [{ type: "feat", name: "Rage" }, { type: "class", name: "Barbarian" }] } }
+  });
+  const lines = gainLines(levelled);
+  check("one line per step that recorded anything", lines.length, 1);
+  check("the feature is in it", lines[0].text.includes("Rage"), true);
+  check("the class itself is not - it is the heading already",
+    lines[0].text.includes("Barbarian"), false);
+});
+
+// --- the mark on the sheet ---------------------------------------------------
+
+group("review: the mark beside the name", () => {
+  // The one piece of this feature that is drawn outside our own windows, so
+  // what it decides matters more than usual: it is the only thing a GM sees
+  // without opening anything.
+  const actorWith = (flags = {}) => ({
+    id: "a1",
+    name: "Wren",
+    type: "character",
+    getFlag: (scope, key) => flags[key] ?? null
+  });
+
+  const withFlow = (on, fn) => {
+    const before = globalThis.game.settings;
+    globalThis.game.settings = { get: (scope, key) => (key === "reviewFlow" ? on : null) };
+    try { return fn(); } finally { globalThis.game.settings = before; }
+  };
+
+  check("with the setting off there is nothing to draw",
+    withFlow(false, () => reviewBadge(actorWith())), null);
+
+  // A world that never turned this on should look exactly as it did before.
+  check("and that holds even for a character somebody once submitted",
+    withFlow(false, () => reviewBadge(actorWith({ review: { state: "approved" } }))), null);
+
+  check("an NPC is not a character being built",
+    withFlow(true, () => reviewBadge({ ...actorWith(), type: "npc" })), null);
+  check("and neither is nothing at all",
+    withFlow(true, () => reviewBadge(null)), null);
+
+  const face = (flags) => withFlow(true, () => reviewBadge(actorWith(flags)).icon);
+
+  check("never submitted: an empty circle", face({}), "fa-regular fa-circle");
+  check("waiting: a half circle", face({ review: { state: "pending" } }),
+    "fa-solid fa-circle-half-stroke");
+  check("approved: the tick", face({ review: { state: "approved" } }),
+    "fa-solid fa-circle-check");
+  // The case a two-state mark would get wrong: sent back is not the same as
+  // never sent, and it is the state the player has to do something about.
+  check("sent back is its own face, not the empty one",
+    face({ review: { state: "returned" } }), "fa-solid fa-circle-exclamation");
+
+  // A state written by some later version must not fall through to a face that
+  // claims the character is fine.
+  check("an unknown state reads as not submitted",
+    face({ review: { state: "escalated" } }), "fa-regular fa-circle");
+
+  // The tooltip is the panel's sentence, from the same function, so the two
+  // cannot drift apart.
+  const badge = withFlow(true, () => reviewBadge(actorWith({ review: { state: "approved", at: 0 } })));
+  check("the mark carries a sentence, not just a colour", badge.label.length > 0, true);
+  check("and the state, for the stylesheet", badge.state, "approved");
+});
+
+// --- which round a card belongs to -------------------------------------------
+
+group("review: what a card in the chat log can still do", () => {
+  // The bug this exists for: the GM sent a character back, the player fixed it
+  // and sent it again, and the new card had no buttons. The flag is written
+  // after the message on purpose, so while that card rendered the actor still
+  // carried "returned" - and a card that only asked "what is the state now"
+  // answered with the previous round's decision.
+  const at = (t, state) => ({
+    id: "a1",
+    type: "character",
+    getFlag: (scope, key) => (key === "review" ? { state, at: t } : null)
+  });
+
+  const T1 = 1000;
+  const T2 = 2000;
+
+  check("no character left to act on", cardStance(null, { sentAt: T1 }), "gone");
+
+  check("the card just sent, nothing decided yet",
+    cardStance(at(T1, "pending"), { sentAt: T1 }), "open");
+  check("the card the GM has answered",
+    cardStance(at(T1, "approved"), { sentAt: T1 }), "decided");
+
+  // The reported bug, in one line.
+  check("a resubmission is open even while the old decision is still on the actor",
+    cardStance(at(T1, "returned"), { sentAt: T2 }), "open");
+  // Same shape, and the reason it also bit a second GM: the message and the
+  // flag arrive as two separate broadcasts, in no guaranteed order.
+  check("and the same holds for an approval from the previous round",
+    cardStance(at(T1, "approved"), { sentAt: T2 }), "open");
+
+  // The other half of the same bug: with the state back to pending, LAST
+  // round's card grew a fresh pair of buttons and the GM could approve a
+  // character from a report that had been superseded.
+  check("the older card does not come back to life",
+    cardStance(at(T2, "pending"), { sentAt: T1 }), "superseded");
+
+  // A decision always wins over an older card, whichever way it went.
+  check("an old card shows the decision that came after it",
+    cardStance(at(T2, "returned"), { sentAt: T1 }), "decided");
+
+  // Cards sent before this timestamp existed carry no `at`. They fall back to
+  // reading the live state, which is what every card used to do.
+  check("a card from before the timestamp still reads the state",
+    cardStance(at(T2, "approved"), {}), "decided");
+  check("and is still open while nothing has been decided",
+    cardStance(at(T2, "pending"), {}), "open");
+
+  // A character whose flag was wiped by hand is not a character with a verdict.
+  check("no record at all reads as open", cardStance(at(0, undefined), { sentAt: T1 }), "open");
 });
 
 // --- result ------------------------------------------------------------------

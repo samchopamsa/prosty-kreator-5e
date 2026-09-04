@@ -37,6 +37,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
+import { openImporterPanel } from "./importer-panel.mjs";
 import { readLevelBefore, recordLevelGains, levelGainTitle, gainSections } from "./gains.mjs";
 import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
@@ -269,6 +270,19 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         if (actor.sheet.rendered) {
           await actor.sheet.render();
           await wait(500);
+        }
+      }
+
+      // The same reading panel the class step opens. The importer's level-up
+      // dialog is also where a second class is chosen, and choosing one out of
+      // a list of bare names is the moment descriptions are worth most. With
+      // the panel docked this is redundant - the host watch opens it for any
+      // importer window - but with docking off nothing else would.
+      if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
+        try {
+          openImporterPanel();
+        } catch (err) {
+          console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
         }
       }
 

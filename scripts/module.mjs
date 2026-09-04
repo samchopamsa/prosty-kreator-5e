@@ -25,6 +25,8 @@ import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { selfTest, captureImporter, captureDialog } from "./selftest.mjs";
 import { DEFAULT_PORTRAIT_FOLDER } from "./portrait.mjs";
+import { registerReviewHooks, submitForReview, reviewState } from "./review.mjs";
+import { registerReviewDirectory } from "./review-directory.mjs";
 
 Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "defaultLanguage", {
@@ -264,6 +266,19 @@ Hooks.once("init", () => {
     type: Boolean,
     default: true
   });
+
+  game.settings.register(MODULE_ID, "reviewFlow", {
+    name: "Let players hand a finished character to the GM",
+    hint:
+      "Adds a button to the panel that whispers the character to the GM along with what this module " +
+      "noticed about it - including choices skipped inside the importer, which leave no trace on the " +
+      "sheet at all. The GM approves it or sends it back from the chat message. It records a " +
+      "decision; it does not lock the character.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: false
+  });
 });
 
 registerTranslationHelper();
@@ -280,6 +295,12 @@ registerSheetButton();
 registerTidyControls();
 registerBrowserTweaks();
 registerContextMenu();
+// Only a Hooks.on: the buttons it adds appear on the GM copy of a message this
+// module sent, so a world with the setting off never has one to decorate.
+registerReviewHooks();
+// Same again for the Actors sidebar: it checks the setting on every render,
+// so a world with the flow off gets an untouched directory.
+registerReviewDirectory();
 
 Hooks.once("ready", () => {
   // Hidden: this is for working out why something did or did not happen, not a
@@ -372,6 +393,10 @@ Hooks.once("ready", () => {
     reference: () => new ClassReference().render(true),
     importerPanel: () => openImporterPanel(),
     levelUp: (actorId) => openLevelUp(actorId),
+    // Handing a character to the GM, and where it stands - both only
+    // verifiable in a live world, so they are here rather than in a test.
+    submitReview: (actorId) => submitForReview(game.actors.get(actorId)),
+    reviewState: (actorId) => reviewState(game.actors.get(actorId)),
     debug: (actorId) => debugActor(actorId),
     debugCompendiums: () => debugCompendiums(),
     // Czy przedmioty na karcie nosza stemple importera - od tego zalezy, czy

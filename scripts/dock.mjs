@@ -37,9 +37,24 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
+import { matchesImporterTitle } from "./importer-watch.mjs";
 
-/** The window we dock into. Only this one: it is the one with room. */
-const HOST_TITLE = /Import Classes/i;
+/**
+ * The window we dock into, by the same rule that reads its rows.
+ *
+ * TWO TITLES, ONE WINDOW. Adding a first class calls it "Import Classes &
+ * Subclasses"; levelling up and multiclassing reach the same list under
+ * "Filter/Search for Class and Subclass". A local /Import Classes/ here matched
+ * only the first, and the effect on a multiclass was worse than no docking:
+ * with no host found, watchForHost() puts the panel into pk5e-dock-waiting,
+ * which is display:none. So a player adding a second class had the panel opened
+ * for them and then hidden, and saw no descriptions at all - the symptom this
+ * whole file was supposed to have removed.
+ *
+ * The rule lives in importer-watch.mjs and is imported rather than copied,
+ * because a copy is what let the two drift apart in the first place: that file
+ * learned about the second title (2026-08-28) and this one did not.
+ */
 
 /** Where the panel's element came from, so it can be put back. */
 let origin = null;
@@ -48,7 +63,7 @@ let observer = null;
 function hostWindow() {
   return [...document.querySelectorAll("div.application.ve-app")].find(
     (win) =>
-      win.offsetParent && HOST_TITLE.test(win.querySelector(".window-title")?.textContent ?? "")
+      win.offsetParent && matchesImporterTitle(win.querySelector(".window-title")?.textContent)
   );
 }
 
