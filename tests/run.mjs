@@ -53,7 +53,6 @@ const { takeSnapshot, levelChange } = await import("../scripts/snapshot.mjs");
 const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups, classesIn,
   dropLevelGainsFor } = await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
-const { tokenImageUpdate, isPlaceholderImage } = await import("../scripts/portrait.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
@@ -1228,101 +1227,6 @@ group("naming: the token follows the character", () => {
     "nothing to do when it already matches",
     tokenNameUpdate({ name: "Keray", prototypeToken: { name: "Łucznik" } }, "Łucznik", placeholders),
     {}
-  );
-});
-
-group("portrait: the token picture follows the portrait", () => {
-  const mystery = "icons/svg/mystery-man.svg";
-  const face = "assets/portrety/keray.webp";
-
-  // The one measured in the live world (2026-09-10): every fresh character
-  // there wore the system's own stand-in, and none wore Foundry's. A rule that
-  // knew only about the mystery man would have matched nothing at all.
-  const dnd5eDefault = "systems/dnd5e/icons/svg/actors/character.svg";
-
-  check("an unset token picture counts as a placeholder", isPlaceholderImage(""), true);
-  check("so does the mystery man", isPlaceholderImage(mystery), true);
-  check("so does the dnd5e stand-in, which is the one really seen",
-    isPlaceholderImage(dnd5eDefault), true);
-  check("so does anything in the core icon set", isPlaceholderImage("icons/svg/wolf.svg"), true);
-  check("a real picture does not", isPlaceholderImage(face), false);
-  check("and neither does an imported one that merely sits deep in a system folder",
-    isPlaceholderImage("systems/dnd5e/tokens/beast/Wolf.webp"), false);
-
-  check(
-    "the dnd5e stand-in is replaced like any other",
-    tokenImageUpdate({ img: dnd5eDefault, prototypeToken: { texture: { src: dnd5eDefault } } }, face),
-    { "prototypeToken.texture.src": face }
-  );
-
-  // The complaint this exists for: the portrait appears on the sheet and the
-  // token is still the mystery man, with nothing on screen to say why.
-  check(
-    "the mystery man is replaced",
-    tokenImageUpdate({ img: mystery, prototypeToken: { texture: { src: mystery } } }, face),
-    { "prototypeToken.texture.src": face }
-  );
-  check(
-    "an empty token picture is filled in",
-    tokenImageUpdate({ img: mystery, prototypeToken: { texture: { src: "" } } }, face),
-    { "prototypeToken.texture.src": face }
-  );
-  check(
-    "so is one still showing the portrait being replaced",
-    tokenImageUpdate(
-      { img: "assets/portrety/old.webp", prototypeToken: { texture: { src: "assets/portrety/old.webp" } } },
-      face
-    ),
-    { "prototypeToken.texture.src": face }
-  );
-
-  // The case worth protecting, the same one as for names: a token deliberately
-  // showing something else.
-  check(
-    "a deliberately different token picture is left alone",
-    tokenImageUpdate(
-      { img: mystery, prototypeToken: { texture: { src: "assets/tokeny/wilk.webp" } } },
-      face
-    ),
-    {}
-  );
-  check(
-    "nothing to do when it already matches",
-    tokenImageUpdate({ img: mystery, prototypeToken: { texture: { src: face } } }, face),
-    {}
-  );
-  check(
-    "nothing to do without a new picture",
-    tokenImageUpdate({ img: face, prototypeToken: { texture: { src: mystery } } }, ""),
-    {}
-  );
-
-  // A dynamic ring keeps its own copy of the picture. Empty means "use
-  // texture.src", so it is left empty rather than filled in.
-  check(
-    "an empty ring subject is left empty",
-    tokenImageUpdate(
-      { img: mystery, prototypeToken: { texture: { src: mystery }, ring: { subject: { texture: "" } } } },
-      face
-    ),
-    { "prototypeToken.texture.src": face }
-  );
-  check(
-    "a ring subject holding the old portrait follows too",
-    tokenImageUpdate(
-      {
-        img: "assets/portrety/old.webp",
-        prototypeToken: {
-          texture: { src: "assets/portrety/old.webp" },
-          ring: { subject: { texture: "assets/portrety/old.webp" } }
-        }
-      },
-      face
-    ),
-    {
-      "prototypeToken.texture.src": face,
-      "prototypeToken.ring.subject.texture": face
-    }
   );
 });
 

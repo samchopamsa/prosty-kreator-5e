@@ -15,6 +15,24 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.3.1
+
+**Wycofanie 2.3.0: moduł nie zmienia już systemowego zachowania Foundry'ego.**
+Foundry celowo trzyma portret i obrazek tokena jako dwie niezależne rzeczy, a
+2.3.0 wpinało się globalnie w `updateActor` i wiązało je dla każdej postaci w
+świecie — także wtedy, gdy obrazek ustawiał ktoś zupełnie poza tym modułem, i
+także dla tokenów stojących już na scenach. To jest zmiana w tym, jak działa
+sam system, a nie w tym, jak działa kreator, i taka nie jest rolą tego modułu.
+Cofnięte w całości: hook, synchronizacja tokenów na scenach i obsługa pierścienia
+dynamicznego tokena.
+
+Bez zmian zostaje to, co ekran portretu w kreatorze robił od zawsze: portret
+ustawiony **tym ekranem** trafia równocześnie na kartę i na prototyp tokena. To
+jedno działanie w jednym miejscu, na wyraźne żądanie gracza — nie reguła
+narzucona całemu światu.
+
+---
+
 ## 2.3.0
 
 **Obrazek postaci staje się też obrazkiem tokena.** Foundry trzyma portret i
