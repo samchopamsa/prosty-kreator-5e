@@ -15,6 +15,33 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.3.0
+
+**Obrazek postaci staje się też obrazkiem tokena.** Foundry trzyma portret i
+obrazek tokena niezależnie, więc ustawienie jednego zostawiało drugi jako
+zastępczą sylwetkę — a gracz, który właśnie zobaczył swoją twarz na karcie, nie
+ma powodu podejrzewać, że gdzieś w ustawieniach tokena siedzi drugi obrazek.
+Ekran portretu w kreatorze ustawiał oba od zawsze; teraz to samo dzieje się przy
+portrecie ustawionym **poza panelem** — kliknięciem portretu na karcie,
+upuszczeniem pliku, importem.
+
+Token idzie za portretem tylko wtedy, gdy nosi obrazek, którego nikt nie wybrał:
+zastępczy, żaden, albo dokładnie ten portret, który właśnie jest wymieniany.
+Token ustawiony celowo — wilk dla druida w wild shape, kaptur na postaci, której
+twarz jest tajemnicą — zostaje nietknięty. Zastępczy obrazek rozpoznawany jest po
+ścieżce, a nie po jednej stałej: zmierzone na żywym świecie (2026-09-10, 10
+postaci i 69 aktorów) świeża postać dnd5e nosi `character.svg` z katalogu
+systemu, a mystery mana Foundry'ego nie nosił nikt.
+
+Tokeny stojące już na scenach idą za tym samym — tylko podlinkowane, bo
+niepodlinkowany token jest osobną kopią z własnym życiem. Zmiana samego prototypu
+nie robiłaby nic tokenowi wyciągniętemu wczoraj, a „dobrze na karcie, dobrze w
+ustawieniach, źle na mapie” to najgorszy z trzech stanów. Pierścień dynamicznego
+tokena trzyma własną kopię obrazka i jest podmieniany razem z resztą, inaczej
+pokazywałby dalej starą twarz.
+
+---
+
 ## 2.2.2
 
 **Panel z opisami dokuje się także przy awansie.** Przy dodawaniu klasy panel

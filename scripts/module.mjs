@@ -24,7 +24,7 @@ import { debugFluff } from "./class-text.mjs";
 import { startTokenNameSync } from "./naming.mjs";
 import { LevelUpGuide, openLevelUp } from "./levelup.mjs";
 import { selfTest, captureImporter, captureDialog } from "./selftest.mjs";
-import { DEFAULT_PORTRAIT_FOLDER } from "./portrait.mjs";
+import { DEFAULT_PORTRAIT_FOLDER, startTokenImageSync } from "./portrait.mjs";
 import { registerReviewHooks, submitForReview, reviewState } from "./review.mjs";
 import { registerReviewDirectory } from "./review-directory.mjs";
 
@@ -384,6 +384,11 @@ Hooks.once("ready", () => {
   // again - so renaming a character left its token saying "New Character" on
   // every hover.
   startTokenNameSync(["New Character", /^New Character for .+$/, /^New Character \(\d+\)$/]);
+
+  // The same for the picture: Foundry keeps the portrait and the token image
+  // apart, so setting one on the sheet left the token as the mystery man and
+  // the player digging through the token configuration to find out why.
+  startTokenImageSync();
 
   const api = {
     guide: () => CreationGuide.start(),
