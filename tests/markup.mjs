@@ -623,6 +623,28 @@ group("panel: okno, w ktore sie dokuje", () => {
     document.querySelectorAll(".pk5e-dock-row").length, 0);
   later.remove();
 
+  // Okno, ktore importer pokazuje przy level upie, nie musi miec tego samego
+  // ksztaltu co okno dodawania klasy: tytul potrafi siedziec w golym h1 w
+  // naglowku, a korzen nie musi niesc klasy "application". importer-watch.mjs
+  // czytal oba ksztalty, dock.mjs tylko pierwszy - i rozjazd byl niewidoczny,
+  // bo panel dalej sledzil podswietlony wiersz i pokazywal wlasciwy tekst,
+  // tylko przestawal wchodzic do srodka okna. Gracz widzial przy level upie
+  // plywajace okienko zamiast panelu w oknie. Stad jeden finder dla obu.
+  const levelUp = document.createElement("div");
+  levelUp.className = "ve-app";
+  levelUp.innerHTML =
+    "<header><h1>Filter/Search for Class and Subclass</h1></header>" +
+    '<div class="window-content"><div class="veapp__list"></div></div>';
+  document.body.appendChild(levelUp);
+  Object.defineProperty(levelUp, "offsetParent", { get: () => document.body });
+  const panelLevelUp = fakePanel();
+  check("panel dokuje sie takze w oknie level upu", dockPanel(panelLevelUp), true);
+  check("element siedzi w oknie level upu", levelUp.contains(panelLevelUp.element), true);
+  undockPanel(panelLevelUp);
+  check("i lista level upu wraca na miejsce",
+    levelUp.querySelectorAll(".veapp__list").length, 1);
+  levelUp.remove();
+
   // Ekran wyboru poziomow ma podobny tytul i wlasna robote (level-select.mjs).
   // Doklejenie sie do niego byloby regresja w druga strone.
   const levels = buildHost("Select Class and Subclass Levels");

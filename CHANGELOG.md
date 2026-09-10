@@ -15,6 +15,29 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.2.2
+
+**Panel z opisami dokuje się także przy awansie.** Przy dodawaniu klasy panel
+wchodził do środka okna importera, a przy awansie zostawał osobnym, pływającym
+okienkiem obok — mimo że w obu miejscach otwiera go ten sam kod. Rozjazd siedział
+gdzie indziej: `dock.mjs` i `importer-watch.mjs` szukały tego samego okna dwiema
+osobnymi regułami. Wspólny był tylko tytuł, przeniesiony do jednego pliku po
+wcześniejszej awarii przy multiclassie; selektor został skopiowany i zdążył się
+rozjechać — dokowanie wymagało `div.application.ve-app` z tytułem w
+`.window-title`, a śledzenie przyjmowało dowolne `.ve-app` i czytało tytuł z
+trzech miejsc. Okno kroku klasy spełnia obie reguły, więc tam nic nie wyglądało
+źle; okno spełniające tylko luźniejszą jest śledzone, ale nigdy nie zadokowane —
+panel pokazuje wtedy właściwy tekst obok okna zamiast w nim. Cała reguła —
+element, element tytułu i sam tytuł — mieszka teraz w jednym miejscu.
+
+**Panel nie zostaje ukryty na zawsze, gdy gospodarz się nie pojawi.** Czekał poza
+ekranem bez limitu, a przy zwykłym awansie klasy, którą postać już ma, importer
+może w ogóle nie otworzyć listy klas — otwarty panel zostawał wtedy niewidoczny
+do końca sesji. Po ośmiu sekundach wraca do bycia zwykłym oknem obok importera,
+czyli tym, czym był, zanim dokowanie powstało.
+
+---
+
 ## 2.2.1
 
 **Pigułki z kroku klasy nie znikają, gdy gracz długo wybiera.** Panel czekał na

@@ -37,10 +37,11 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
-import { matchesImporterTitle } from "./importer-watch.mjs";
+import { findImporterWindow } from "./importer-watch.mjs";
 
 /**
- * The window we dock into, by the same rule that reads its rows.
+ * The window we dock into is found by importer-watch.mjs, not by a rule of our
+ * own. Twice now the two have drifted, and both times the same way.
  *
  * TWO TITLES, ONE WINDOW. Adding a first class calls it "Import Classes &
  * Subclasses"; levelling up and multiclassing reach the same list under
@@ -49,22 +50,48 @@ import { matchesImporterTitle } from "./importer-watch.mjs";
  * with no host found, watchForHost() puts the panel into pk5e-dock-waiting,
  * which is display:none. So a player adding a second class had the panel opened
  * for them and then hidden, and saw no descriptions at all - the symptom this
- * whole file was supposed to have removed.
+ * whole file was supposed to have removed. Fixed 2026-08-28 by moving the title
+ * regex into importer-watch.mjs and importing it.
  *
- * The rule lives in importer-watch.mjs and is imported rather than copied,
- * because a copy is what let the two drift apart in the first place: that file
- * learned about the second title (2026-08-28) and this one did not.
+ * TWO SHAPES, ONE WINDOW. The selector stayed behind, and drifted next: this
+ * file wanted a `div.application.ve-app` with an `h1.window-title`, while
+ * importer-watch.mjs accepted any `.ve-app` and read the title from three
+ * places. The class step's window satisfies both, so nothing looked wrong there;
+ * a window that satisfies only the looser rule is followed but never docked, and
+ * the panel floats beside the importer instead of sitting inside it. Which is
+ * what a player saw at level-up while class selection looked right.
+ *
+ * So the whole rule - element, title element, title text - now lives in one
+ * place, and this file adds only what is its own business: a window nobody can
+ * see is no use to dock into.
  */
 
 /** Where the panel's element came from, so it can be put back. */
 let origin = null;
 let observer = null;
 
+/**
+ * How long the panel stays hidden waiting for a host before giving up on one.
+ *
+ * Waiting out of sight is right while a host is on its way and wrong once none
+ * is coming, and the level-up route is where that difference shows: the
+ * importer answers its level screen first, and a plain level-up of a class the
+ * character already has need never open a class list at all. Without a limit
+ * the panel a player asked for stays display:none for the rest of the session -
+ * opened, invisible, and reported as "the descriptions stopped working".
+ *
+ * Past this it goes back to being an ordinary window beside the importer, which
+ * is what it was before docking existed. Longer than importer-watch's own
+ * watchdog, so when the markup really has moved on the GM gets that file's
+ * console warning naming what it looked for, rather than only a panel that
+ * quietly stopped docking.
+ */
+const HOST_WAIT_MS = 8000;
+let waitTimer = null;
+let gaveUpWaiting = false;
+
 function hostWindow() {
-  return [...document.querySelectorAll("div.application.ve-app")].find(
-    (win) =>
-      win.offsetParent && matchesImporterTitle(win.querySelector(".window-title")?.textContent)
-  );
+  return findImporterWindow({ visible: true }) ?? null;
 }
 
 /**
@@ -190,6 +217,9 @@ export function watchForHost(panel) {
     if (!element) return;
 
     if (host) {
+      clearTimeout(waitTimer);
+      waitTimer = null;
+      gaveUpWaiting = false;
       element.classList.remove("pk5e-dock-waiting");
       if (!host.contains(element)) dockPanel(panel);
       return;
@@ -201,8 +231,23 @@ export function watchForHost(panel) {
     // it, so the panel is asked for before there is anywhere to put it. Left
     // visible it appears as a stray window next to a window it has nothing to
     // do with, which is exactly what docking was meant to stop. So it waits,
-    // out of sight, until its host exists.
+    // out of sight, until its host exists - but only while one could still be
+    // coming. See HOST_WAIT_MS for what happens when none does.
+    if (gaveUpWaiting) return;
     element.classList.add("pk5e-dock-waiting");
+    if (waitTimer) return;
+
+    waitTimer = setTimeout(() => {
+      waitTimer = null;
+      gaveUpWaiting = true;
+      const waiting = panel?.element;
+      if (!waiting) return;
+      waiting.classList.remove("pk5e-dock-waiting");
+      // Placed as it would have been without docking: the panel has been
+      // hidden since it rendered, so wherever Foundry last put it is not
+      // somewhere anybody chose.
+      panel.setPosition?.(panel.constructor?.beside?.() ?? {});
+    }, HOST_WAIT_MS);
   };
 
   observer = new MutationObserver(sync);
@@ -221,6 +266,9 @@ export function watchForHost(panel) {
 export function stopWatchingHost() {
   observer?.disconnect();
   observer = null;
+  clearTimeout(waitTimer);
+  waitTimer = null;
+  gaveUpWaiting = false;
 }
 
 

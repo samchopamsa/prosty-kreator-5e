@@ -75,15 +75,50 @@ const SETTLE_MS = 60;
  */
 const WATCHDOG_MS = 6000;
 
-function titleOf(app) {
-  return app.querySelector(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
+/**
+ * The importer's title, wherever the build in front of us keeps it.
+ *
+ * Three selectors, because the importer's windows are not all of one Foundry
+ * application generation: v14's ApplicationV2 writes h1.window-title, the older
+ * shell writes .header-title, and a window that styles its own header leaves a
+ * bare h1 inside it. Reading only the first is how dock.mjs came to disagree
+ * with this file about what counts as the importer window.
+ */
+export function importerTitleOf(app) {
+  return app?.querySelector?.(".window-title, .header-title, header h1")?.textContent?.trim() ?? "";
 }
 
-function findImporter() {
-  return Array.from(document.querySelectorAll(".ve-app")).find((app) =>
-    TITLE_MATCH.test(titleOf(app))
+/**
+ * The importer's class list window, by the one rule everything that looks for
+ * it now uses.
+ *
+ * ONE FINDER, NOT TWO. dock.mjs used to carry its own - `div.application.ve-app`,
+ * with the title read from `.window-title` alone. Against the window the class
+ * step opens the two agree: that one is captured in
+ * tests/fixtures/importer-class-list.html and is exactly that shape. Against a
+ * window shaped even slightly differently they do not, and the way they
+ * disagree is invisible. This file still finds it, so the panel still follows
+ * the highlighted row and shows the right text; dock.mjs finds no host, so the
+ * element is never moved inside. The panel ends up floating beside the importer
+ * instead of sitting in it - which is precisely the difference a player sees
+ * between adding a class and levelling up.
+ *
+ * The title regex was moved here in 2026-08-28 after the same drift bit a
+ * multiclass. The selector was left behind; this is the rest of that fix.
+ *
+ * @param {object}  [options]
+ * @param {boolean} [options.visible] Skip windows that are not on screen.
+ *                                    Docking needs it - an element cannot be
+ *                                    moved into a window nobody is looking at -
+ *                                    and watching does not.
+ */
+export function findImporterWindow({ visible = false } = {}) {
+  return Array.from(document.querySelectorAll(".ve-app")).find(
+    (app) => (!visible || app.offsetParent) && TITLE_MATCH.test(importerTitleOf(app))
   );
 }
+
+const findImporter = () => findImporterWindow();
 
 /**
  * Reports, once, that the markup no longer looks like we expect.
