@@ -26,6 +26,34 @@
  * The folder is created on demand, one segment at a time. createDirectory
  * throws when the directory is already there, which is the normal case and not
  * worth reporting.
+ *
+ * WHY THIS SCREEN ALSO SETS THE TOKEN
+ * -----------------------------------
+ * Foundry keeps the portrait and the token picture apart, and nothing joins
+ * them. Read out of the running versions (2026-09-10): Foundry 14 never copies
+ * `img` onto `prototypeToken.texture.src` on an edit - the only places both are
+ * written together are compendium art mapping and the defaults a new actor is
+ * created with. dnd5e 5.3.3 edits exactly ONE of the two, whichever its portrait
+ * frame is showing, chosen by the `dnd5e.showTokenPortrait` flag:
+ *
+ *     path: portraitData.isToken ? "prototypeToken.texture.src" : "img"
+ *
+ * The flag is off by default, so setting a portrait on the sheet leaves the
+ * token as the system's stand-in - which is what a player then reports as "my
+ * picture is on the sheet but the token is still a silhouette".
+ *
+ * So this screen sets both, and that is a deliberate divergence from the sheet,
+ * kept deliberately small: it happens here, on one click the player asked for,
+ * and nowhere else. A world-wide rule that made the two follow each other for
+ * every actor was tried (2.3.0) and withdrawn - changing how the system behaves
+ * is not this module's business, and it is not what the panel was asked to do.
+ *
+ * WHAT IT WILL NOT OVERWRITE
+ * --------------------------
+ * Only a token wearing a picture nobody chose: the stand-in, nothing at all, or
+ * the very portrait being replaced. A token deliberately set to something else
+ * - a wolf for a druid's wild shape, a hooded figure over a face that is a
+ * secret - is a real use and is left exactly as it is.
  */
 
 import { MODULE_ID } from "./constants.mjs";
@@ -83,14 +111,56 @@ async function uploadPortrait(file) {
 }
 
 /**
- * Writes the portrait onto the character and its token.
+ * The stand-in pictures - the ones a token wears because nobody has chosen
+ * anything, not because somebody picked them.
  *
- * Both, deliberately: a portrait set only on the sheet leaves the token as the
- * mystery man, and the player who set it has no idea why.
+ * Matched on the path rather than against one constant, and the width of the
+ * second pattern is deliberate. Measured across the live world (2026-09-10, 10
+ * characters among 69 actors): a fresh dnd5e character wears
+ * `systems/dnd5e/icons/svg/actors/character.svg` - the system's own default -
+ * and Foundry's mystery man appeared on nothing at all. A rule that knew only
+ * about the mystery man would therefore match none of the tokens it exists for.
+ * In that same world no token sat anywhere under `icons/svg/` except those
+ * stand-ins, so the breadth costs nothing measurable.
  */
+const PLACEHOLDER_IMAGES = [/mystery-man/i, /(^|\/)icons\/svg\//i];
+
+/** Whether a picture is one nobody chose. Nothing at all counts as one. */
+export function isPlaceholderImage(path) {
+  const img = String(path ?? "").trim();
+  if (!img) return true;
+  return PLACEHOLDER_IMAGES.some((pattern) => pattern.test(img));
+}
+
+/**
+ * What setting this portrait should write.
+ *
+ * Separated from the writing so the rule can be tested without a Foundry: it
+ * takes plain values and returns the fields of an update, nothing more.
+ *
+ * @param   {object} actor  with `img` and `prototypeToken`
+ * @param   {string} path   the portrait being set
+ * @returns {object} fields to hand to actor.update()
+ */
+export function portraitUpdate(actor, path) {
+  const update = { img: path };
+
+  // The token follows only while it is wearing a picture nobody chose. Equal to
+  // the portrait being replaced counts as one: a token that was following the
+  // portrait should go on following it.
+  const current = String(actor?.prototypeToken?.texture?.src ?? "").trim();
+  const previous = String(actor?.img ?? "").trim();
+  if (isPlaceholderImage(current) || current === previous) {
+    update["prototypeToken.texture.src"] = path;
+  }
+
+  return update;
+}
+
+/** Writes the portrait onto the character, and onto its token when it may. */
 async function applyPortrait(actor, path) {
   if (!actor || !path) return false;
-  await actor.update({ img: path, "prototypeToken.texture.src": path });
+  await actor.update(portraitUpdate(actor, path));
   return true;
 }
 

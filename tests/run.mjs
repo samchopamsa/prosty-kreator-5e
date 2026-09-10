@@ -53,6 +53,7 @@ const { takeSnapshot, levelChange } = await import("../scripts/snapshot.mjs");
 const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups, classesIn,
   dropLevelGainsFor } = await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
+const { isPlaceholderImage, portraitUpdate } = await import("../scripts/portrait.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
   featureHash, missingFeatures, countChoices, subclassIntro } =
@@ -2138,6 +2139,65 @@ group("review: what a card in the chat log can still do", () => {
 
   // A character whose flag was wiped by hand is not a character with a verdict.
   check("no record at all reads as open", cardStance(at(0, undefined), { sentAt: T1 }), "open");
+});
+
+/**
+ * The portrait screen and the token.
+ *
+ * The sheet sets one picture; this screen sets both, and only ever the token
+ * nobody chose. Read out of dnd5e 5.3.3 and Foundry 14 (see the file header):
+ * nothing in either joins the two fields, so a portrait set on the sheet leaves
+ * the token as the system's stand-in.
+ */
+group("portrait: what setting a portrait writes", () => {
+  // The one measured in the live world: every fresh character wore the system's
+  // stand-in, and none wore Foundry's.
+  const standIn = "systems/dnd5e/icons/svg/actors/character.svg";
+  const mystery = "icons/svg/mystery-man.svg";
+  const face = "assets/portrety/keray.webp";
+  const wolf = "assets/tokeny/wilk.webp";
+
+  check("an unset picture counts as a stand-in", isPlaceholderImage(""), true);
+  check("so does the dnd5e one, which is the one really seen",
+    isPlaceholderImage(standIn), true);
+  check("so does the mystery man", isPlaceholderImage(mystery), true);
+  check("a real picture does not", isPlaceholderImage(face), false);
+  check("and neither does an imported one that merely sits deep in a system folder",
+    isPlaceholderImage("systems/dnd5e/tokens/beast/Wolf.webp"), false);
+
+  // The complaint this exists for: the portrait appears on the sheet and the
+  // token is still a silhouette, with nothing on screen to say why.
+  check(
+    "a stand-in token follows the new portrait",
+    portraitUpdate({ img: standIn, prototypeToken: { texture: { src: standIn } } }, face),
+    { img: face, "prototypeToken.texture.src": face }
+  );
+
+  check(
+    "so does a token with no picture at all",
+    portraitUpdate({ img: "", prototypeToken: {} }, face),
+    { img: face, "prototypeToken.texture.src": face }
+  );
+
+  // A token that was already following the portrait goes on following it.
+  check(
+    "a token still showing the portrait being replaced follows too",
+    portraitUpdate({ img: mystery, prototypeToken: { texture: { src: mystery } } }, face),
+    { img: face, "prototypeToken.texture.src": face }
+  );
+
+  // The whole point of the narrow rule: somebody chose that wolf.
+  check(
+    "a token set deliberately is left alone",
+    portraitUpdate({ img: face, prototypeToken: { texture: { src: wolf } } }, "assets/portrety/nowy.webp"),
+    { img: "assets/portrety/nowy.webp" }
+  );
+
+  check(
+    "and stays left alone even when the portrait was never set",
+    portraitUpdate({ img: "", prototypeToken: { texture: { src: wolf } } }, face),
+    { img: face }
+  );
 });
 
 // --- result ------------------------------------------------------------------

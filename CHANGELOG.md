@@ -15,6 +15,29 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.3.2
+
+**Ekran portretu nie nadpisuje tokena ustawionego celowo.** Ustawiał oba obrazki
+zawsze, więc gracz, który dał tokenowi wilka na wild shape albo kaptur na twarz
+będącą tajemnicą, tracił go przy najbliższej zmianie portretu. Teraz token idzie
+za portretem tylko wtedy, gdy nosi obrazek, którego nikt nie wybrał: systemową
+sylwetkę, żaden, albo dokładnie ten portret, który właśnie jest wymieniany.
+
+Samo ustawianie obu naraz zostaje i jest świadomym odstępstwem od karty postaci —
+odczytane z żywych wersji: Foundry 14 nigdzie nie przepisuje `img` na
+`prototypeToken.texture.src` przy edycji, a dnd5e 5.3.3 edytuje dokładnie jedno
+z dwóch pól, to które ramka portretu akurat pokazuje (flaga
+`dnd5e.showTokenPortrait`, domyślnie wyłączona). Portret ustawiony na karcie
+zostawia więc token systemową sylwetką, co gracz zgłasza jako „obrazek jest na
+karcie, a token dalej pusty".
+
+Odstępstwo jest celowo wąskie: dzieje się w tym jednym ekranie, na jedno
+kliknięcie gracza, i nigdzie indziej. Reguła obejmująca cały świat była wydana
+jako 2.3.0 i została wycofana — zmienianie tego, jak zachowuje się system, nie
+jest rolą tego modułu.
+
+---
+
 ## 2.3.1
 
 **Wycofanie 2.3.0: moduł nie zmienia już systemowego zachowania Foundry'ego.**
