@@ -794,6 +794,84 @@ group("katalog: stan zgloszenia w pasku bocznym", () => {
   globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 });
 
+// --- czekanie na koniec importu ---------------------------------------------
+
+/**
+ * Zegar, ktory liczyl zly odcinek.
+ *
+ * Zmierzone na zywej postaci (Jelon, 2026-09-09): 28 minut miedzy nacisnieciem
+ * "Dodaj klase" a wjazdem przedmiotow. Stary, pojedynczy limit ruszal od
+ * nacisniecia, wiec konczyl sie w 2. minucie - w srodku wybierania - a wolajacy
+ * czytal wtedy karte, nie znajdowal roznicy i nie zapisywal nic. Karta klasy
+ * przepadala po cichu.
+ *
+ * Testy chodza na prawdziwych timerach, wiec liczby sa milisekundowe. Chodzi
+ * o KTORY limit rzadzi w ktorej fazie, a nie o ich wartosci produkcyjne.
+ */
+await group("import: wybieranie nie jest tym samym co importowanie", async () => {
+  const hooks = new Map();
+  let nextId = 1;
+  globalThis.Hooks = {
+    on(name, fn) {
+      const id = nextId++;
+      hooks.set(id, { name, fn });
+      return id;
+    },
+    off(name, id) {
+      hooks.delete(id);
+    },
+    callAll(name, ...args) {
+      for (const entry of [...hooks.values()]) if (entry.name === name) entry.fn(...args);
+    }
+  };
+
+  const { watchImportEnd } = await import("../scripts/import-end.mjs");
+
+  /** Czy obietnica rozstrzygnela sie do zadanej chwili. */
+  const settledWithin = async (promise, ms) => {
+    const pending = Symbol("pending");
+    const result = await Promise.race([
+      promise,
+      new Promise((r) => setTimeout(() => r(pending), ms))
+    ]);
+    return result !== pending;
+  };
+
+  const actor = { id: "aktor1" };
+
+  // Gracz czyta opisy. Nic nie przyszlo, wiec krotki limit nie ma prawa zadzialac.
+  const choosing = watchImportEnd({ timeout: 30, choosing: 400, actor });
+  check("krotki limit nie konczy czekania, gdy import sie nie zaczal",
+    await settledWithin(choosing, 150), false);
+  check("konczy je dopiero limit na wybieranie",
+    await settledWithin(choosing, 400), true);
+  check("i mowi, ze importer sie nie odezwal", (await choosing).completed, false);
+
+  // Przedmiot na karcie to jedyny pewny znak, ze import ruszyl - od tej chwili
+  // rzadzi krotki limit.
+  const importing = watchImportEnd({ timeout: 60, choosing: 5000, actor });
+  Hooks.callAll("createItem", { parent: { id: "aktor1" } });
+  check("po pierwszym przedmiocie rzadzi juz limit importu",
+    await settledWithin(importing, 300), true);
+
+  // Cudza postac nie jest naszym importem.
+  const other = watchImportEnd({ timeout: 60, choosing: 400, actor });
+  Hooks.callAll("createItem", { parent: { id: "ktos-inny" } });
+  check("przedmiot u innego aktora niczego nie uruchamia",
+    await settledWithin(other, 200), false);
+  await other;
+
+  // Bez aktora nie da sie odroznic wybierania od importu, wiec zostaje stare
+  // zachowanie: jeden limit na calosc.
+  const legacy = watchImportEnd({ timeout: 60 });
+  check("bez aktora dziala jak dawniej - jeden limit",
+    await settledWithin(legacy, 300), true);
+
+  check("po wszystkim nie zostaje zaden wpiety hook", hooks.size, 0);
+
+  delete globalThis.Hooks;
+});
+
 // --- wynik -------------------------------------------------------------------
 
 console.log("");

@@ -12,10 +12,39 @@
  * Kept apart from option-watch.mjs, which watches the same window for a
  * different reason - whether the import was cancelled. Two callers, two
  * concerns, and neither should have to know about the other.
+ *
+ * WHY THE DEADLINE IS IN TWO PARTS
+ * --------------------------------
+ * There used to be one clock, started when the panel pressed the button, and it
+ * was measuring the wrong thing. Pressing "Add Class" does not start an import -
+ * it opens the importer, and the player then reads. Measured on a live
+ * character (Jelon, 2026-09-09): 28 minutes between the press and the items
+ * landing, all 50 of them inside 55ms once the choice was finally made. The
+ * clock ran out at minute two, the caller read the sheet against its own
+ * unchanged self, found no difference and recorded nothing - and the panel had
+ * stopped listening 26 minutes before the import it was waiting for. The GM
+ * never saw it because a GM knows what they are picking and is inside two
+ * minutes; every character built by a player who read the descriptions lost its
+ * class card, which is exactly the step this module opens a reading panel for.
+ *
+ * So the wait for the import to BEGIN and the wait for it to END are two
+ * different lengths, and beginning is not a DOM event: it is an item arriving on
+ * the character. That is why an actor may be handed in. Without one the old
+ * single-deadline behaviour is kept, so a caller that has no actor to watch is
+ * no worse off than before.
  */
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
+
+/**
+ * How long the player may spend choosing before we stop expecting an import.
+ *
+ * Generous on purpose: the cost of being too short is a card silently lost, the
+ * cost of being too long is a step that says "importing" for a while after
+ * somebody walked away from it. The measured case was 28 minutes.
+ */
+const CHOOSING_TIMEOUT = 1800000;
 
 const COMPLETE_TITLE = /^import complete/i;
 const CANCELLED = /was cancelled/i;
@@ -31,12 +60,18 @@ const COMPLETE_TOAST = /level[- ]?up complete/i;
  * Resolves when the "Import Complete" window appears, or when the wait runs out.
  *
  * @param   {object} options
- * @param   {number} options.timeout  Give up after this long.
+ * @param   {number} options.timeout   Give up this long after the import began.
+ * @param   {number} options.choosing  Give up this long after being asked, if it
+ *                                     never began at all. Ignored without an actor.
+ * @param   {Actor}  options.actor     The character being imported into. Items
+ *                                     arriving on it are what "began" means.
  * @returns {Promise<{completed: boolean, cancelled: boolean}>}
  */
-export function watchImportEnd({ timeout = 120000 } = {}) {
+export function watchImportEnd({ timeout = 120000, choosing = CHOOSING_TIMEOUT, actor = null } = {}) {
   return new Promise((resolve) => {
     let settled = false;
+    let timer = null;
+    let itemHook = null;
 
     // Anything already on screen belongs to whatever happened before this call.
     //
@@ -55,8 +90,17 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
       settled = true;
       observer.disconnect();
       clearTimeout(timer);
+      if (itemHook !== null) Hooks.off("createItem", itemHook);
       trace("import end:", result);
       resolve(result);
+    };
+
+    /** Restarts the clock. Calling it again replaces the deadline, never adds one. */
+    const arm = (ms) => {
+      clearTimeout(timer);
+      // Giving up is a normal outcome, not a failure: the player may have
+      // cancelled, or closed the window before we noticed it.
+      timer = setTimeout(() => finish({ completed: false, cancelled: false }), ms);
     };
 
     const look = () => {
@@ -89,9 +133,22 @@ export function watchImportEnd({ timeout = 120000 } = {}) {
     });
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Giving up is a normal outcome, not a failure: the player may have
-    // cancelled, or closed the window before we noticed it.
-    const timer = setTimeout(() => finish({ completed: false, cancelled: false }), timeout);
+    // AN ITEM LANDING IS THE IMPORT BEGINNING
+    //
+    // Every further one restarts the shorter clock rather than adding to it: an
+    // import arrives as a burst and then pauses for each dialog it puts up, so
+    // the question worth asking is always "how long since the last thing
+    // happened", not "how long since we started".
+    if (actor) {
+      itemHook = Hooks.on("createItem", (item) => {
+        if (item?.parent?.id !== actor.id) return;
+        arm(timeout);
+      });
+    }
+
+    // Without an actor there is nothing to tell choosing from importing, so the
+    // one deadline covers both, exactly as it did before.
+    arm(actor ? choosing : timeout);
 
     // It may already be on screen if the import was quick.
     look();

@@ -15,6 +15,24 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.2.1
+
+**Pigułki z kroku klasy nie znikają, gdy gracz długo wybiera.** Panel czekał na
+koniec importu przez dwie minuty liczone od naciśnięcia „Dodaj klasę” — a
+naciśnięcie tego przycisku nie zaczyna importu, tylko otwiera importer, w którym
+gracz dopiero czyta. Zmierzone na żywej postaci: 28 minut między naciśnięciem a
+wjazdem przedmiotów. Limit kończył się w drugiej minucie, panel porównywał wtedy
+kartę z jej własnym, niezmienionym stanem, nie znajdował różnicy i zgodnie z
+regułą „pusta różnica to brak zapisu” nie zapisywał nic — a import wjeżdżał
+kwadrans później do kroku, który już nie nasłuchiwał. MG tego nie widział, bo
+wie, co wybiera, i mieści się w dwóch minutach; tracili to gracze czytający
+opisy, czyli ci, dla których krok klasy otwiera panel z opisami. Czekanie na
+początek importu i czekanie na jego koniec są teraz dwoma osobnymi limitami, a
+początkiem jest przedmiot lądujący na karcie, nie zdarzenie w oknie. Ten sam
+błąd dotyczył okna awansu i też został naprawiony.
+
+---
+
 ## 2.2.0
 
 **Zgłoszenie gotowej postaci do akceptacji MG.** Nowe ustawienie świata

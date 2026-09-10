@@ -294,7 +294,11 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         return false;
       }
 
-      await watchImportEnd({ timeout: IMPORT_TIMEOUT_MS });
+      // The actor goes in so the wait knows the difference between a player
+      // still choosing what the level brings and an import that has stalled;
+      // without it the deadline runs from the press and expires mid-choice
+      // (import-end.mjs).
+      await watchImportEnd({ timeout: IMPORT_TIMEOUT_MS, actor });
       // The sheet settles a moment after the importer reports itself done.
       await wait(600);
 

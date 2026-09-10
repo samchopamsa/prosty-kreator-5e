@@ -1114,7 +1114,11 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
 
     try {
-      await watchImportEnd({ timeout: 120000 });
+      // The actor goes in so the wait can tell "the player is still choosing"
+      // from "the import is running" - without it the clock starts at the press
+      // and runs out while the importer is still on screen, which is how a
+      // class card came to be lost (import-end.mjs).
+      await watchImportEnd({ timeout: 120000, actor: this.actor });
     } finally {
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
@@ -1240,7 +1244,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     try {
       await pressLevelUp(actor);
-      await watchImportEnd({ timeout: 120000 });
+      // Same reason as the step above: choosing what a level brings is not a
+      // pause in the import, it is the player reading.
+      await watchImportEnd({ timeout: 120000, actor });
     } finally {
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
