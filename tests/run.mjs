@@ -145,6 +145,26 @@ group("compendium: matching what the importer highlighted", () => {
     "b"
   );
 
+  // A subclass highlighted in the list a level-up opens can arrive without a
+  // parent class - that window writes none into its rows. The name then has to
+  // carry it alone, and only where it carries it outright.
+  check(
+    "no parent given: a subclass only one class has is matched on its name",
+    name({ name: "Twilight Domain", type: "subclass", parentName: "", code: "TCE" }),
+    "Twilight Domain"
+  );
+  check(
+    "no parent given: the same name under two classes matches neither",
+    matchImporterEntry(
+      [
+        { uuid: "a", name: "Champion", type: "subclass", classId: "fighter", code: "XPHB" },
+        { uuid: "b", name: "Champion", type: "subclass", classId: "rogue", code: "HB" }
+      ],
+      { name: "Champion", type: "subclass", parentName: "", code: "XPHB" }
+    ),
+    null
+  );
+
   const groups = groupByClass(entries);
   check("grouping keeps one heading per class", groups.map((g) => g.name), ["Cleric", "Sorcerer"]);
   check(
@@ -719,7 +739,28 @@ group("rules-data: subclasses belong to a class, not a name", () => {
     selectSubclass(subclasses, "Wizard", "College of Swords"),
     null
   );
+
+  // The list a level-up opens records no parent anywhere in its markup, so the
+  // reader cannot always supply one. Then the name decides on its own - and
+  // only when it decides outright, which is the same rule the parent exists to
+  // enforce rather than an exception to it.
+  check(
+    "no parent given: a name only one class owns is answer enough",
+    selectSubclass(subclasses, "", "College of Swords")?.className,
+    "Bard"
+  );
+  check(
+    "no parent given: a name two classes own answers nothing",
+    selectSubclass(subclasses, "", "Champion"),
+    null
+  );
+  check(
+    "no parent given: a name nobody owns is still nothing",
+    selectSubclass(subclasses, null, "Circle of the Moon"),
+    null
+  );
 });
+
 
 group("rules-data: features come from the level field, not the array position", () => {
   // Shaped like the real reading: an array per level, each feature carrying its

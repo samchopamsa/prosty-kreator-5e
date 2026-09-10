@@ -37,7 +37,7 @@
 
 import { MODULE_ID } from "./constants.mjs";
 import { trace } from "./trace.mjs";
-import { findImporterWindow } from "./importer-watch.mjs";
+import { findImporterWindow, findImporterList } from "./importer-watch.mjs";
 
 /**
  * The window we dock into is found by importer-watch.mjs, not by a rule of our
@@ -107,7 +107,11 @@ export function dockPanel(panel) {
   if (!element || !host) return false;
   if (host.contains(element)) return true;
 
-  const list = host.querySelector(".veapp__list");
+  // Not a selector of our own: the window the class step opens and the one a
+  // level-up opens wrap their rows in different containers, and looking only
+  // for the first is what left the panel floating beside a level-up
+  // (findImporterList).
+  const list = findImporterList(host);
   if (!list?.parentElement) return false;
 
   if (!origin) origin = { parent: element.parentElement, next: element.nextSibling };
@@ -179,7 +183,7 @@ export function undockPanel(panel) {
 
   // Unwrap: the list goes back where the row now stands, and the row goes away.
   for (const row of document.querySelectorAll(".pk5e-dock-row")) {
-    const list = row.querySelector(".veapp__list");
+    const list = findImporterList(row);
     if (list) {
       for (const name of ["flex", "width", "min-width", "max-width", "height"]) {
         list.style.removeProperty(name);

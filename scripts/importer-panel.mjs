@@ -26,7 +26,7 @@ import {
   classIdForName,
   readDescription
 } from "./compendium.mjs";
-import { watchImporter, importerRect } from "./importer-watch.mjs";
+import { watchImporter, importerRect, findImporterWindow } from "./importer-watch.mjs";
 import { watchForHost, stopWatchingHost, undockPanel } from "./dock.mjs";
 import { describeRow } from "./class-text.mjs";
 
@@ -287,9 +287,14 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this._listOpen = false;
     this._query = "";
     this._limitTo = known ? classKey : null;
-    this._notice = known
-      ? t("panel.missingEntry", row.name, row.parentName)
-      : t("panel.missingClass", row.parentName);
+    // No parent at all is its own case: the list a level-up opens does not
+    // record which class a subclass belongs to, so naming the class here would
+    // mean naming nothing ("Nie ma klasy  w kompendiach").
+    this._notice = !row.parentName
+      ? t("panel.missingOnly", row.name)
+      : known
+        ? t("panel.missingEntry", row.name, row.parentName)
+        : t("panel.missingClass", row.parentName);
 
     this.render();
   }
@@ -337,6 +342,77 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this._query = "";
     await this.show(uuid);
   }
+}
+
+/**
+ * How long a level-up is given to produce a class list before we stop waiting.
+ *
+ * A backstop, not a schedule: the caller cancels this the moment its level is
+ * finished, so the only thing the number decides is how long a watcher outlives
+ * an import that was abandoned. Generous, because the list is not opened by the
+ * importer but by the player, several dialogs in - "Level Up", then "Choose
+ * Subclass?" - and somebody reading those unhurried is exactly who the panel is
+ * for. The first number here was twenty seconds and would have expired on them.
+ */
+const LIST_WAIT_MS = 120000;
+
+/**
+ * Opens the panel when - and only when - the importer's class list appears.
+ *
+ * Levelling up used to open it straight away, on the reasoning that a level-up
+ * is also where a second class is chosen. It is not where a *first* one is:
+ * going from level 1 to 2 with a single class the importer never asks which
+ * class, it puts up "Select Class and Subclass Levels" and gets on with it. The
+ * panel opened regardless, found no window it recognised, waited out of sight
+ * for HOST_WAIT_MS and then - by dock.mjs's design, having given up on a host -
+ * placed itself on screen as a stray empty window beside the level screen.
+ * Which is what a player sees as "the description panel appears for no reason".
+ *
+ * So the decision is left to the thing that actually settles it: the class list
+ * window. If it opens, the panel opens with it; if the importer never asks
+ * which class, nothing appears. Same rule as dock.mjs's host watch, kept here
+ * as well because that one only runs when the panel is set to dock, and this
+ * has to hold either way.
+ *
+ * @param   {object}   [options]
+ * @param   {number}   [options.timeout]  Stop waiting after this long.
+ * @returns {Function} Call to stop waiting; the panel does not open afterwards.
+ */
+export function openImporterPanelWithList({ timeout = LIST_WAIT_MS } = {}) {
+  let done = false;
+  let observer = null;
+  let timer = null;
+
+  const stop = () => {
+    if (done) return;
+    done = true;
+    observer?.disconnect();
+    clearTimeout(timer);
+  };
+
+  const look = () => {
+    if (done || !findImporterWindow()) return;
+    stop();
+    try {
+      openImporterPanel();
+    } catch (err) {
+      console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
+    }
+  };
+
+  try {
+    observer = new MutationObserver(look);
+    observer.observe(document.body, { childList: true, subtree: true });
+    timer = setTimeout(stop, timeout);
+    // Occasionally the window is already there - a list left open by a
+    // cancelled run - in which case there is no mutation to wait for.
+    look();
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not watch for the importer's class list`, err);
+    stop();
+  }
+
+  return stop;
 }
 
 /** Opens the panel, or brings the existing one forward. */

@@ -158,14 +158,26 @@ export function selectClass(classes, name, source = null) {
  * Subclass names repeat across classes far more than one expects, and the
  * parent is stored as className/classSource rather than being derivable from
  * the name.
+ *
+ * NO PARENT AT ALL is a real case, not a caller being careless: the list a
+ * level-up opens does not record which class a subclass belongs to anywhere in
+ * its markup, so importer-watch.mjs cannot always supply one. Then the name
+ * alone decides, and only if it decides outright - two classes owning a
+ * subclass of the same name gives no answer rather than a coin toss, which is
+ * the whole reason the parent is normally required.
  */
 export function selectSubclass(subclasses, className, subclassName, source = null) {
-  const matches = (subclasses ?? []).filter(
-    (s) =>
-      same(s.className, className) &&
-      (same(s.name, subclassName) || same(s.shortName, subclassName))
+  const byName = (subclasses ?? []).filter(
+    (s) => same(s.name, subclassName) || same(s.shortName, subclassName)
   );
+  const matches = className
+    ? byName.filter((s) => same(s.className, className))
+    : byName;
+
   if (!matches.length) return null;
+  if (!className && new Set(matches.map((s) => String(s.className ?? "").toLowerCase())).size > 1) {
+    return null;
+  }
   if (source) return matches.find((s) => same(s.source, source)) ?? null;
 
   for (const preferred of SOURCE_PREFERENCE) {

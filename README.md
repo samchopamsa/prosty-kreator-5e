@@ -8,7 +8,7 @@ Advancement i importer działają dokładnie tak, jak zostały zbudowane. Kreato
 dokłada trzy rzeczy, których brakuje: **kolejność**, **to, o co importer nigdy
 nie pyta** (punktacja cech, języki) i **wykrywanie tego, co zostało pominięte**.
 
-Wersja **2.3.2**.
+Wersja **2.3.3**.
 
 ---
 

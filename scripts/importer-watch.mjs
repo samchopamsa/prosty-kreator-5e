@@ -23,6 +23,35 @@
  * - the book code is a suffix on a CSS class: ve-source__XPHB. This is the
  *   canonical code, unlike the label beside it, which reads "PHB'24"
  * - clicking adds "list-multi-selected" to the row
+ *
+ * THE SECOND WINDOW, read out of the live build 2.18.3.v14 (2026-09-10)
+ * --------------------------------------------------------------------
+ * A level-up and a multiclass do not open that window. They open the importer's
+ * modal filter component, wrapped in a Foundry window by the importer's own
+ * mixin, and it only looks like the same list:
+ *
+ *   <div class="list ve-ui-list__wrp ...">
+ *     <label class="ve-w-100 ve-flex ve-lst__row-border veapp__list-row ...">
+ *       <div class="ve-col-1 ..."><div class="ve-fltr-cls__tgl"></div></div>
+ *       <div class="ve-bold ve-col-9">Druid</div>
+ *       <div class="ve-col-2 ... ve-source__XPHB">XPHB</div>
+ *     </label>
+ *     <label ...><div class="ve-col-9 ve-pl-1 ..."><span class="ve-mx-3">&mdash;</span> Circle of the Moon</div>...
+ *
+ * Three differences, all of which broke something:
+ *
+ * - the rows are wrapped in div.list.ve-ui-list__wrp, not div.veapp__list. That
+ *   is what dock.mjs looks for, so the panel could not be put into this window
+ *   and floated beside it instead - the visible complaint that started this.
+ * - a subclass row carries NO title="Class: X". The component keeps the
+ *   relation in its own data (ListItem.data.ixClass) and writes none of it into
+ *   the markup, so the parent has to come from the row order: classes are
+ *   listed each followed by its own subclasses.
+ * - the cells are divs rather than spans, which is why nothing here is looked
+ *   for by tag name.
+ *
+ * Read from the source rather than guessed: Bundle.js, _getWrpList and
+ * _getListItems_getClassItem / _getListItems_getSubclassItem.
  */
 
 import { MODULE_ID } from "./constants.mjs";
@@ -140,7 +169,7 @@ function warnMarkup(stage, detail = {}) {
       "Looked for:",
     {
       window: ".ve-app with a title matching /import classes/i",
-      list: "div.veapp__list",
+      list: "div.veapp__list, or div.list.ve-ui-list__wrp on the level-up route",
       row: "label containing span.ve-col-9",
       selection: "class list-multi-selected",
       ...detail
@@ -149,24 +178,83 @@ function warnMarkup(stage, detail = {}) {
 }
 
 /**
+ * The scrolling list of rows inside the importer's window.
+ *
+ * TWO WINDOWS, TWO CONTAINERS. Adding a class opens the importer's own import
+ * list, whose rows sit in `div.veapp__list`. Levelling up and multiclassing
+ * reach a different component - the importer's modal filter, wrapped in a
+ * Foundry window by its own mixin - and that one builds
+ * `div.list.ve-ui-list__wrp` instead (read out of the live build 2.18.3.v14,
+ * `_getWrpList` in Bundle.js). Same rows underneath, different box around them.
+ *
+ * Only the first was ever looked for, which is why levelling up gave a panel
+ * that would not dock: dock.mjs needs this element to put the panel beside, did
+ * not find it, and left the panel floating - a stray window listing compendium
+ * entries next to the list it was supposed to be reading.
+ */
+export function findImporterList(app) {
+  // The rows themselves decide it wherever they exist: whatever holds a
+  // veapp__list-row is the list, whatever else in the window calls itself a
+  // list is not. Falling back to the class alone covers the moment before the
+  // list has been built, which is when the level-up route is first looked at.
+  return (
+    app?.querySelector?.(".veapp__list") ??
+    app?.querySelector?.(".veapp__list-row")?.closest?.(".ve-ui-list__wrp") ??
+    app?.querySelector?.(".ve-ui-list__wrp") ??
+    null
+  );
+}
+
+/** A row's visible name, without the dash a subclass is prefixed with. */
+function nameOf(cell) {
+  if (!cell) return "";
+  // The dash before a subclass name sits in its own span; without removing it
+  // the name would read "-Life Domain" and match nothing. A version marker
+  // (ve-px-3) is a spacer with the same problem.
+  const clone = cell.cloneNode(true);
+  clone.querySelectorAll(".ve-mx-3, .ve-px-3").forEach((el) => el.remove());
+  return clone.textContent.trim();
+}
+
+const nameCellOf = (row) => row?.querySelector?.(".ve-col-9") ?? null;
+const isClassCell = (cell) => !!cell?.classList?.contains("ve-bold");
+
+/**
+ * The class a subclass row belongs to, when the row does not say.
+ *
+ * The import list writes it into the row: title="Class: Artificer". The modal
+ * filter reached by a level-up does not write it anywhere at all - it keeps the
+ * relation in its own data and puts nothing in the markup. What it does do is
+ * list every class followed by its own subclasses, so the nearest bold row
+ * above a subclass is its class.
+ *
+ * Sorting the list by source would break that grouping, and then this finds the
+ * wrong class or none. Which is the ordinary outcome here: no parent, and the
+ * panel says the subclass is not in the compendiums rather than showing the
+ * wrong one.
+ */
+function classAbove(row) {
+  for (let node = row?.previousElementSibling; node; node = node.previousElementSibling) {
+    const cell = nameCellOf(node);
+    if (isClassCell(cell)) return nameOf(cell);
+  }
+  return "";
+}
+
+/**
  * Turns a highlighted row into { name, type, parentName, code }.
  * Returns null for anything that does not look like a list row.
  */
 export function readRow(row) {
-  const nameCell = row?.querySelector?.(".ve-col-9");
+  const nameCell = nameCellOf(row);
   if (!nameCell) return null;
 
-  // The dash before a subclass name sits in its own span; without removing it
-  // the name would read "—Life Domain" and match nothing.
-  const clone = nameCell.cloneNode(true);
-  clone.querySelectorAll(".ve-mx-3").forEach((el) => el.remove());
-  const name = clone.textContent.trim();
+  const name = nameOf(nameCell);
   if (!name) return null;
 
-  const isClass = nameCell.classList.contains("ve-bold");
-  const parentName = isClass
-    ? name
-    : (nameCell.getAttribute("title") ?? "").replace(/^\s*class:\s*/i, "").trim();
+  const isClass = isClassCell(nameCell);
+  const titled = (nameCell.getAttribute("title") ?? "").replace(/^\s*class:\s*/i, "").trim();
+  const parentName = isClass ? name : titled || classAbove(row);
 
   const sourceCell = row.querySelector("[class*='ve-source__']");
   const code = (sourceCell?.className ?? "").match(/ve-source__(\S+)/)?.[1] ?? "";
@@ -233,10 +321,12 @@ export function watchImporter({ onSelect, onClose } = {}) {
     // with its filters up and no rows built yet, and warning then would put
     // "the importer's markup has changed" in the GM's console every time
     // somebody multiclassed. Rows that exist and cannot be read still is one.
-    const list = app.querySelector(".veapp__list");
+    const list = findImporterList(app);
     const rows = list ? Array.from(list.querySelectorAll("label")) : [];
     if (!list) {
-      warnMarkup("list container not found", { found: "no div.veapp__list" });
+      warnMarkup("list container not found", {
+        found: "neither div.veapp__list nor div.list.ve-ui-list__wrp"
+      });
     } else if (rows.length && !rows.some((row) => readRow(row))) {
       warnMarkup("rows unreadable", {
         found: `div.veapp__list present with ${rows.length} rows, none yielded a name`

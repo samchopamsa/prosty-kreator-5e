@@ -36,7 +36,7 @@ import {
   selectionFor
 } from "./languages-core.mjs";
 import { ClassReference } from "./reference.mjs";
-import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
+import { ImporterPanel, openImporterPanel, openImporterPanelWithList } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
@@ -1214,13 +1214,12 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Same reading panel as the class step: adding a second class is exactly the
     // moment a player wants to know what the classes do, and it was only
-    // offered the first time round.
+    // offered the first time round. Opened when the class list appears and not
+    // before - this button also takes an ordinary level, where the importer
+    // never asks which class and the panel would arrive with nothing in it.
+    let stopWaitingForList = null;
     if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
-      try {
-        openImporterPanel();
-      } catch (err) {
-        console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
-      }
+      stopWaitingForList = openImporterPanelWithList();
     }
 
     // Marked as importing for the same reason the other steps are: the importer
@@ -1248,6 +1247,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // pause in the import, it is the player reading.
       await watchImportEnd({ timeout: 120000, actor });
     } finally {
+      stopWaitingForList?.();
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
       await wait(600);

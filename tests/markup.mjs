@@ -75,7 +75,7 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 // ostrzezenia, ktore sa czescia tego, co testujemy.
 globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
-const { readRow, watchImporter, importerRect, matchesImporterTitle } =
+const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList } =
   await import("../scripts/importer-watch.mjs");
 const { dockPanel, undockPanel } = await import("../scripts/dock.mjs");
 const { decorate: markDirectory } = await import("../scripts/review-directory.mjs");
@@ -653,6 +653,98 @@ group("panel: okno, w ktore sie dokuje", () => {
   levels.remove();
 
   document.querySelectorAll(".ve-app, .application").forEach((el) => el.remove());
+});
+
+// --- lista, ktora otwiera level up ------------------------------------------
+//
+// To NIE jest to samo okno co przy dodawaniu klasy, choc wyglada podobnie i
+// nosi ten sam tytul. Dodanie klasy otwiera wlasna liste importu (fixture
+// powyzej): wiersze siedza w div.veapp__list, a podklasa niesie title="Class:
+// X". Level up i multiclass otwiraja komponent filtra, opakowany w okno
+// Foundry, ktory buduje div.list.ve-ui-list__wrp i o klasie rodzicielskiej nie
+// pisze w markupie nic - trzyma ja u siebie w danych.
+//
+// Ksztalt spisany z zywego builda 2.18.3.v14 (Bundle.js, _getWrpList oraz
+// _getListItems_getClassItem / _getListItems_getSubclassItem). Skutkiem
+// czytania tylko pierwszego ksztaltu byl panel, ktory przy level upie plywal
+// obok okna i pokazywal liste kompendiow zamiast opisu podklasy.
+
+group("importer: lista otwierana przez level up", () => {
+  const modal = document.createElement("div");
+  modal.className = "ve-app";
+  modal.innerHTML =
+    '<h1 class="window-title">Filter/Search for Class and Subclass</h1>' +
+    '<div class="ve-flex-col"><div class="ve-lst__form-top"></div>' +
+    '<div class="list ve-ui-list__wrp ve-overflow-y-scroll"></div></div>';
+  document.body.appendChild(modal);
+  Object.defineProperty(modal, "offsetParent", { get: () => document.body });
+
+  const wrp = modal.querySelector(".ve-ui-list__wrp");
+
+  const modalRow = ({ name, bold = false, source = "XPHB" }) => {
+    const label = document.createElement("label");
+    label.className = "ve-w-100 ve-flex ve-lst__row-border veapp__list-row ve-no-select";
+    label.innerHTML =
+      '<div class="ve-col-1 ve-pl-0 ve-flex-vh-center"><div class="ve-fltr-cls__tgl"></div></div>' +
+      (bold
+        ? `<div class="ve-bold ve-col-9">${name}</div>`
+        : `<div class="ve-col-9 ve-pl-1 ve-flex-v-center"><span class="ve-mx-3">&mdash;</span> ${name}</div>`) +
+      `<div class="ve-col-2 ve-pr-0 ve-flex-h-center ve-source__${source}">${source}</div>`;
+    wrp.appendChild(label);
+    return label;
+  };
+
+  modalRow({ name: "Druid", bold: true });
+  const moon = modalRow({ name: "Circle of the Moon" });
+  modalRow({ name: "Fighter", bold: true });
+  const champion = modalRow({ name: "Champion" });
+
+  check("kontener listy znaleziony po wierszach, nie po nazwie klasy CSS",
+    findImporterList(modal) === wrp, true);
+
+  // Bez atrybutu title jedyna informacja o klasie jest kolejnosc wierszy:
+  // klasa, a pod nia jej podklasy.
+  check("podklasa bez title bierze klase z wiersza nad soba", readRow(moon), {
+    name: "Circle of the Moon",
+    type: "subclass",
+    parentName: "Druid",
+    code: "XPHB"
+  });
+
+  check("i liczy sie NAJBLIZSZA klasa nad wierszem, nie pierwsza z listy",
+    readRow(champion).parentName, "Fighter");
+
+  // Wiersz bez zadnej klasy nad soba - lista posortowana po zrodle rozbija
+  // grupowanie i wtedy rodzica po prostu nie ma. Pusty rodzic jest odpowiedzia,
+  // bledny nie byl.
+  const sierota = document.createElement("div");
+  sierota.className = "list ve-ui-list__wrp";
+  sierota.innerHTML =
+    '<label class="veapp__list-row"><div class="ve-col-9"><span class="ve-mx-3">&mdash;</span> Champion</div></label>';
+  modal.appendChild(sierota);
+  check("podklasa bez klasy nad soba nie zgaduje rodzica",
+    readRow(sierota.querySelector("label")).parentName, "");
+  sierota.remove();
+
+  // I to samo okno musi dac sie zadokowac - to byl caly widoczny objaw.
+  const element = document.createElement("div");
+  element.className = "application";
+  document.body.appendChild(element);
+  const panel = { element };
+
+  check("panel dokuje sie w liscie level upu", dockPanel(panel), true);
+  check("element siedzi w oknie", modal.contains(element), true);
+  check("lista wjechala do wiersza dokujacego obok panelu",
+    element.parentElement?.classList.contains("pk5e-dock-row"), true);
+
+  undockPanel(panel);
+  check("po oddokowaniu lista wraca na swoje miejsce",
+    modal.querySelectorAll(".ve-ui-list__wrp").length, 1);
+  check("i nie zostaje zaden wiersz dokujacy",
+    document.querySelectorAll(".pk5e-dock-row").length, 0);
+
+  element.remove();
+  modal.remove();
 });
 
 // --- katalog aktorow ---------------------------------------------------------

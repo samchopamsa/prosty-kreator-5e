@@ -244,9 +244,20 @@ export function matchImporterEntry(entries, picked) {
 
   // A class matches on its own name. A subclass must also belong to the class
   // the importer named, so a Cleric domain can never match a Druid circle.
+  //
+  // Unless the importer named no class at all, which the list a level-up opens
+  // does not - it keeps the relation in its own data and writes none of it into
+  // the row. Then the name has to carry it alone, and only where it carries it
+  // outright: one entry answers, two named the same under different classes is
+  // exactly the confusion the parent exists to prevent, so that answers
+  // nothing.
   let candidates;
   if (picked.type === "class") {
     candidates = sameType.filter((e) => e.name === wantedName);
+  } else if (!picked.parentName) {
+    const named = sameType.filter((e) => e.name === wantedName);
+    const classes = new Set(named.map((e) => normalise(e.classId)));
+    candidates = classes.size === 1 ? named : [];
   } else {
     const wantedClass = classIdForName(entries, picked.parentName);
     candidates = sameType.filter(

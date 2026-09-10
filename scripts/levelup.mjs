@@ -37,7 +37,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
-import { openImporterPanel } from "./importer-panel.mjs";
+import { openImporterPanelWithList } from "./importer-panel.mjs";
 import { readLevelBefore, recordLevelGains, levelGainTitle, gainSections } from "./gains.mjs";
 import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
@@ -258,6 +258,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
 
     const before = readLevelBefore(actor);
+    let stopWaitingForList = null;
 
     try {
       if (game.settings.get(MODULE_ID, "levelUpMode") === "xp") {
@@ -273,17 +274,14 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
 
-      // The same reading panel the class step opens. The importer's level-up
-      // dialog is also where a second class is chosen, and choosing one out of
-      // a list of bare names is the moment descriptions are worth most. With
-      // the panel docked this is redundant - the host watch opens it for any
-      // importer window - but with docking off nothing else would.
+      // The same reading panel the class step opens - but only if this level-up
+      // turns out to ask which class. Levelling a single-class character does
+      // not: the importer goes straight to the level screen, and a panel opened
+      // in advance ended up on screen beside it with nothing to say
+      // (openImporterPanelWithList). Multiclassing does ask, and choosing out of
+      // a list of bare names is the moment descriptions are worth most.
       if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
-        try {
-          openImporterPanel();
-        } catch (err) {
-          console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
-        }
+        stopWaitingForList = openImporterPanelWithList();
       }
 
       const pressed = await pressLevelUp(actor);
@@ -335,6 +333,8 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.error(t("levelup.failed"));
       return false;
     } finally {
+      // Whatever this level turned out to be, nothing is still to come from it.
+      stopWaitingForList?.();
       this._busy = false;
       this.render();
     }

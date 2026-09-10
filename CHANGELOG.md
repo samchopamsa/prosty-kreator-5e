@@ -15,6 +15,37 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.3.3
+
+**Panel z opisami klas nie pokazuje się przy zwykłym awansie.** Przy przejściu
+z 1 na 2 poziom importer w ogóle nie pyta o klasę — idzie od razu do ekranu
+wyboru poziomu. Panel otwierał się mimo to, nie znajdował okna z listą klas,
+przez osiem sekund czekał w ukryciu na okno, do którego mógłby się zadokować,
+a potem — zgodnie ze swoją własną regułą „skoro nie ma gospodarza, pokaż się
+normalnie" — pojawiał się obok jako pusta ramka bez żadnej treści.
+
+Teraz decyzję podejmuje to, co ją faktycznie rozstrzyga: okno z listą klas.
+Jeśli się otworzy (multiklasa, dodanie klasy), panel otwiera się razem z nim.
+Jeśli importer o klasę nie pyta, nie pojawia się nic. Krok „Klasa" w kreatorze
+działa jak dotąd — tam lista otwiera się zawsze.
+
+**A gdy okno z listą klas naprawdę się otwiera, panel wchodzi do środka i
+pokazuje opis.** Przy awansie i multiklasie importer otwiera inne okno niż przy
+dodawaniu klasy — z wyglądu takie samo, w środku inne. Odczytane z żywego builda
+2.18.3.v14: wiersze siedzą w `div.list.ve-ui-list__wrp`, a nie w
+`div.veapp__list`, i wiersz podklasy nie niesie `title="Class: X"` — importer
+trzyma tę informację u siebie w danych. Skutek: panel nie miał się w co
+zadokować (stąd pływające okienko obok) i nie wiedział, do jakiej klasy należy
+podświetlona podklasa, więc zamiast opisu pokazywał listę kompendiów.
+
+Teraz kontener listy jest szukany po samych wierszach, a klasa podklasy — po
+najbliższym wierszu klasy nad nią, bo importer wypisuje każdą klasę razem z jej
+podklasami. Gdy i tego nie ma (lista posortowana po źródle), nazwa podklasy
+rozstrzyga sama, ale tylko jeśli rozstrzyga jednoznacznie: dwie klasy z podklasą
+o tej samej nazwie dają brak odpowiedzi, nie losowanie.
+
+---
+
 ## 2.3.2
 
 **Ekran portretu nie nadpisuje tokena ustawionego celowo.** Ustawiał oba obrazki
