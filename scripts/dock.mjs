@@ -71,24 +71,14 @@ let origin = null;
 let observer = null;
 
 /**
- * How long the panel stays hidden waiting for a host before giving up on one.
- *
- * Waiting out of sight is right while a host is on its way and wrong once none
- * is coming, and the level-up route is where that difference shows: the
- * importer answers its level screen first, and a plain level-up of a class the
- * character already has need never open a class list at all. Without a limit
- * the panel a player asked for stays display:none for the rest of the session -
- * opened, invisible, and reported as "the descriptions stopped working".
- *
- * Past this it goes back to being an ordinary window beside the importer, which
- * is what it was before docking existed. Longer than importer-watch's own
- * watchdog, so when the markup really has moved on the GM gets that file's
- * console warning naming what it looked for, rather than only a panel that
- * quietly stopped docking.
+ * NO WAITING, NO FLOATING. Until 2.4.0 a panel that found no host hid itself
+ * (pk5e-dock-waiting) for eight seconds and then, giving up, showed itself as
+ * an ordinary window wherever it happened to be. Every "a description window
+ * popped up out of nowhere" report was that give-up: the panel had been opened
+ * in advance of a list that came late or never came. Now a panel is only ever
+ * opened when its host is already on screen (openImporterPanel), so a missing
+ * host means the host has gone - and the panel goes with it.
  */
-const HOST_WAIT_MS = 8000;
-let waitTimer = null;
-let gaveUpWaiting = false;
 
 function hostWindow() {
   return findImporterWindow({ visible: true }) ?? null;
@@ -215,50 +205,37 @@ export function undockPanel(panel) {
 /**
  * Keeps the panel docked while the host window exists.
  *
- * An observer rather than a one-off: the importer's window opens after the panel
- * in some flows and before it in others, and rebuilds parts of itself when the
- * filter changes.
+ * An observer rather than a one-off: the importer rebuilds parts of its window
+ * when the filter changes, and the panel has to notice its host closing.
  */
 export function watchForHost(panel) {
   stopWatchingHost();
 
+  // Closed once. The timed passes below can land after the host and the panel
+  // are both gone, and a second close is at best a no-op.
+  let done = false;
+
   const sync = () => {
+    if (done) return;
     const host = hostWindow();
     const element = panel?.element;
     if (!element) return;
 
     if (host) {
-      clearTimeout(waitTimer);
-      waitTimer = null;
-      gaveUpWaiting = false;
-      element.classList.remove("pk5e-dock-waiting");
       if (!host.contains(element)) dockPanel(panel);
       return;
     }
 
+    // The host has gone, so there is nowhere for this panel to be. Undocked
+    // first so the element is not torn down inside a window that is itself
+    // being torn down, then closed - not hidden, not left floating.
+    // importer-watch.mjs closes it for the same reason when the window leaves
+    // the page; closing twice is a no-op, and two reasons to close beat one.
+    done = true;
+    stopWatchingHost();
     if (element.classList.contains("pk5e-docked")) undockPanel(panel);
-
-    // The importer opens a data-source window first and the class list only after
-    // it, so the panel is asked for before there is anywhere to put it. Left
-    // visible it appears as a stray window next to a window it has nothing to
-    // do with, which is exactly what docking was meant to stop. So it waits,
-    // out of sight, until its host exists - but only while one could still be
-    // coming. See HOST_WAIT_MS for what happens when none does.
-    if (gaveUpWaiting) return;
-    element.classList.add("pk5e-dock-waiting");
-    if (waitTimer) return;
-
-    waitTimer = setTimeout(() => {
-      waitTimer = null;
-      gaveUpWaiting = true;
-      const waiting = panel?.element;
-      if (!waiting) return;
-      waiting.classList.remove("pk5e-dock-waiting");
-      // Placed as it would have been without docking: the panel has been
-      // hidden since it rendered, so wherever Foundry last put it is not
-      // somewhere anybody chose.
-      panel.setPosition?.(panel.constructor?.beside?.() ?? {});
-    }, HOST_WAIT_MS);
+    trace("importer panel closing: its host is gone");
+    panel.close?.();
   };
 
   observer = new MutationObserver(sync);
@@ -277,9 +254,6 @@ export function watchForHost(panel) {
 export function stopWatchingHost() {
   observer?.disconnect();
   observer = null;
-  clearTimeout(waitTimer);
-  waitTimer = null;
-  gaveUpWaiting = false;
 }
 
 
@@ -292,7 +266,9 @@ export function stopWatchingHost() {
  * sign that descriptions existed.
  *
  * Now the panel belongs to that window rather than to the step that usually
- * precedes it.
+ * precedes it - and since 2.4.0 this is the ONLY thing that opens it. The steps
+ * that used to open it in advance are gone, because "in advance" is where the
+ * floating windows came from.
  */
 let opener = null;
 
@@ -301,7 +277,7 @@ export function startHostWatch(openPanel) {
 
   const check = () => {
     if (!hostWindow()) return;
-    if (!game.settings.get(MODULE_ID, "dockImporterPanel")) return;
+    if (!game.settings.get(MODULE_ID, "openReferenceWithClass")) return;
     try {
       openPanel();
     } catch (err) {

@@ -1,7 +1,7 @@
 /**
  * importer-panel.mjs
  * ---------------------------------------------------------------------------
- * A narrow window that sits beside the importer's importer and shows what the
+ * A narrow panel that sits inside the importer's class list and shows what the
  * highlighted class or subclass actually does.
  *
  * The importer lists names and nothing else, which leaves a new player choosing
@@ -27,6 +27,7 @@ import {
   readDescription
 } from "./compendium.mjs";
 import { watchImporter, importerRect, findImporterWindow } from "./importer-watch.mjs";
+import { trace } from "./trace.mjs";
 import { watchForHost, stopWatchingHost, undockPanel } from "./dock.mjs";
 import { describeRow } from "./class-text.mjs";
 
@@ -40,12 +41,12 @@ const PANEL_WIDTH = 340;
  *
  * foundry.applications.instances is where an ApplicationV2 is normally found
  * by id, and it is not enough here: an application registers there when it
- * renders, not when it is made. Two openers fire on the same DOM mutation when
- * the class list appears - the host watch in dock.mjs and
- * openImporterPanelWithList() below - and between the first constructing a
- * panel and that panel rendering, the second looks up the id, finds nothing,
- * and constructs another. Both then dock into the same window, the second
- * wrapping the first, which a player sees as two panels side by side (2.3.3).
+ * renders, not when it is made. Two openers once fired on the same DOM
+ * mutation when the class list appeared, and between the first constructing a
+ * panel and that panel rendering, the second looked up the id, found nothing,
+ * and constructed another. Both then docked into the same window, the second
+ * wrapping the first, which a player saw as two panels side by side (2.3.3).
+ * There is one opener now; this stays because the registry gap is real.
  *
  * So the reference is taken at construction and released at close, and the
  * registry is only the fallback for a panel this module did not open.
@@ -223,9 +224,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
     // Re-docked on every render: Foundry rewrites position and size as inline
     // styles each time, and re-parents the element if it has been moved.
-    if (!this._stopDocking && game.settings.get(MODULE_ID, "dockImporterPanel")) {
-      this._stopDocking = watchForHost(this);
-    }
+    if (!this._stopDocking) this._stopDocking = watchForHost(this);
   }
 
   /**
@@ -369,82 +368,30 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 /**
- * How long a level-up is given to produce a class list before we stop waiting.
+ * Opens the panel inside the importer's class list, or returns the one there.
  *
- * A backstop, not a schedule: the caller cancels this the moment its level is
- * finished, so the only thing the number decides is how long a watcher outlives
- * an import that was abandoned. Generous, because the list is not opened by the
- * importer but by the player, several dialogs in - "Level Up", then "Choose
- * Subclass?" - and somebody reading those unhurried is exactly who the panel is
- * for. The first number here was twenty seconds and would have expired on them.
+ * NEVER WITHOUT A HOST. This is the rule that replaced three others (2.4.0):
+ * the panel used to be opened in advance by the class step, by the level-up
+ * window and by the panel's own level-up button, on the reasoning that the
+ * list was about to appear. Sometimes it was not - a plain level-up asks no
+ * class question - and sometimes it appeared later than the panel's patience,
+ * and each time the player got a window floating beside nothing, showing a
+ * list of compendiums. The panel has one place it makes sense, to the right of
+ * the importer's list; so it exists only while that list is on screen, and
+ * refusing to open anywhere else is what makes that true rather than usual.
+ *
+ * Opened by the host watch in module.mjs, which fires when such a window
+ * appears, however it was reached: the class step, a level-up, a multiclass,
+ * the sheet's own button. Nothing else needs to open it, and nothing else
+ * should.
  */
-const LIST_WAIT_MS = 120000;
-
-/**
- * Opens the panel when - and only when - the importer's class list appears.
- *
- * Levelling up used to open it straight away, on the reasoning that a level-up
- * is also where a second class is chosen. It is not where a *first* one is:
- * going from level 1 to 2 with a single class the importer never asks which
- * class, it puts up "Select Class and Subclass Levels" and gets on with it. The
- * panel opened regardless, found no window it recognised, waited out of sight
- * for HOST_WAIT_MS and then - by dock.mjs's design, having given up on a host -
- * placed itself on screen as a stray empty window beside the level screen.
- * Which is what a player sees as "the description panel appears for no reason".
- *
- * So the decision is left to the thing that actually settles it: the class list
- * window. If it opens, the panel opens with it; if the importer never asks
- * which class, nothing appears. Same rule as dock.mjs's host watch, kept here
- * as well because that one only runs when the panel is set to dock, and this
- * has to hold either way.
- *
- * @param   {object}   [options]
- * @param   {number}   [options.timeout]  Stop waiting after this long.
- * @returns {Function} Call to stop waiting; the panel does not open afterwards.
- */
-export function openImporterPanelWithList({ timeout = LIST_WAIT_MS } = {}) {
-  let done = false;
-  let observer = null;
-  let timer = null;
-
-  const stop = () => {
-    if (done) return;
-    done = true;
-    observer?.disconnect();
-    clearTimeout(timer);
-  };
-
-  const look = () => {
-    if (done || !findImporterWindow()) return;
-    stop();
-    try {
-      openImporterPanel();
-    } catch (err) {
-      console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
-    }
-  };
-
-  try {
-    observer = new MutationObserver(look);
-    observer.observe(document.body, { childList: true, subtree: true });
-    timer = setTimeout(stop, timeout);
-    // Occasionally the window is already there - a list left open by a
-    // cancelled run - in which case there is no mutation to wait for.
-    look();
-  } catch (err) {
-    console.warn(`${MODULE_ID} | Could not watch for the importer's class list`, err);
-    stop();
-  }
-
-  return stop;
-}
-
-/** Opens the panel, or brings the existing one forward. */
 export function openImporterPanel() {
   const open = openPanel();
-  if (open) {
-    open.bringToFront?.();
-    return open;
+  if (open) return open;
+
+  if (!findImporterWindow({ visible: true })) {
+    trace("importer panel not opened: no class list on screen");
+    return null;
   }
   const panel = new ImporterPanel();
   panel.render(true);

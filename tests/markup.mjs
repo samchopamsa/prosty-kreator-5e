@@ -77,7 +77,7 @@ globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
 const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList } =
   await import("../scripts/importer-watch.mjs");
-const { dockPanel, undockPanel } = await import("../scripts/dock.mjs");
+const { dockPanel, undockPanel, watchForHost } = await import("../scripts/dock.mjs");
 const { decorate: markDirectory } = await import("../scripts/review-directory.mjs");
 
 // --- harness, ten sam co w run.mjs ------------------------------------------
@@ -760,6 +760,46 @@ group("importer: lista otwierana przez level up", () => {
 
   element.remove();
   modal.remove();
+});
+
+// --- panel zyje tylko razem z gospodarzem -----------------------------------
+//
+// Do 2.4.0 panel bez gospodarza chowal sie na osiem sekund, a potem pokazywal
+// jako zwykle okno "gdzie popadnie". Kazde "okienko z opisem samo sie
+// otworzylo" bylo tym wlasnie: panelem otwartym na zapas przed lista, ktora
+// przyszla pozno albo wcale. Teraz brak gospodarza to zamkniecie - nie
+// czekanie, nie plywanie.
+
+await group("panel: zamyka sie, gdy znika okno z lista", async () => {
+  const host = document.createElement("div");
+  host.className = "application ve-app";
+  host.innerHTML =
+    '<h1 class="window-title">Filter/Search for Class and Subclass</h1>' +
+    '<div class="window-content"><div class="veapp__list"></div></div>';
+  document.body.appendChild(host);
+  Object.defineProperty(host, "offsetParent", { get: () => document.body });
+
+  const element = document.createElement("div");
+  element.className = "application pk5e-importer-panel";
+  document.body.appendChild(element);
+  let closed = 0;
+  const panel = { element, close: () => { closed += 1; element.remove(); } };
+
+  const stop = watchForHost(panel);
+  check("z gospodarzem na ekranie panel od razu siedzi w srodku", host.contains(element), true);
+  check("i nie jest zamykany", closed, 0);
+
+  host.remove();
+  await wait(50);
+  check("gdy okno znika, panel jest zamykany", closed, 1);
+  check("a nie zostawiony jako okno obok", element.isConnected, false);
+  check("i nie zostaje po nim wiersz dokujacy", document.querySelectorAll(".pk5e-dock-row").length, 0);
+
+  // Opoznione przebiegi sync() (50/200/600 ms) trafiaja juz po zamknieciu i
+  // nie moga zamykac drugi raz ani niczego dotykac.
+  await wait(700);
+  check("pozniejsze przebiegi nie zamykaja ponownie", closed, 1);
+  stop();
 });
 
 // --- katalog aktorow ---------------------------------------------------------

@@ -15,6 +15,34 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.4.0
+
+**Panel z opisami nigdy nie pływa.** Istnieje tylko w widocznym oknie z listą
+klas importera — otwiera się, gdy to okno się pojawia, siedzi po prawej od
+listy, zamyka się, gdy okno znika. Bez czekania, bez chowania, bez pokazywania
+się „gdzie popadnie".
+
+Do tej pory trzy miejsca otwierały go na zapas — krok „Klasa", okno awansu i
+przycisk awansu w panelu — a `dock.mjs` bez gospodarza chował panel na osiem
+sekund i potem, poddając się, pokazywał go jako zwykłe okno. Każde „okienko z
+opisem samo się otworzyło" (także to po wyborze klasy przy tworzeniu) było tym
+właśnie: panelem otwartym przed listą, która przyszła późno albo wcale. Łatanie
+kolejnych wyścigów (2.3.3, 2.3.4) nie zmieniało zasady, więc zmieniona jest
+zasada.
+
+Co konkretnie:
+- `openImporterPanel()` odmawia otwarcia, gdy na ekranie nie ma okna z listą;
+  jedynym miejscem, które je woła, jest obserwator okien w `module.mjs`;
+- gdy okno z listą znika, panel jest zamykany (dotąd: chowany, potem pływał);
+- w stylach panel niezadokowany jest niewidoczny — nawet ten ułamek sekundy
+  między renderem a zadokowaniem nie ma jak mignąć;
+- ustawienie „Put the description panel inside the importer" znika: bez
+  dokowania panel z definicji pływałby, a tego już nie ma. Zostaje jedno
+  ustawienie: „Show class descriptions inside the importer's class list",
+  które włącza lub wyłącza panel w ogóle.
+
+---
+
 ## 2.3.4
 
 **Jeden panel z opisami, nie dwa.** Po 2.3.3 przy wyborze podklasy w awansie

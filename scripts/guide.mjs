@@ -36,7 +36,7 @@ import {
   selectionFor
 } from "./languages-core.mjs";
 import { ClassReference } from "./reference.mjs";
-import { ImporterPanel, openImporterPanel, openImporterPanelWithList } from "./importer-panel.mjs";
+import { ImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
@@ -1076,16 +1076,9 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
   static async onAddStep(event, target) {
     const step = target.dataset.step;
 
-    // The importer lists class names with nothing to read, so open the narrow
-    // panel beside it. That one follows whatever the player highlights; the
-    // wide reference window stays available from the link in this step.
-    if (step === "class" && game.settings.get(MODULE_ID, "openReferenceWithClass")) {
-      try {
-        openImporterPanel();
-      } catch (err) {
-        console.warn(`${MODULE_ID} | Could not open the panel alongside`, err);
-      }
-    }
+    // The description panel is not opened here. It opens by itself, inside the
+    // importer's class list, when that window appears (module.mjs host watch)
+    // - opening it in advance is how it ended up floating beside nothing.
 
     // Armed before the button, because the screen it waits for is one the
     // button brings up. Not awaited: it resolves when that screen has been
@@ -1212,16 +1205,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       }
     }
 
-    // Same reading panel as the class step: adding a second class is exactly the
-    // moment a player wants to know what the classes do, and it was only
-    // offered the first time round. Opened when the class list appears and not
-    // before - this button also takes an ordinary level, where the importer
-    // never asks which class and the panel would arrive with nothing in it.
-    let stopWaitingForList = null;
-    if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
-      stopWaitingForList = openImporterPanelWithList();
-    }
-
     // Marked as importing for the same reason the other steps are: the importer
     // puts its choice dialogs up a moment after the class lands, and without
     // this the panel announced a skipped choice while the dialog asking for it
@@ -1247,7 +1230,6 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       // pause in the import, it is the player reading.
       await watchImportEnd({ timeout: 120000, actor });
     } finally {
-      stopWaitingForList?.();
       this._importing = null;
       // The sheet settles a moment after the importer reports itself finished.
       await wait(600);

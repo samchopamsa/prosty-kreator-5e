@@ -1482,9 +1482,13 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
   min-width: 46rem;
 }
 
-/* Waiting for its host. Hidden rather than closed, so the panel keeps the
-   state it has built up and reappears already following the list. */
-.application.pk5e-dock-waiting {
+/* Never visible outside its host. The panel is only opened when the class
+   list is on screen and is closed when it goes, but between rendering and
+   docking there is a moment in which it is an ordinary window at an ordinary
+   position - and if the list has not built its rows yet, that moment lasts
+   until the next mutation. Hiding everything that is not docked turns "the
+   panel does not float" from a sequence of events into a rule. */
+.application.pk5e-importer-panel:not(.pk5e-docked) {
   display: none !important;
 }
 

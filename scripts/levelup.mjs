@@ -37,7 +37,6 @@ import { MODULE_ID } from "./constants.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
 import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
-import { openImporterPanelWithList } from "./importer-panel.mjs";
 import { readLevelBefore, recordLevelGains, levelGainTitle, gainSections } from "./gains.mjs";
 import { rulesChecks } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
@@ -258,7 +257,6 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
 
     const before = readLevelBefore(actor);
-    let stopWaitingForList = null;
 
     try {
       if (game.settings.get(MODULE_ID, "levelUpMode") === "xp") {
@@ -274,15 +272,10 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         }
       }
 
-      // The same reading panel the class step opens - but only if this level-up
-      // turns out to ask which class. Levelling a single-class character does
-      // not: the importer goes straight to the level screen, and a panel opened
-      // in advance ended up on screen beside it with nothing to say
-      // (openImporterPanelWithList). Multiclassing does ask, and choosing out of
-      // a list of bare names is the moment descriptions are worth most.
-      if (game.settings.get(MODULE_ID, "openReferenceWithClass")) {
-        stopWaitingForList = openImporterPanelWithList();
-      }
+      // The description panel is not opened from here. If this level-up asks
+      // which class - a multiclass, a subclass - the list it asks with brings
+      // the panel along by itself (module.mjs host watch); a plain level-up
+      // asks nothing and gets no panel, which is the point.
 
       const pressed = await pressLevelUp(actor);
       if (!pressed) {
@@ -333,8 +326,6 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.error(t("levelup.failed"));
       return false;
     } finally {
-      // Whatever this level turned out to be, nothing is still to come from it.
-      stopWaitingForList?.();
       this._busy = false;
       this.render();
     }

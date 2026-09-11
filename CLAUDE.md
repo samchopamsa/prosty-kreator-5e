@@ -83,7 +83,8 @@ Layers, roughly outward-in:
 - **Windows** (ApplicationV2 + HandlebarsApplicationMixin, one `.hbs` each):
   `guide.mjs` (the panel), `complete.mjs` (ability scores on an already-imported
   actor), `languages.mjs`, `levelup.mjs`, `reference.mjs` (wide compendium
-  reader), `importer-panel.mjs` (narrow panel beside the importer),
+  reader), `importer-panel.mjs` (narrow panel docked inside the importer's class list;
+  it is opened only by the host watch in `dock.mjs` and never floats),
   `reference-config.mjs`.
 - **`sheet-actions.mjs`** — all DOM plumbing: finding sheet markup, waiting for
   windows, clicking. Timing-dependent and the most likely thing to break when
