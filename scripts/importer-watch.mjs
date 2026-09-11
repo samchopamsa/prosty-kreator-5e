@@ -135,16 +135,35 @@ export function importerTitleOf(app) {
  * The title regex was moved here in 2026-08-28 after the same drift bit a
  * multiclass. The selector was left behind; this is the rest of that fix.
  *
+ * TWO WINDOWS AT ONCE, and which one. The importer does not close its import
+ * list when a class has been imported, so by the time a multiclass opens its
+ * own list the class step's window is often still in the page - hidden or
+ * behind everything, but there. Two rules used to pick from that pair: docking
+ * took the first VISIBLE match, this file's watcher took the first match of
+ * any kind. Different windows. The panel sat in the new list while its
+ * observer listened to the old one, and a player choosing a second class from
+ * the creator saw the panel dock and then show nothing at all (2026-09-11).
+ *
+ * So there is one preference now, for everyone who asks: a window on screen
+ * over one that is not, and among those the NEWEST - Foundry appends windows
+ * to the body in the order they open, so newest is last. A caller that
+ * insists on a visible window gets none rather than a hidden one; a caller
+ * that does not still gets the visible one whenever there is one, and only
+ * falls back to a hidden one when nothing better exists (the tests run in
+ * jsdom, where nothing has a layout and everything is "hidden").
+ *
  * @param {object}  [options]
  * @param {boolean} [options.visible] Skip windows that are not on screen.
  *                                    Docking needs it - an element cannot be
- *                                    moved into a window nobody is looking at -
- *                                    and watching does not.
+ *                                    moved into a window nobody is looking at.
  */
 export function findImporterWindow({ visible = false } = {}) {
-  return Array.from(document.querySelectorAll(".ve-app")).find(
-    (app) => (!visible || app.offsetParent) && TITLE_MATCH.test(importerTitleOf(app))
+  const matching = Array.from(document.querySelectorAll(".ve-app")).filter((app) =>
+    TITLE_MATCH.test(importerTitleOf(app))
   );
+  const shown = matching.filter((app) => app.offsetParent);
+  const pool = visible || shown.length ? shown : matching;
+  return pool[pool.length - 1];
 }
 
 const findImporter = () => findImporterWindow();
@@ -380,9 +399,18 @@ export function watchImporter({ onSelect, onClose } = {}) {
       onClose?.();
       return;
     }
-    if (!app) {
-      const found = findImporter();
-      if (found) attach(found);
+
+    // Not only when there is nothing yet: a newer list can open while the one
+    // being watched is still in the page (see findImporterWindow), and the
+    // player is clicking in the newer one. Following the finder's choice
+    // wherever it moves keeps this observer on the same window dock.mjs put
+    // the panel in.
+    const found = findImporter();
+    if (found && found !== app) {
+      inner?.disconnect();
+      inner = null;
+      app = null;
+      attach(found);
     }
   }));
 

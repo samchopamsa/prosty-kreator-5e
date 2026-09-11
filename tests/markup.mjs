@@ -75,7 +75,7 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 // ostrzezenia, ktore sa czescia tego, co testujemy.
 globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
-const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList } =
+const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList, findImporterWindow } =
   await import("../scripts/importer-watch.mjs");
 const { dockPanel, undockPanel, watchForHost } = await import("../scripts/dock.mjs");
 const { decorate: markDirectory } = await import("../scripts/review-directory.mjs");
@@ -800,6 +800,70 @@ await group("panel: zamyka sie, gdy znika okno z lista", async () => {
   await wait(700);
   check("pozniejsze przebiegi nie zamykaja ponownie", closed, 1);
   stop();
+});
+
+// --- dwa okna z lista naraz ---------------------------------------------------
+//
+// Importer nie zamyka swojej listy importu po zaimportowaniu klasy, wiec gdy
+// multiklasa otwiera wlasna liste, w DOM sa dwa pasujace okna. Dokowanie bralo
+// pierwsze WIDOCZNE, obserwator zaznaczen pierwsze JAKIEKOLWIEK - rozne okna.
+// Panel siedzial w nowym, a sluchal starego: pusta przestrzen.
+
+await group("importer: dwa okna z lista, ktore jest tym wlasciwym", async () => {
+  dom.window.document.body.innerHTML = "";
+
+  const okno = (id, rows) => {
+    const app = document.createElement("div");
+    app.className = "application ve-app";
+    app.id = id;
+    app.innerHTML =
+      '<h1 class="window-title">Filter/Search for Class and Subclass</h1>' +
+      '<div class="veapp__list">' +
+      rows.map((n) => `<label><span class="ve-col-9 ve-bold">${n}</span></label>`).join("") +
+      "</div>";
+    document.body.appendChild(app);
+    return app;
+  };
+  // Widocznosc jawnie na kazdym oknie: wczesniejsza grupa podmienia
+  // offsetParent na prototypie, wiec "domyslnie ukryte" trzeba tu powiedziec.
+  const visibility = (app, shown) =>
+    Object.defineProperty(app, "offsetParent", { get: () => (shown ? document.body : null), configurable: true });
+  const visible = (app) => visibility(app, true);
+  const hidden = (app) => visibility(app, false);
+
+  const stare = hidden(okno("stare", ["Fighter"]));
+  const nowe = hidden(okno("nowe", ["Wizard"]));
+
+  check("bez ukladu (jsdom) wygrywa nowsze, czyli ostatnie w DOM",
+    findImporterWindow()?.id, "nowe");
+  check("z visible i bez zadnego widocznego - nic",
+    findImporterWindow({ visible: true }), undefined);
+
+  visible(stare);
+  check("widoczne wygrywa z nowszym, ale ukrytym", findImporterWindow()?.id, "stare");
+  check("i to samo okno dostaje dokowanie", findImporterWindow({ visible: true })?.id, "stare");
+
+  visible(nowe);
+  check("dwa widoczne: nowsze", findImporterWindow()?.id, "nowe");
+
+  // Obserwator: przypiety do starego okna, gdy nowe sie pojawia, ma przejsc
+  // za nim - bo tam klika gracz.
+  nowe.remove();
+  const seen = [];
+  const stop = watchImporter({ onSelect: (r) => seen.push(r.name) });
+  const nowsze = visible(okno("nowsze", ["Wizard"]));
+  await wait(SETTLED);
+  nowsze.querySelector("label").classList.add("list-multi-selected");
+  await wait(SETTLED);
+  check("klikniecie w nowszym oknie dociera do panelu", seen, ["Wizard"]);
+
+  seen.length = 0;
+  stare.querySelector("label").classList.add("list-multi-selected");
+  await wait(SETTLED);
+  check("a stare okno nie jest juz sluchane", seen, []);
+  stop();
+
+  dom.window.document.body.innerHTML = "";
 });
 
 // --- katalog aktorow ---------------------------------------------------------
