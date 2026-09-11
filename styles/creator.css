@@ -474,6 +474,10 @@
 .pk5e-report-item.is-warning { border-left-color: #c08a3e; }
 .pk5e-report-label { font-weight: 600; }
 .pk5e-report-hint { opacity: 0.7; font-size: 13px; line-height: 1.3; }
+/* The one finding that carries its own fix (spells to pick): a link under the
+   hint, left-aligned like the text above it rather than stretched like the
+   step's own buttons. */
+.pk5e-report-action { align-self: flex-start; margin-top: 2px; font-size: 13px; }
 /* chat summary card */
 .pk5e-card { display: flex; flex-direction: column; gap: 6px; }
 .pk5e-card-head { display: flex; align-items: center; gap: 8px; }
@@ -2353,3 +2357,153 @@ body.pk5e-hide-importer-levelup button[class*="level-up"]:not(.pk5e-sheet-button
 .pk5e-review-filter[aria-pressed="true"] {
   color: var(--color-text-hyperlink, #78a9d0);
 }
+
+/* ---------------------------------------------------------------------------
+   Spells the importer leaves to the player (2.5.0).
+
+   Three places say where the spells stand: a note under the spell pills on
+   the class card and in the level-up window, with a proper button; the foot
+   of a caster's description in the panel beside the importer's class list;
+   and the panel beside its spell list, which lists the sheet's spells with a
+   remove button each. The note and the panel share the first two rules.
+   --------------------------------------------------------------------------- */
+.pk5e-spell-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 7px 9px;
+  border-left: 3px solid var(--pk5e-accent);
+  border-radius: 3px;
+  background: var(--pk5e-hover, rgba(128, 128, 128, 0.08));
+}
+.pk5e-spell-note { display: flex; flex-direction: column; gap: 1px; font-size: 14px; }
+.pk5e-spell-note.is-short .pk5e-spell-note-text { color: var(--pk5e-warning, #c08a3e); }
+.pk5e-spell-note-hint { font-size: 13px; opacity: 0.75; line-height: 1.3; }
+
+/* The button: a block like the step's own "Choose a class", not a link -
+   it is the way the spells get onto the sheet, and a link under a pill row
+   was missed. The step rule above already sizes any non-link button inside a
+   step; this repeats it for the level-up window, which has no such rule. */
+.pk5e-spell-button {
+  width: 100%;
+  margin-top: 3px;
+  padding: 5px 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid var(--pk5e-accent);
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.pk5e-spell-button:hover:not(:disabled) { background: var(--pk5e-hover); }
+
+/* Docked in the spell panel the note has no button (the list is beside it)
+   and no tint - it is the panel's heading, not a callout inside a card. */
+.pk5e-spell-notes.is-docked {
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  background: none;
+}
+
+/* The foot of a caster's description. */
+.pk5e-text-spells {
+  margin-top: 10px;
+  padding: 7px 9px;
+  border-left: 3px solid var(--pk5e-accent);
+  border-radius: 3px;
+  background: var(--pk5e-hover, rgba(128, 128, 128, 0.08));
+}
+.pk5e-text-spells .pk5e-text-level { margin-top: 0; }
+.pk5e-text-spells p { margin: 3px 0; font-size: 14px; }
+.pk5e-text-spells-note { opacity: 0.75; font-size: 13px; }
+
+/* The panel beside the spell list. Never visible outside its host, for the
+   reason the description panel gives. */
+.application.pk5e-spell-panel:not(.pk5e-docked) {
+  display: none !important;
+}
+/* The list scrolls on its own. The docked element is a stretched flex item
+   whose content box is its window-content; without a minimum height of zero
+   on the way down, the body grows to fit every spell and the overflow is
+   simply cut off by the row - which is how a Bard 5's third-level spells
+   went unreachable. */
+.application.pk5e-spell-panel.pk5e-docked > .window-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.pk5e-spell-panel-root { flex: 1 1 auto; min-height: 0; }
+.pk5e-spell-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* A spell a feature granted rather than the class list: shown, named after
+   its giver, and not offered for removal. */
+.pk5e-spell-row.is-locked { opacity: 0.75; }
+.pk5e-spell-origin {
+  flex: 0 0 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* A spell above what the class can cast at this level. */
+.pk5e-spell-row.is-too-high .pk5e-spell-name { color: var(--pk5e-warning, #c08a3e); }
+.pk5e-spell-flag { flex: 0 0 auto; color: var(--pk5e-warning, #c08a3e); }
+.pk5e-spell-row-note {
+  padding: 0 4px 2px 32px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--pk5e-warning, #c08a3e);
+}
+.pk5e-spell-group-title {
+  margin: 4px 0 2px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+.pk5e-spell-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.pk5e-spell-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-size: 14px;
+}
+.pk5e-spell-row:hover { background: var(--pk5e-hover); }
+.pk5e-spell-row img { width: 22px; height: 22px; border: none; border-radius: 3px; flex: 0 0 22px; }
+.pk5e-spell-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk5e-spell-remove {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  line-height: 1;
+  border-radius: 3px;
+  opacity: 0.6;
+}
+.pk5e-spell-remove:hover { opacity: 1; color: var(--pk5e-warning, #b34747); }
+
+/* The note once the count matches and nothing sits above the cap: the same
+   block, the accent gone green, the button reading "Change spells". Colour
+   changes rather than the note going, because a player who has just picked
+   six spells is exactly the one about to change their mind about one. */
+.pk5e-spell-note.is-complete .pk5e-spell-note-text { color: var(--pk5e-ok, #4c9a5a); }
+.pk5e-spell-notes:has(.is-complete):not(:has(.is-short)) { border-left-color: var(--pk5e-ok, #4c9a5a); }
+.pk5e-spell-button.is-complete { border-color: var(--pk5e-ok, #4c9a5a); font-weight: 500; }
+.pk5e-spell-note-high { font-size: 13px; line-height: 1.3; color: var(--pk5e-warning, #c08a3e); }
+.pk5e-spell-note .pk5e-spell-button { margin-top: 5px; }

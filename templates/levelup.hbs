@@ -73,6 +73,22 @@
                   {{/if}}
                   {{/each}}
                 </span>
+              {{#if spellNotes}}
+              {{!-- Where the spells stand for a class the importer leaves to the player,
+                    with the button that opens its spell list (checkup.mjs). --}}
+              <div class="pk5e-spell-notes">
+                {{#each spellNotes}}
+                <div class="pk5e-spell-note {{#if complete}}is-complete{{else}}is-short{{/if}}">
+                  <span class="pk5e-spell-note-text"><strong>{{className}} {{level}}:</strong> {{text}}</span>
+                  {{#if highText}}<span class="pk5e-spell-note-high">{{highText}}</span>{{/if}}
+                  {{#if hint}}<span class="pk5e-spell-note-hint">{{hint}}</span>{{/if}}
+                  <button type="button" class="pk5e-spell-button {{#if complete}}is-complete{{/if}}" data-action="addSpells">
+                    <i class="fa-solid fa-wand-sparkles"></i> {{actionLabel}}
+                  </button>
+                </div>
+                {{/each}}
+              </div>
+              {{/if}}
               </div>
               {{/each}}
             </div>
@@ -89,6 +105,9 @@
             <li class="pk5e-change is-warning">
               <strong>{{label}}</strong>
               {{#if hint}}<span class="pk5e-note-hint">{{hint}}</span>{{/if}}
+              {{#if action}}
+              <button type="button" class="pk5e-link pk5e-report-action" data-action="{{action}}">{{actionLabel}}</button>
+              {{/if}}
             </li>
             {{/each}}
           </ul>

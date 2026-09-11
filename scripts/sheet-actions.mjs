@@ -599,6 +599,53 @@ export async function pressSheetButton(actor, types, labels) {
 }
 
 /**
+ * Opens the importer's own spell list, aimed at this character.
+ *
+ * NOT A SHEET BUTTON, FOR ONCE. Every other step here presses a button the
+ * sheet already has, because the importer intercepts it. There is no such
+ * button for spells: the dnd5e sheet (5.3.3) carries `findItem` for class,
+ * subclass, species, background and facility only, and the importer patches
+ * exactly that list (`_isPatchedFindItemType`). What the importer does for
+ * those - `ChooseImporter.pOpen({actor, modeId})` - it also publishes, as
+ * `api.importer.pOpen`, with "spells" among the ids it accepts. So this is the
+ * same call the sheet button would have made, minus the button.
+ *
+ * The window it opens is the importer's ordinary spell list with the character
+ * as target; the player filters it by class and picks. Nothing is chosen for
+ * them.
+ *
+ * WHERE THE API ACTUALLY IS. Its source assigns the same object to
+ * `game.modules.get("plutonium").api`, `game.plutonium` and
+ * `globalThis.plutonium`. Measured live (2.18.3, 2026-09-11): only the global
+ * is there - the module record's `api` is empty and `game.plutonium` is
+ * undefined, presumably because `game` is replaced after the importer's
+ * script has run. The global is read first, the module record as a fallback
+ * for a build where the order differs.
+ */
+export async function openSpellImporter(actor) {
+  const importer =
+    globalThis[IMPORTER_ID]?.importer ?? game.modules.get(IMPORTER_ID)?.api?.importer;
+  if (typeof importer?.pOpen !== "function") {
+    ui.notifications.warn(t("spells.noImporter"));
+    return false;
+  }
+  try {
+    await importer.pOpen({ actor, modeId: "spells" });
+    // The same data-source screen the class step lands on, answered the same
+    // way - by the setting that says whether to press "Open Importer" for
+    // the player - so the two routes into the importer feel like one.
+    autoAdvance();
+    return true;
+  } catch (err) {
+    // The importer refuses below its configured minimum role, and says so by
+    // throwing. That is its rule to keep; ours is only to pass the word on.
+    console.warn(`${MODULE_ID} | The importer would not open its spell list`, err);
+    ui.notifications.warn(t("spells.openFailed", err?.message ?? ""));
+    return false;
+  }
+}
+
+/**
  * Which creation steps are still outstanding on an actor. Used to decide
  * whether to offer "Resume creation" at all.
  */

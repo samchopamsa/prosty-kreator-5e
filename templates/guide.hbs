@@ -125,6 +125,9 @@
           <li class="pk5e-report-item is-{{level}}">
             <span class="pk5e-report-label">{{label}}</span>
             <span class="pk5e-report-hint">{{hint}}</span>
+            {{#if action}}
+            <button type="button" class="pk5e-link pk5e-report-action" data-action="{{action}}">{{actionLabel}}</button>
+            {{/if}}
           </li>
           {{/each}}
         </ul>
@@ -382,6 +385,25 @@
                 {{/if}}{{/unless}}{{/if}}
               </div>
 
+              {{#if spellNotes}}
+              {{!-- Spells the importer left to the player, and where the sheet
+                    stands with (checkup.mjs): right under the class, above the
+                    skipped-choices callout; green once the count matches, with
+                    the button reading "Change spells" for a later swap. --}}
+              <div class="pk5e-spell-notes">
+                {{#each spellNotes}}
+                <div class="pk5e-spell-note {{#if complete}}is-complete{{else}}is-short{{/if}}">
+                  <span class="pk5e-spell-note-text"><strong>{{className}} {{level}}:</strong> {{text}}</span>
+                  {{#if highText}}<span class="pk5e-spell-note-high">{{highText}}</span>{{/if}}
+                  {{#if hint}}<span class="pk5e-spell-note-hint">{{hint}}</span>{{/if}}
+                  <button type="button" class="pk5e-spell-button {{#if complete}}is-complete{{/if}}" data-action="addSpells">
+                    <i class="fa-solid fa-wand-sparkles"></i> {{actionLabel}}
+                  </button>
+                </div>
+                {{/each}}
+              </div>
+              {{/if}}
+
               {{#if skipped}}
               <div class="pk5e-callout pk5e-skipped-item">
                 <strong>{{pkT "guide.skippedTitle"}}</strong>
@@ -498,6 +520,9 @@
             <li class="pk5e-report-item is-{{level}}">
               <span class="pk5e-report-label">{{label}}</span>
               <span class="pk5e-report-hint">{{hint}}</span>
+              {{#if action}}
+              <button type="button" class="pk5e-link pk5e-report-action" data-action="{{action}}">{{actionLabel}}</button>
+              {{/if}}
             </li>
             {{/each}}
           </ul>
@@ -585,6 +610,9 @@
           <li class="pk5e-report-item is-{{level}}">
             <span class="pk5e-report-label">{{label}}</span>
             <span class="pk5e-report-hint">{{hint}}</span>
+            {{#if action}}
+            <button type="button" class="pk5e-link pk5e-report-action" data-action="{{action}}">{{actionLabel}}</button>
+            {{/if}}
           </li>
           {{/each}}
         </ul>

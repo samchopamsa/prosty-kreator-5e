@@ -8,7 +8,7 @@ Advancement i importer działają dokładnie tak, jak zostały zbudowane. Kreato
 dokłada trzy rzeczy, których brakuje: **kolejność**, **to, o co importer nigdy
 nie pyta** (punktacja cech, języki) i **wykrywanie tego, co zostało pominięte**.
 
-Wersja **2.4.0**.
+Wersja **2.5.0**.
 
 ---
 
@@ -133,7 +133,11 @@ Są ślepe w różnych miejscach i **żaden nie zastępuje pozostałych**:
 - **czytanie karty** — zero punktów życia, zerowa szybkość, nieprzypisane
   premie do cech, puste wpisy Trait, wymagania wieloklasowości
 - **czytanie reguł** — porównanie postaci z tym, co klasa faktycznie daje na
-  danym poziomie (wymaga importera)
+  danym poziomie (wymaga importera); także liczba zaklęć, które klasa każe
+  wybrać, bo bardowi, czarownikowi, warlockowi i magowi darmowy importer nie
+  dobiera ich wcale — kreator mówi „0 z 4", otwiera listę zaklęć importera i
+  dokuje obok niej panel z zaklęciami postaci, z przyciskiem usunięcia przy
+  każdym
 - **obserwowanie okien** — wybory, których dialogi importera **nie zapisują
   nigdzie**: styl walki, sztuczki. Pominięty wybór nie zostawia w danych żadnego
   śladu; jedyny moment, w którym ta informacja istnieje, to czas wyświetlania

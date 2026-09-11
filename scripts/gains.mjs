@@ -484,6 +484,70 @@ export async function recordLevelGains(actor, before) {
   }
 }
 
+/**
+ * Puts a spell picked after the import into the block it belongs with.
+ *
+ * WHY THE RECORD IS TOUCHED AFTER THE FACT
+ * The record is "what the step put on the sheet", read once when the
+ * importer says it has finished. For a Bard that reading has no spells in
+ * it - the importer picks none (rules-data.mjs, "spells the class leaves to
+ * the player") - and the spells come minutes later, through the "Add spells"
+ * button, one Import press at a time. They are part of the same level all
+ * the same, and a player looking at the level's pills expects to see them
+ * there, above the button that added them. So the latest block - the last
+ * level taken, or the class step itself when no level has been - takes them
+ * in, one at a time as they land, and lets them go when they are removed.
+ *
+ * Only the class's own spells: a species' cantrip landing during the same
+ * window was never the level's to claim. Same plain values as every other
+ * item in a record, so it survives the spell's deletion like the rest.
+ *
+ * @param {Actor}  actor
+ * @param {Item}   item     the spell that arrived or left
+ * @param {boolean} removed  true when it left
+ */
+export async function recordSpellChange(actor, item, removed = false) {
+  if (!actor || item?.type !== "spell") return false;
+
+  const list = actor.getFlag(MODULE_ID, LEVEL_GAINS_FLAG) ?? [];
+  const gains = actor.getFlag(MODULE_ID, "gains") ?? {};
+  const inLevel = list.length > 0;
+  const record = inLevel ? list[list.length - 1]?.record : gains.class;
+  if (!record) return false;
+
+  const items = Array.isArray(record.items) ? [...record.items] : [];
+  const key = (entry) => `${entry.type}:${entry.name}`;
+  const at = items.findIndex((entry) => key(entry) === `spell:${item.name}`);
+
+  if (removed) {
+    if (at < 0) return false;
+    items.splice(at, 1);
+  } else {
+    if (at >= 0) return false;
+    items.push({
+      type: item.type,
+      name: item.name,
+      img: item.img ?? "",
+      page: item.flags?.[IMPORTER_FLAG]?.page ?? ""
+    });
+  }
+
+  try {
+    const next = { ...record, items };
+    if (inLevel) {
+      const updated = [...list];
+      updated[updated.length - 1] = { ...updated[updated.length - 1], record: next };
+      await actor.setFlag(MODULE_ID, LEVEL_GAINS_FLAG, updated);
+    } else {
+      await actor.setFlag(MODULE_ID, "gains", { ...gains, class: next });
+    }
+    return true;
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not record the spell on the level`, err);
+    return false;
+  }
+}
+
 /** Forgets every recorded level. For when the class they belong to has gone. */
 export async function clearLevelGains(actor) {
   if (!actor?.getFlag?.(MODULE_ID, LEVEL_GAINS_FLAG)?.length) return;

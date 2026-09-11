@@ -40,7 +40,8 @@ import { ImporterPanel } from "./importer-panel.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { preserveScroll, applyTheme, currentTheme, THEMES } from "./ui.mjs";
 import { checkCharacter } from "./validate.mjs";
-import { rulesChecks } from "./checkup.mjs";
+import { rulesChecks, mergeChecks, spellNotes } from "./checkup.mjs";
+import { isOwnSpell } from "./rules-data.mjs";
 import { folderChoices, uniqueActorName, tokenNameUpdate } from "./naming.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions, skippedText } from "./option-watch.mjs";
 import { migrateActor } from "./migrate.mjs";
@@ -55,13 +56,14 @@ import {
   clearLevelGains,
   dropLastLevelGain,
   dropLevelGainsFor,
-  classesIn
+  classesIn,
+  recordSpellChange
 } from "./gains.mjs";
 import { choosePortrait } from "./portrait.mjs";
 import { trace } from "./trace.mjs";
 import { postSummary } from "./summary.mjs";
 import { submitForReview, reviewContext } from "./review.mjs";
-import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, wait } from "./sheet-actions.mjs";
+import { text, STEP_CONFIG, deleteWithAdvancement, confirmRemoval, grantExperienceFor, pressLevelUp, pressSheetButton, ensureEditMode, restoreSheetMode, openSpellImporter, wait } from "./sheet-actions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -229,7 +231,8 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       languages: CreationGuide.onLanguages,
       postSummary: CreationGuide.onPostSummary,
       recheck: CreationGuide.onRecheck,
-      submitReview: CreationGuide.onSubmitReview
+      submitReview: CreationGuide.onSubmitReview,
+      addSpells: CreationGuide.onAddSpells
     }
   };
 
@@ -475,12 +478,16 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     // Rules comparison, folded into the same list. Awaited here rather than
     // rendered separately so the player reads one checklist, not two, and so a
     // slow or absent rules data simply contributes nothing.
+    //
+    // Merged rather than appended, and the totals re-counted from the merged
+    // list: a rules check can stand in for a sheet check (the spells line),
+    // and a count kept by adding to the old total would still be counting the
+    // line that was dropped.
     const fromRules = await rulesChecks(actor);
     if (fromRules.length) {
-      report.checks.push(...fromRules);
-      const added = fromRules.filter((c) => !c.ok).length;
-      report.warnings += added;
-      report.problems = (report.problems ?? 0) + added;
+      report.checks = mergeChecks(report.checks, fromRules);
+      report.warnings = report.checks.filter((c) => !c.ok && c.level === "warning").length;
+      report.problems = report.checks.filter((c) => !c.ok).length;
     }
 
     const ownership = actor.ownership ?? {};
@@ -506,6 +513,25 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       step.failures = settled ? failures.filter((check) => check.step === step.key) : [];
     }
     const startFailures = named ? failures.filter((check) => check.step === "start") : [];
+
+    // WHERE THE SPELLS STAND, RIGHT UNDER THE CLASS
+    //
+    // The finding says "spells to pick" only as a line in a list at the foot
+    // of the card, below every level's pills - which on a Bard 3 is two
+    // scrolls down, and was missed. So a class whose spells the importer
+    // leaves to the player (checkup.mjs) carries the note on its own entry,
+    // directly under the picture and the description and above the "choices
+    // were skipped" callout, with the count and a proper button. Always, not
+    // only while spells are missing: a player may want to swap one after the
+    // count matches, so the note stays and only its colour and the button's
+    // wording ("Add spells" / "Change spells") follow the state.
+    const classStep = steps.find((step) => step.key === "class");
+    if (classStep?.done && this._importing !== "class") {
+      const notes = await spellNotes(actor);
+      for (const entry of classStep.entries ?? []) {
+        entry.spellNotes = notes.filter((note) => note.itemId === entry.itemId);
+      }
+    }
 
     // WHICH CARD IS ON SCREEN
     //
@@ -888,7 +914,7 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
    * before the click completed, so the first click appeared to do nothing.
    */
   registerWatchers() {
-    const onItem = (doc, added = false) => {
+    const onItem = (doc, added = false, removed = false) => {
       if (doc?.parent?.id !== this.actorId) return;
       // Items still arriving means the import is still running.
       if (this._importing) this._lastActivity = Date.now();
@@ -902,12 +928,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
         ImporterPanel.closeIfOpen();
       }
 
+      // A spell picked through "Add spells" after the import goes onto the
+      // latest block's record, so it shows among the level's pills; one
+      // arriving while an import runs is that import's to record.
+      if (doc.type === "spell" && (added || removed) && !this._importing && isOwnSpell(doc, null, this.actor)) {
+        recordSpellChange(this.actor, doc, removed);
+      }
+
       this.render();
     };
     this._hooks.push(["createItem", Hooks.on("createItem", (doc) => onItem(doc, true))]);
-    for (const hook of ["deleteItem", "updateItem"]) {
-      this._hooks.push([hook, Hooks.on(hook, (doc) => onItem(doc, false))]);
-    }
+    this._hooks.push(["deleteItem", Hooks.on("deleteItem", (doc) => onItem(doc, false, true))]);
+    this._hooks.push(["updateItem", Hooks.on("updateItem", (doc) => onItem(doc, false))]);
 
     const onActor = (doc, changed = {}) => {
       if (doc?.id !== this.actorId) return;
@@ -1376,6 +1408,18 @@ export class CreationGuide extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static onRecheck() {
     this.render();
+  }
+
+  /**
+   * Opens the importer's spell list on this character.
+   *
+   * The panel does not wait for it: the spells arrive one at a time as the
+   * player picks them, each one fires createItem, and the watcher redraws the
+   * panel on each - so the "3 of 4" under the class counts up as they land.
+   */
+  static async onAddSpells() {
+    if (!this.actor) return;
+    await openSpellImporter(this.actor);
   }
 
   /**

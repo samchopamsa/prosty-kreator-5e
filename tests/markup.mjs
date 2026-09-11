@@ -75,7 +75,8 @@ globalThis.HTMLElement = dom.window.HTMLElement;
 // ostrzezenia, ktore sa czescia tego, co testujemy.
 globalThis.game = { user: { isGM: true }, settings: { get: () => false } };
 
-const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList, findImporterWindow } =
+const { readRow, watchImporter, importerRect, matchesImporterTitle, findImporterList, findImporterWindow,
+  findSpellListWindow, matchesSpellListTitle, importTargetOf, importTargetActor } =
   await import("../scripts/importer-watch.mjs");
 const { dockPanel, undockPanel, watchForHost } = await import("../scripts/dock.mjs");
 const { decorate: markDirectory } = await import("../scripts/review-directory.mjs");
@@ -655,6 +656,152 @@ group("panel: okno, w ktore sie dokuje", () => {
   document.querySelectorAll(".ve-app, .application").forEach((el) => el.remove());
 });
 
+
+// --- okno listy zakle, drugi gospodarz --------------------------------------
+//
+// Ksztalt SPISANY Z ZYWEGO OKNA "Import Spells" (2.18.3.v14, 2026-09-11), nie
+// zgrany: proba wyniesienia markupu przez mostek przegladarki byla blokowana
+// po stronie rozszerzenia, wiec ponizej jest odtworzenie z odczytu, a nie
+// zrzut. Odczyt: .ve-app z h1.window-title "Import Spells", cialo
+// div.ve-flex-col.ve-h-100.ve-window.ve-min-h-0 z pieciorgiem dzieci - pasek
+// filtra, pigulki, wiersz szukania, div.veapp__list.ve-mb-1.ve-h-100 z
+// wierszami .veapp__list-row, stopka z button.ve-btn-primary[name=btn-run].
+// Wiersz: div.veapp__list-row > label.veapp__list-row-hoverable > komorki.
+// Gdy zrzut sie uda, nalezy go tu podmienic - zob. naglowek pliku.
+
+group("panel zaklec: okno, w ktore sie dokuje", () => {
+  const buildSpellHost = () => {
+    const host = document.createElement("div");
+    host.className = "application ve-app";
+    host.innerHTML =
+      '<header class="window-header"><h1 class="window-title">Import Spells</h1></header>' +
+      '<section class="window-content ve-app-window">' +
+      '<div class="ve-flex-col ve-h-100 ve-window ve-min-h-0">' +
+      '<div class="ve-flex-v-stretch ve-input-group ve-input-group--top ve-no-shrink"></div>' +
+      '<div class="ve-fltr__mini-view ve-btn-group"></div>' +
+      '<div class="ve-flex-v-stretch ve-input-group ve-input-group--bottom ve-mb-1 ve-no-shrink"></div>' +
+      '<div class="veapp__list ve-mb-1 ve-h-100">' +
+      '<div class="ve-w-100 ve-flex-col ve-no-shrink veapp__list-row"><label class="ve-w-100 veapp__list-row-hoverable ve-flex-v-center">' +
+      '<span class="ve-px-1 ve-col-3-2">Accelerate/Decelerate</span></label></div>' +
+      "</div>" +
+      '<div class="ve-no-shrink ve-flex-v-center"><button class="ve-btn ve-btn-5et ve-btn-primary ve-w-100" name="btn-run">Import</button></div>' +
+      "</div></section>";
+    document.body.appendChild(host);
+    Object.defineProperty(host, "offsetParent", { get: () => document.body });
+    return host;
+  };
+
+  const spellPanel = () => {
+    const element = document.createElement("div");
+    element.className = "application";
+    document.body.appendChild(element);
+    return { element, findHost: () => findSpellListWindow({ visible: true }) ?? null };
+  };
+
+  check("tytul listy zaklec jest rozpoznawany", matchesSpellListTitle("Import Spells"), true);
+  check("a tytul listy klas nie", matchesSpellListTitle("Import Classes & Subclasses"), false);
+  check("bez okna nie ma gospodarza", findSpellListWindow(), undefined);
+
+  const host = buildSpellHost();
+  check("okno listy zaklec jest znajdowane", findSpellListWindow() === host, true);
+  check("a lista klas go nie widzi", findImporterWindow(), undefined);
+
+  const panel = spellPanel();
+  check("panel zaklec dokuje sie w oknie listy zaklec", dockPanel(panel), true);
+  check("element siedzi w tym oknie", host.contains(panel.element), true);
+  check("lista i panel dziela jeden wiersz",
+    host.querySelector(".pk5e-dock-row")?.children.length, 2);
+  // Naglowki kolumn ida do kolumny razem z lista, zeby zwezaly sie z nia:
+  // zostawione na pelnej szerokosci przestawaly sie zgadzac z tabela.
+  check("naglowki kolumn siedza w kolumnie nad lista",
+    Array.from(host.querySelector(".pk5e-dock-col")?.children ?? []).map((el) => el.className.split(" ")[0]),
+    ["ve-flex-v-stretch", "veapp__list"]);
+  check("stopka z przyciskiem Import zostaje pod nimi",
+    host.querySelector(".ve-window > :last-child button[name='btn-run']") !== null, true);
+
+  // Dwa panele w dwoch oknach naraz: oddokowanie jednego nie moze rozebrac
+  // drugiego. Dawniej undockPanel() rozwijal KAZDY wiersz dokujacy na stronie.
+  const classHost = document.createElement("div");
+  classHost.className = "application ve-app";
+  classHost.innerHTML =
+    '<h1 class="window-title">Import Classes &amp; Subclasses</h1>' +
+    '<div class="window-content"><div class="veapp__list"></div></div>';
+  document.body.appendChild(classHost);
+  Object.defineProperty(classHost, "offsetParent", { get: () => document.body });
+  const classPanelEl = document.createElement("div");
+  classPanelEl.className = "application";
+  document.body.appendChild(classPanelEl);
+  const classPanel = { element: classPanelEl };
+  check("panel opisow dokuje sie obok, w oknie klas", dockPanel(classPanel), true);
+
+  undockPanel(panel);
+  check("oddokowanie panelu zaklec zostawia panel opisow w jego oknie",
+    classHost.contains(classPanelEl), true);
+  check("a lista zaklec wraca na swoje miejsce",
+    host.querySelector(".ve-window > .veapp__list") !== null, true);
+  check("i naglowki kolumn wracaja tuz nad nia, w dawnej kolejnosci",
+    Array.from(host.querySelector(".ve-window").children).map((el) => el.className.split(" ").pop()),
+    ["ve-no-shrink", "ve-btn-group", "ve-no-shrink", "ve-h-100", "ve-flex-v-center"]);
+  check("i okno zaklec nie jest juz gospodarzem",
+    host.classList.contains("pk5e-dock-host"), false);
+
+  undockPanel(classPanel);
+  check("po obu oddokowaniach nie ma zadnego wiersza dokujacego",
+    document.querySelectorAll(".pk5e-dock-row").length, 0);
+
+  document.querySelectorAll(".ve-app, .application").forEach((el) => el.remove());
+});
+
+
+// --- czyj to import ----------------------------------------------------------
+//
+// Okno kreatora ("Import Wizard: Importing to Actor ...") potrafi zamknac sie,
+// zanim lista sie pojawi - z odznaczonym "Keep Window Open" tak wlasnie jest -
+// i wtedy lista klas stoi na stronie sama, bez imienia w markupie. Panel z
+// opisem opisywal przez to 1. poziom postaci, ktora miala trzeci. Obiekt okna
+// importera (ui.windows[id]) niesie `_actor` - to jest zrodlo pierwsze, tytul
+// zapasem.
+
+group("importer: dla kogo jest import", () => {
+  const actor = { documentName: "Actor", name: "TEST" };
+  const previousUi = globalThis.ui;
+  const previousActors = globalThis.game.actors;
+  globalThis.ui = { windows: { 108: { _actor: actor } } };
+  globalThis.game.actors = { filter: (fn) => [actor, { documentName: "Actor", name: "Inny" }].filter(fn) };
+
+  const list = document.createElement("div");
+  list.className = "application ve-app";
+  list.id = "app-108";
+  list.innerHTML = '<h1 class="window-title">Import Classes &amp; Subclasses</h1>';
+  document.body.appendChild(list);
+  check("aktor z obiektu okna, choc tytul go nie nazywa", importTargetOf(list)?.name, "TEST");
+
+  const wizard = document.createElement("div");
+  wizard.className = "application ve-app";
+  wizard.id = "app-107";
+  wizard.innerHTML = '<h1 class="window-title">Import Wizard: Importing to Actor "TEST"</h1>';
+  document.body.appendChild(wizard);
+  check("bez obiektu okna zostaje tytul", importTargetOf(wizard)?.name, "TEST");
+
+  const other = document.createElement("div");
+  other.className = "application ve-app";
+  other.id = "app-109";
+  other.innerHTML = '<h1 class="window-title">Import Wizard: Importing to Actor "Nikt"</h1>';
+  document.body.appendChild(other);
+  check("imie, ktorego nikt nie nosi, to nikt", importTargetOf(other), null);
+  check("okno bez imienia i bez obiektu to nikt",
+    importTargetOf(Object.assign(document.createElement("div"), { className: "ve-app" })), null);
+
+  globalThis.game.actors = { filter: (fn) => [actor, { documentName: "Actor", name: "Nikt" }, { documentName: "Actor", name: "Nikt" }].filter(fn) };
+  check("dwoje o tym samym imieniu to nikt - nie rzut moneta", importTargetOf(other), null);
+
+  check("z calej strony: najnowsze okno, ktore kogos nazywa", importTargetActor()?.name, "TEST");
+
+  document.querySelectorAll(".ve-app").forEach((el) => el.remove());
+  globalThis.ui = previousUi;
+  globalThis.game.actors = previousActors;
+});
+
 // --- lista, ktora otwiera level up ------------------------------------------
 //
 // To NIE jest to samo okno co przy dodawaniu klasy, choc wyglada podobnie i
@@ -674,7 +821,11 @@ group("importer: lista otwierana przez level up", () => {
   modal.className = "ve-app";
   modal.innerHTML =
     '<h1 class="window-title">Filter/Search for Class and Subclass</h1>' +
-    '<div class="ve-flex-col"><div class="ve-lst__form-top"></div>' +
+    // Naglowki kolumn siedza tu w bloku NAD lista, jako jego ostatnie dziecko
+    // (odczyt z zywego okna, 2026-09-11), nie jako sasiad listy jak w oknie
+    // klas - zostawione tam wisialy nad panelem zamiast nad tabela.
+    '<div class="ve-flex-col"><div class="ve-flex-col ve-w-100 ve-mb-2"><div class="ve-lst__form-top"></div>' +
+    '<div class="ve-input-group ve-input-group--bottom ve-flex ve-no-shrink"><button class="ve-col-9 sort">Name</button></div></div>' +
     '<div class="list ve-ui-list__wrp ve-overflow-y-scroll"></div></div>';
   document.body.appendChild(modal);
   Object.defineProperty(modal, "offsetParent", { get: () => document.body });
@@ -736,6 +887,9 @@ group("importer: lista otwierana przez level up", () => {
   check("element siedzi w oknie", modal.contains(element), true);
   check("lista wjechala do wiersza dokujacego obok panelu",
     element.parentElement?.classList.contains("pk5e-dock-row"), true);
+  check("naglowki kolumn z bloku nad lista wjechaly do kolumny z lista",
+    Array.from(modal.querySelector(".pk5e-dock-col")?.children ?? []).map((el) => el.className.split(" ")[0]),
+    ["ve-input-group", "list"]);
 
   // Dwa panele w jednym oknie - tak wygladalo 2.3.3, gdy dwa obserwatory
   // zareagowaly na te sama mutacje i kazdy otworzyl wlasny panel. Drugi
@@ -757,6 +911,10 @@ group("importer: lista otwierana przez level up", () => {
     modal.querySelectorAll(".ve-ui-list__wrp").length, 1);
   check("i nie zostaje zaden wiersz dokujacy",
     document.querySelectorAll(".pk5e-dock-row").length, 0);
+  check("a naglowki kolumn wracaja do bloku nad lista, na jego koniec",
+    modal.querySelector(".ve-mb-2")?.lastElementChild?.classList.contains("ve-input-group--bottom"), true);
+  check("i lista znow stoi zaraz za tym blokiem",
+    modal.querySelector(".ve-ui-list__wrp")?.previousElementSibling?.classList.contains("ve-mb-2"), true);
 
   element.remove();
   modal.remove();

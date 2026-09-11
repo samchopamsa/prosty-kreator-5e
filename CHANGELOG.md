@@ -15,6 +15,125 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.5.0
+
+**Zaklęcia, których importer nie dobiera.** Bard zaimportowany przez kreator
+przychodził ze sztuczkami i bez ani jednego zaklęcia — i nic o tym nie mówiło.
+Odczytane z kodu darmowego Plutonium (2.18.3): import klasy pyta tylko o
+sztuczki („Select Cantrips") oraz, dla klas przygotowujących z całej listy po
+długim odpoczynku, proponuje „Populate Spellbook" i wrzuca wszystko, co można
+przygotować. Bard, czarownik i warlock (obie edycje), mag (stała księga),
+tropiciel 2014 i podklasy-jednotrzecie (Eldritch Knight, Arcane Trickster) nie
+spełniają tego warunku, więc wybór zaklęć poziomowanych nie odbywa się wcale —
+to funkcja płatnego Charactermancera, której ten build nie ma.
+
+Co robi kreator:
+- `rules-data.mjs` czyta z danych klas te same progresje, które importer
+  pomija (`preparedSpellsProgression`, `spellsKnownProgression`, dla maga suma
+  `spellsKnownProgressionFixed`, do tego `cantripProgression`), i odbija
+  dokładnie warunek importera, żeby odzywać się tylko tam, gdzie on milczy;
+- pod krokiem „Klasa" pojawia się ostrzeżenie „Bard 1: zaklęcia do wybrania —
+  Zaklęcia przygotowane: 0 z 4. Sztuczki: 2 z 2." z przyciskiem **Dodaj
+  zaklęcia**, który otwiera listę zaklęć importera wycelowaną w postać
+  (`plutonium.importer.pOpen({actor, modeId: "spells"})` — to samo wywołanie,
+  które importer robi po naciśnięciu przycisku na karcie; dla zaklęć takiego
+  przycisku karta dnd5e nie ma; API jest pod `globalThis.plutonium`, bo
+  `game.modules.get("plutonium").api` w 2.18.3 stoi puste). Lista otwiera się
+  już przefiltrowana na klasę postaci, a ekran źródeł danych jest przeklikiwany
+  tym samym ustawieniem, co przy kroku klasy. Licznik rośnie w miarę dodawania;
+- to samo ostrzeżenie w oknie awansu, pod notatkami po każdym poziomie, także
+  odświeżane, gdy zaklęcie ląduje na karcie — żeby po awansie było wiadomo, że
+  zestaw trzeba uzupełnić;
+- liczone są tylko zaklęcia z listy klasy: wrodzone, „at will" i „zawsze
+  przygotowane" (z listy podklasy) pochodzą skądinąd i nie wchodzą do rachunku;
+  zaklęcie z etykietą innej klasy (`sourceClass`, importer ją zapisuje) też nie.
+  Sztuczki są wyjęte spod reguły „zawsze przygotowane": zmierzone na żywym
+  bardzie, importer zapisuje własne sztuczki jako `prepared: 2` (sztuczki nie
+  wymagają przygotowania), więc czytane dosłownie liczyłyby się jako zero;
+- klasa jest wyszukiwana w księdze zapisanej na przedmiocie przez importer,
+  więc bard 2014 jest mierzony tabelą 2014, nie 2024;
+- stara linia „Zaklęcia na karcie" z `validate.mjs` ustępuje nowej, gdy ta
+  jest (`mergeChecks` w `checkup.mjs`), i dostaje poprawioną podpowiedź —
+  dotąd zrzucała winę na zamknięty za wcześnie import, co nie było prawdą.
+- to samo, zanim klasa trafi na kartę: na dole opisu klasy w panelu przy
+  liście klas importera pojawia się blok „Zaklęcia do wybrania na N. poziomie"
+  — ile zaklęć i sztuczek, do którego poziomu zaklęć (`maxSpellLevel` liczony
+  z `casterProgression` po tabelach klas: pełny, połówkowy od 2., rzemieślnik
+  od 1., jednotrzeci od 3., pakt do 5.), a gdy import celuje w istniejącą
+  postać, także ile już jest na karcie. Postać i poziom panel bierze z obiektu
+  okna importera (`ui.windows[id]._actor`), bo okno kreatora z jej imieniem w
+  tytule potrafi zamknąć się, zanim lista się pojawi — tytuł zostaje zapasem;
+- notatka „Bard 3: Zaklęcia przygotowane 0 z 6. Sztuczki 2 z 2. Zaklęcia do
+  2. poziomu" z **ramkowym przyciskiem** „Dodaj zaklęcia" siedzi w sekcji
+  „Zaklęcia" pigułek — na karcie klasy w panelu (ostatni blok poziomu) i pod
+  ostatnim poziomem w oknie awansu; gdy sekcji nie ma, powstaje. Link w
+  spisie braków zostaje;
+- **panel zaklęć w oknie importera.** Gdy otwiera się lista „Import Spells",
+  po prawej od niej dokuje się panel z zaklęciami postaci pogrupowanymi po
+  poziomach, z przyciskiem usunięcia przy każdym i licznikiem z tabeli klasy u
+  góry — dodawanie, sprawdzanie i podmiana na jednym ekranie. `dock.mjs`
+  obsługuje odtąd dwa panele w dwóch oknach (stan per panel, udział
+  szerokości per panel: opisy 60%, zaklęcia 34%), a `undockPanel` rozwija
+  tylko własny wiersz. Ustawienie świata „Show the character's spells beside
+  the importer's spell list", domyślnie włączone. Usunięcie to zwykłe
+  `item.delete()` bez potwierdzenia — lista, która przywraca zaklęcie, jest
+  obok.
+- notatka w kreatorze siedzi bezpośrednio pod ramką klasy (obrazek i opis) i
+  nad ostrzeżeniem „Choices were skipped", nie na końcu bloków poziomów — a
+  gdy liczba się zgadza, znika; w wierszu linków pod klasą zostaje zwykły link
+  „Zaklęcia" do podmiany. W oknie awansu tak samo: tylko przy braku;
+- **panel zaklęć pokazuje całą kartę i wie, skąd co jest.** `spellOrigin`
+  (`rules-data.mjs`) odczytuje pochodzenie: zaklęcie z klasy niesie
+  `system.sourceItem: "class:bard"` i `sourceClass`; nadane przez rasę,
+  pochodzenie, atut lub podklasę przez advancement niesie
+  `flags.dnd5e.advancementOrigin` z id dawcy, więc dawca jest nazwany;
+  wrodzone i „at will" bez stempla to to samo; zawsze-przygotowane
+  poziomowane bez klasy to lista podklasy; `sourceItem: "consumable:..."` to
+  przedmiot. Tylko zaklęcia z klasy da się usunąć i tylko one wchodzą do
+  rachunku; reszta jest w panelu zablokowana, z nazwą dawcy;
+- **zaklęcie powyżej poziomu klasy.** Lista importera importuje każdy
+  zaznaczony wiersz niezależnie od poziomu postaci. Zaklęcie z klasy powyżej
+  `maxSpellLevel` jest w panelu oznaczone od razu, gdy ląduje; po serii
+  importu (gdy przez sekundę nic nie przychodzi) pojawia się dialog z listą
+  takich zaklęć — także wtedy, gdy importer już schował listę i panel z nią
+  zniknął (zmierzone: lista chowa się w chwili naciśnięcia Import, więc timer
+  nie jest kasowany przy zamknięciu panelu). To samo trafia do spisu braków
+  („Bestow Curse: zaklęcie 3. poziomu");
+- nagłówki kolumn listy importera (`.ve-input-group--bottom`, w obu oknach)
+  wchodzą do kolumny razem z listą, więc zwężają się z nią i dalej zgadzają
+  się z tabelą — dotąd zostawały na pełnej szerokości i „Name" wisiało nad
+  „Level";
+- panel zaklęć przewija się (`min-height: 0` w dół łańcucha flex, dotąd
+  wyższe poziomy były obcięte).
+- sztuczki z rasy i pochodzenia były do usunięcia: reguła „zawsze
+  przygotowane bez klasy = nadane" wyłączała sztuczki, bo importer tak samo
+  zapisuje sztuczki klasy. Rozstrzyga stempel klasy (`sourceItem:
+  "class:..."`, który pisze i import klasy, i lista zaklęć — zmierzone), a
+  sztuczka rasy go nie ma. Teraz zablokowane jak reszta nadanych;
+- przycisk nie znika po skompletowaniu: notatka zostaje, zielenieje, a przycisk
+  czyta „Zmień zaklęcia" (przy braku: „Dodaj zaklęcia"). Zaklęcia powyżej
+  poziomu klasy to jedna zbiorcza linia na klasę, nie osobne wpisy;
+- zaklęcie dobrane po imporcie trafia do rekordu ostatniego bloku
+  (`recordSpellChange` w `gains.mjs`: ostatni awans, a bez awansu krok
+  klasy) i pojawia się jako pigułka nad przyciskiem — w oknie awansu i w
+  kreatorze; usunięte znika z rekordu.
+- **podklasy spoza PHB bez opisu przy awansie z kreatora** (zgłoszone na
+  College of Masks i College of Cuisine, oba homebrew). Cache danych reguł w
+  `rules-data.mjs` budował się raz, przy pierwszym użyciu — a w tej karcie
+  wcześniej, niż importer miał gotowy homebrew: 30 klas i 330 podklas zamiast
+  32 i 385, do końca sesji. Panel szedł wtedy ścieżką zapasową przez
+  kompendia, gdzie są tylko księgi 2024 — stąd „PHB działa, reszta pokazuje
+  komunikat o kompendium". Każda część (oficjalne, brew, prerelease) jest
+  teraz cache'owana osobno i dopiero wtedy, gdy coś zwróciła; pusta albo
+  nieudana jest pytana ponownie przy następnym odczycie. Zmierzone w tej
+  samej karcie: pierwszy odczyt bez brew 30/330, drugi 32/385 z College of
+  Masks. Wymaga odświeżenia strony, żeby stara karta pozbyła się zamrożonego
+  cache;
+- nagłówki kolumn w oknie awansu („Filter/Search for Class and Subclass")
+  siedzą w bloku nad listą, nie obok niej — dokowanie znajduje je także tam
+  i odkłada na miejsce przy oddokowaniu.
+
+---
 ## 2.4.0
 
 **Panel z opisami nigdy nie pływa.** Istnieje tylko w widocznym oknie z listą

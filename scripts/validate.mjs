@@ -372,9 +372,20 @@ export function checkCharacter(actor) {
     (sum, slot) => sum + (Number(slot?.max) || 0),
     0
   );
+  //
+  // Keyed, because the rules reading (checkup.mjs) makes the same check with
+  // the numbers filled in and a button to fix it, and stands in for this one
+  // when it can. This stays for the world without the importer's data loaded.
   if (slots > 0) {
     const spells = actor.items.filter((i) => i.type === "spell").length;
-    add(spells > 0, WARNING, t("check.spells"), t("check.spellsHint"), "class");
+    checks.push({
+      ok: spells > 0,
+      level: WARNING,
+      label: t("check.spells"),
+      hint: t("check.spellsHint"),
+      step: "class",
+      key: "spells"
+    });
   }
 
   const portrait = actor.img ?? "";

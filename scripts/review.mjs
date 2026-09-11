@@ -39,7 +39,7 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { checkCharacter } from "./validate.mjs";
-import { rulesChecks } from "./checkup.mjs";
+import { rulesChecks, mergeChecks } from "./checkup.mjs";
 import { isAvailable } from "./rules-data.mjs";
 import { skippedOptions, skippedText } from "./option-watch.mjs";
 import { gainSections } from "./gains.mjs";
@@ -251,7 +251,7 @@ export async function submitForReview(actor) {
   const rulesRead = isAvailable();
   const fromRules = await rulesChecks(actor);
   const payload = reviewPayload(actor, {
-    checks: [...(report.checks ?? []), ...fromRules],
+    checks: mergeChecks(report.checks, fromRules),
     rulesRead
   });
 

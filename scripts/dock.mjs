@@ -66,9 +66,19 @@ import { findImporterWindow, findImporterList } from "./importer-watch.mjs";
  * see is no use to dock into.
  */
 
-/** Where the panel's element came from, so it can be put back. */
-let origin = null;
-let observer = null;
+/**
+ * TWO PANELS, TWO HOSTS, ONE MECHANISM (2.5.0).
+ *
+ * This began as the description panel's private plumbing, with the host
+ * window, the element's origin and the observer all module-level - there was
+ * one panel, so there was one of each. The spell panel (spell-panel.mjs)
+ * docks the same way into a different window, the importer's "Import Spells"
+ * list, which the same `.veapp__list` component builds. So the host is now
+ * something the panel names (`panel.findHost`, falling back to the class
+ * list), and the origin and observer live on the panel itself. The moving,
+ * wrapping and forcing of styles - the part that took four attempts to get
+ * right - is unchanged and shared.
+ */
 
 /**
  * NO WAITING, NO FLOATING. Until 2.4.0 a panel that found no host hid itself
@@ -84,6 +94,16 @@ function hostWindow() {
   return findImporterWindow({ visible: true }) ?? null;
 }
 
+/** The window this panel docks into: its own rule, else the class list. */
+function hostFor(panel) {
+  try {
+    return (typeof panel?.findHost === "function" ? panel.findHost() : hostWindow()) ?? null;
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not look for the panel's host window`, err);
+    return null;
+  }
+}
+
 /**
  * Moves the panel into the host window, beside the list.
  *
@@ -93,7 +113,7 @@ function hostWindow() {
  */
 export function dockPanel(panel) {
   const element = panel?.element;
-  const host = hostWindow();
+  const host = hostFor(panel);
   if (!element || !host) return false;
   if (host.contains(element)) return true;
 
@@ -111,9 +131,10 @@ export function dockPanel(panel) {
   const list = findImporterList(host);
   if (!list?.parentElement) return false;
 
-  if (!origin) origin = { parent: element.parentElement, next: element.nextSibling };
+  if (!panel._dockOrigin) panel._dockOrigin = { parent: element.parentElement, next: element.nextSibling };
 
-  // A new row holding just the list and the panel.
+  // A new row holding the list and the panel - and the list's column
+  // headers, with the list.
   //
   // The obvious move - make the list's parent a row - is wrong, and was wrong
   // three times before this. That parent is the whole window body: the filter
@@ -121,12 +142,42 @@ export function dockPanel(panel) {
   // it to a row and every one of those becomes a vertical column, which is
   // exactly what happened.
   //
-  // So the two things that belong side by side get a container of their own,
-  // slotted in where the list was. Everything above and below it is untouched.
+  // So the things that belong side by side get a container of their own,
+  // slotted in where the list was. Everything above and below it is untouched
+  // - except the header row. It sits directly above the list
+  // (`.ve-input-group--bottom`, "wrp-btns-sort", in both the class window and
+  // the spell window) and lays its buttons out in the same column widths as
+  // the rows below. Left at full width while the list narrowed to make room
+  // for the panel, its columns stopped lining up with the table's - Name over
+  // Level, Level over Time - which was obvious on the spell list's seven
+  // columns. So the headers go into a column with the list, and the two
+  // narrow together.
+  // Two places the header row lives. In the class window and the spell
+  // window it is the list's previous sibling. In the window a level-up opens
+  // (the importer's filter modal, "Filter/Search for Class and Subclass") it
+  // is the LAST child of the block before the list, in with the filter bar
+  // and the source pills - read off that window live (2026-09-11), where the
+  // headers had stayed at full width over the panel. Wherever it came from is
+  // remembered on the panel, so undocking can put it back exactly there.
+  const isHeaders = (el) => Boolean(el?.classList?.contains("ve-input-group--bottom"));
+  const before = list.previousElementSibling;
+  const headers = isHeaders(before)
+    ? before
+    : isHeaders(before?.lastElementChild)
+      ? before.lastElementChild
+      : null;
+  if (headers) {
+    panel._dockHeaders = { node: headers, parent: headers.parentElement, next: headers.nextSibling };
+  }
+
   const row = document.createElement("div");
   row.className = "pk5e-dock-row";
+  const column = document.createElement("div");
+  column.className = "pk5e-dock-col";
   list.replaceWith(row);
-  row.append(list, element);
+  if (headers) column.append(headers);
+  column.append(list);
+  row.append(column, element);
 
   element.classList.add("pk5e-docked");
   host.classList.add("pk5e-dock-host");
@@ -149,9 +200,21 @@ export function dockPanel(panel) {
     "min-height": "0",
     overflow: "hidden"
   });
-  force(list, { flex: "1 1 40%", width: "auto", "min-width": "0", "max-width": "none", height: "auto" });
+  // How much of the row the panel takes. The description panel is the point
+  // of its window - the list is names and a source - so it takes the larger
+  // share; the spell panel sits beside a seven-column list that needs its
+  // width, so it names a smaller one (`panel.dockShare`).
+  const share = Math.round((Number(panel.dockShare) || 0.6) * 100);
+  force(column, {
+    display: "flex",
+    "flex-direction": "column",
+    flex: `1 1 ${100 - share}%`,
+    "min-width": "0",
+    "min-height": "0"
+  });
+  force(list, { flex: "1 1 auto", width: "auto", "min-width": "0", "max-width": "none", height: "auto", "min-height": "0" });
   force(element, {
-    flex: "1 1 60%",
+    flex: `1 1 ${share}%`,
     position: "static",
     left: "auto",
     top: "auto",
@@ -178,26 +241,46 @@ export function undockPanel(panel) {
     element.style.removeProperty(name);
   }
 
-  // Unwrap: the list goes back where the row now stands, and the row goes away.
-  for (const row of document.querySelectorAll(".pk5e-dock-row")) {
+  // Unwrap THIS panel's row only: the list goes back where the row now
+  // stands, and the row goes away. Another panel's row in another window is
+  // not ours to touch - with two panels that dock, unwrapping every row on
+  // the page would pull the other one apart.
+  const row = element.closest(".pk5e-dock-row");
+  const host = row?.closest(".pk5e-dock-host") ?? null;
+  if (row) {
     const list = findImporterList(row);
     if (list) {
-      for (const name of ["flex", "width", "min-width", "max-width", "height"]) {
+      for (const name of ["flex", "width", "min-width", "max-width", "height", "min-height"]) {
         list.style.removeProperty(name);
       }
-      row.replaceWith(list);
+      // The element must leave the row before the row is replaced by the
+      // list, or it leaves the page with it.
+      const origin = panel._dockOrigin;
+      if (origin?.parent?.isConnected) origin.parent.insertBefore(element, origin.next);
+      else document.body.appendChild(element);
+      // The column gave the headers and the list a home together; they go
+      // back where the row stands, in the order they were, header first.
+      const column = row.querySelector(".pk5e-dock-col");
+      const restored = column ? Array.from(column.children) : [list];
+      row.replaceWith(...restored);
+      // Headers that came from inside the block above go back inside it.
+      const came = panel._dockHeaders;
+      if (came?.node && came.parent?.isConnected && came.parent !== restored[0]?.parentElement) {
+        came.parent.insertBefore(came.node, came.next?.isConnected ? came.next : null);
+      }
+      panel._dockHeaders = null;
     } else {
+      document.body.appendChild(element);
       row.remove();
     }
+  } else {
+    const origin = panel._dockOrigin;
+    if (origin?.parent?.isConnected) origin.parent.insertBefore(element, origin.next);
+    else document.body.appendChild(element);
   }
+  panel._dockOrigin = null;
 
-  if (origin?.parent?.isConnected) origin.parent.insertBefore(element, origin.next);
-  else document.body.appendChild(element);
-  origin = null;
-
-  for (const host of document.querySelectorAll(".pk5e-dock-host")) {
-    host.classList.remove("pk5e-dock-host");
-  }
+  host?.classList.remove("pk5e-dock-host");
 
   panel.setPosition?.(panel.constructor.beside?.() ?? {});
 }
@@ -209,7 +292,7 @@ export function undockPanel(panel) {
  * when the filter changes, and the panel has to notice its host closing.
  */
 export function watchForHost(panel) {
-  stopWatchingHost();
+  stopWatchingHost(panel);
 
   // Closed once. The timed passes below can land after the host and the panel
   // are both gone, and a second close is at best a no-op.
@@ -217,7 +300,7 @@ export function watchForHost(panel) {
 
   const sync = () => {
     if (done) return;
-    const host = hostWindow();
+    const host = hostFor(panel);
     const element = panel?.element;
     if (!element) return;
 
@@ -232,14 +315,15 @@ export function watchForHost(panel) {
     // importer-watch.mjs closes it for the same reason when the window leaves
     // the page; closing twice is a no-op, and two reasons to close beat one.
     done = true;
-    stopWatchingHost();
+    stopWatchingHost(panel);
     if (element.classList.contains("pk5e-docked")) undockPanel(panel);
-    trace("importer panel closing: its host is gone");
+    trace("docked panel closing: its host is gone");
     panel.close?.();
   };
 
-  observer = new MutationObserver(sync);
+  const observer = new MutationObserver(sync);
   observer.observe(document.body, { childList: true, subtree: true });
+  panel._dockObserver = observer;
 
   // The observer only fires on a change, and the host window is often already
   // open and settled by the time the panel renders - in which case there is no
@@ -248,12 +332,12 @@ export function watchForHost(panel) {
   sync();
   for (const delay of [50, 200, 600]) setTimeout(sync, delay);
 
-  return () => stopWatchingHost();
+  return () => stopWatchingHost(panel);
 }
 
-export function stopWatchingHost() {
-  observer?.disconnect();
-  observer = null;
+export function stopWatchingHost(panel) {
+  panel?._dockObserver?.disconnect();
+  if (panel) panel._dockObserver = null;
 }
 
 

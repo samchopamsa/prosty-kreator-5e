@@ -26,7 +26,7 @@ import {
   classIdForName,
   readDescription
 } from "./compendium.mjs";
-import { watchImporter, importerRect, findImporterWindow } from "./importer-watch.mjs";
+import { watchImporter, importerRect, findImporterWindow, importTargetActor } from "./importer-watch.mjs";
 import { trace } from "./trace.mjs";
 import { watchForHost, stopWatchingHost, undockPanel } from "./dock.mjs";
 import { describeRow } from "./class-text.mjs";
@@ -55,6 +55,28 @@ let current = null;
 
 function openPanel() {
   return current ?? foundry.applications.instances?.get(ImporterPanel.DEFAULT_OPTIONS.id) ?? null;
+}
+
+/**
+ * Who the import is for, and at which level it would land.
+ *
+ * The character comes from the importer's own window (importTargetActor in
+ * importer-watch.mjs, which says where it looks). With none found the
+ * description is written for level 1 and no sheet, which is the creation
+ * case anyway.
+ *
+ * The level is one above what the character already has in that class, so a
+ * level-up's panel describes the level about to arrive rather than the one
+ * already there.
+ */
+function importTargetFor(row) {
+  const actor = importTargetActor();
+
+  const className = row?.type === "subclass" ? row.parentName : row?.name;
+  const held = actor?.items?.find(
+    (item) => item.type === "class" && item.name.toLowerCase() === String(className ?? "").toLowerCase()
+  );
+  return { actor, level: (Number(held?.system?.levels) || 0) + 1 };
 }
 
 export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -237,7 +259,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   _onClose(options) {
     this._stopDocking?.();
     this._stopDocking = null;
-    stopWatchingHost();
+    stopWatchingHost(this);
     try {
       undockPanel(this);
     } catch (err) {
@@ -269,7 +291,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     // A player hovering Path of the Battlerager wants to know what it is, not
     // that it is absent from world.xphb.
     try {
-      const described = await describeRow(row);
+      const described = await describeRow(row, importTargetFor(row));
       if (described) {
         this._notice = null;
         this._limitTo = null;

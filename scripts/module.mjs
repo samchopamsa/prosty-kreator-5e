@@ -17,6 +17,7 @@ import { registerContextMenu } from "./context-menu.mjs";
 import { registerTranslationHelper, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { ClassReference } from "./reference.mjs";
 import { ImporterPanel, openImporterPanel } from "./importer-panel.mjs";
+import { startSpellHostWatch, openSpellPanel } from "./spell-panel.mjs";
 import { startHostWatch } from "./dock.mjs";
 import { debugActor, debugCompendiums, debugStamps } from "./debug.mjs";
 import { debugRules, debugVerify } from "./rules-data.mjs";
@@ -104,6 +105,17 @@ Hooks.once("init", () => {
   game.settings.register(MODULE_ID, "openReferenceWithClass", {
     name: "Show class descriptions inside the importer's class list",
     hint: "The importer lists class names with nothing to read. This puts a panel inside its class list window, to the right of the list, that follows along: click a class or subclass and its description appears there. It opens with that window and closes with it, wherever the window came from - the class step, a level-up, a multiclass. The wide reference window is unaffected and stays available from the class step.",
+    scope: "world",
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
+  // The spell panel's twin of the setting above. Off, the importer's spell
+  // list is exactly as the importer draws it.
+  game.settings.register(MODULE_ID, "spellPanel", {
+    name: "Show the character's spells beside the importer's spell list",
+    hint: "The importer's spell list does not know what the sheet already holds. This puts a panel inside its spell list window, to the right of the list, with the character's spells grouped by level, a remove button on each, and the count the class table sets - so a spell can be added, checked and swapped on one screen. It opens with that window and closes with it.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -365,6 +377,10 @@ Hooks.once("ready", () => {
   // mid-session takes effect at the next list.
   startHostWatch(openImporterPanel);
 
+  // Its sibling for the spell list (spell-panel.mjs): the character's own
+  // spells beside the six hundred on offer, with a remove button each.
+  startSpellHostWatch();
+
   // prototypeToken.name is copied from the actor once, at creation, and never
   // again - so renaming a character left its token saying "New Character" on
   // every hover.
@@ -377,6 +393,7 @@ Hooks.once("ready", () => {
     languages: (actorId) => new LanguagePicker({ actorId }).render(true),
     reference: () => new ClassReference().render(true),
     importerPanel: () => openImporterPanel(),
+    spellPanel: () => openSpellPanel(),
     levelUp: (actorId) => openLevelUp(actorId),
     // Handing a character to the GM, and where it stands - both only
     // verifiable in a live world, so they are here rather than in a test.

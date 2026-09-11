@@ -1,0 +1,62 @@
+<div class="pk5e-root pk5e-panel-root pk5e-spell-panel-root">
+
+  {{#if missing}}
+  <p class="pk5e-empty">{{pkT "guide.missing"}}</p>
+  {{else}}
+
+  <header class="pk5e-panel-head">
+    <h3>{{pkT "spellpanel.title"}}</h3>
+    <span class="pk5e-panel-origin">{{actorName}}</span>
+  </header>
+
+  {{#if notes}}
+  {{!-- Where the class table says the character should stand (checkup.mjs).
+        No button here: the list that adds spells is the other half of this
+        very window. --}}
+  <div class="pk5e-spell-notes is-docked">
+    {{#each notes}}
+    <div class="pk5e-spell-note {{#if short}}is-short{{/if}}">
+      <span class="pk5e-spell-note-text"><strong>{{className}} {{level}}:</strong> {{text}}</span>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+
+  <div class="pk5e-spell-panel-body">
+    {{#if empty}}
+    <p class="pk5e-empty">{{labels.empty}}</p>
+    {{else}}
+    {{#each groups}}
+    <section class="pk5e-spell-group">
+      <h4 class="pk5e-spell-group-title">{{label}}</h4>
+      <ul class="pk5e-spell-list">
+        {{#each entries}}
+        <li class="pk5e-spell-row {{#if locked}}is-locked{{/if}} {{#if tooHigh}}is-too-high{{/if}}">
+          {{#if img}}<img src="{{img}}" alt="">{{/if}}
+          <span class="pk5e-spell-name is-readable"
+                data-tooltip="<section class='loading' data-uuid='{{uuid}}'><i class='fas fa-spinner fa-spin-pulse'></i></section>"
+                data-tooltip-direction="LEFT">{{name}}</span>
+          {{#if tooHigh}}
+          <span class="pk5e-spell-flag" title="{{../../labels.tooHigh}}"><i class="fa-solid fa-triangle-exclamation"></i></span>
+          {{/if}}
+          {{#if locked}}
+          <span class="pk5e-spell-origin" title="{{origin}}"><i class="fa-solid fa-lock"></i> {{origin}}</span>
+          {{else}}
+          <button type="button" class="pk5e-spell-remove" data-action="removeSpell"
+                  data-item="{{id}}" title="{{../../labels.remove}}" aria-label="{{../../labels.remove}}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          {{/if}}
+        </li>
+        {{#if tooHigh}}
+        <li class="pk5e-spell-row-note">{{../../labels.tooHigh}}</li>
+        {{/if}}
+        {{/each}}
+      </ul>
+    </section>
+    {{/each}}
+    {{/if}}
+  </div>
+
+  {{/if}}
+</div>

@@ -36,9 +36,10 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t, currentLanguage, LANGUAGE_CHOICES } from "./i18n.mjs";
 import { applyTheme, preserveScroll, currentTheme, THEMES } from "./ui.mjs";
-import { pressLevelUp, grantExperienceFor, wait } from "./sheet-actions.mjs";
-import { readLevelBefore, recordLevelGains, levelGainTitle, gainSections } from "./gains.mjs";
-import { rulesChecks } from "./checkup.mjs";
+import { pressLevelUp, grantExperienceFor, openSpellImporter, wait } from "./sheet-actions.mjs";
+import { readLevelBefore, recordLevelGains, recordSpellChange, levelGainTitle, gainSections, LEVEL_GAINS_FLAG } from "./gains.mjs";
+import { isOwnSpell } from "./rules-data.mjs";
+import { rulesChecks, spellNotes, attachSpellNotes } from "./checkup.mjs";
 import { watchOptionDialogs, skippedOptions, clearSkippedOptions } from "./option-watch.mjs";
 import { watchImportEnd } from "./import-end.mjs";
 import { trace } from "./trace.mjs";
@@ -102,7 +103,8 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       dismissOption: LevelUpGuide.onDismissOption,
       setLanguage: LevelUpGuide.onSetLanguage,
       setTheme: LevelUpGuide.onSetTheme,
-      finish: LevelUpGuide.onFinish
+      finish: LevelUpGuide.onFinish,
+      addSpells: LevelUpGuide.onAddSpells
     }
   };
 
@@ -147,6 +149,24 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     const targets = [];
     for (let n = level + 1; n <= 20; n += 1) targets.push({ level: n, count: n - level });
 
+    // THE SAME PILLS THE CREATION PANEL DRAWS (the comment below says why),
+    // with one addition under the last level: where the spells stand for a
+    // class the importer leaves to the player, and the button to add them.
+    // Under the last level only, because that is the character as it is now;
+    // an earlier level's block is history.
+    const levels = this._levels.map((entry) => ({
+      title: levelGainTitle(entry),
+      sections: gainSections(entry.record, {
+        skipTypes: ["class"],
+        kind: "class",
+        actor
+      })
+    }));
+    if (levels.length && !this._busy) {
+      const notes = await spellNotes(actor);
+      if (notes.length) attachSpellNotes(levels[levels.length - 1].sections, notes);
+    }
+
     return {
       // The same two switches the creation panel carries. Both are per-user
       // preferences about how a window reads, and this is a window someone will
@@ -184,14 +204,7 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       //
       // The class item is skipped: its level is the heading. A subclass is not
       // - picking one is the most interesting thing level 3 ever does.
-      levels: this._levels.map((entry) => ({
-        title: levelGainTitle(entry),
-        sections: gainSections(entry.record, {
-          skipTypes: ["class"],
-          kind: "class",
-          actor
-        })
-      })),
+      levels,
       // Only the problems. The "everything matches" line belongs on the
       // creation panel, where the player is deciding whether they are done;
       // here it would be one more thing to read after a level they already
@@ -234,11 +247,54 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!this._stopOptionWatch && this.actor) {
       this._stopOptionWatch = watchOptionDialogs(this.actor, () => this.render());
     }
+
+    // Spells only, and only once a level has landed. The notes under a level
+    // can say "4 of 5 spells" with a button beside it; the player presses it,
+    // picks the fifth in the importer's list, and the note should say so
+    // rather than wait for the next level to be read. Removals too, since the
+    // panel beside that list can take a spell off again. Nothing else on this
+    // window is worth redrawing for an item moving - the level itself is
+    // read once, after the importer says it has finished.
+    //
+    // The spell also goes onto the level's record (gains.mjs), so it shows
+    // among the level's pills above the button that added it - here, where
+    // this window draws the record it holds in memory, and on the creation
+    // panel, which reads the flag. The in-memory copy is replaced with what
+    // was written, so the two cannot disagree.
+    if (!this._spellHooks) {
+      const onSpell = (removed) => async (doc) => {
+        if (doc?.parent?.id !== this.actorId || doc.type !== "spell") return;
+        if (this._busy || !this._levels.length) return;
+        const actor = this.actor;
+        if (actor && isOwnSpell(doc, null, actor)) {
+          const written = await recordSpellChange(actor, doc, removed);
+          if (written) {
+            const list = actor.getFlag(MODULE_ID, LEVEL_GAINS_FLAG) ?? [];
+            const latest = list[list.length - 1];
+            if (latest) this._levels[this._levels.length - 1] = latest;
+          }
+        }
+        this.refreshNotes();
+      };
+      this._spellHooks = [
+        ["createItem", Hooks.on("createItem", onSpell(false))],
+        ["deleteItem", Hooks.on("deleteItem", onSpell(true))]
+      ];
+    }
+  }
+
+  async refreshNotes() {
+    const actor = this.actor;
+    if (!actor) return;
+    this._notes = await rulesChecks(actor);
+    this.render();
   }
 
   async close(options = {}) {
     this._stopOptionWatch?.();
     this._stopOptionWatch = null;
+    for (const [name, id] of this._spellHooks ?? []) Hooks.off(name, id);
+    this._spellHooks = null;
     return super.close(options);
   }
 
@@ -375,6 +431,19 @@ export class LevelUpGuide extends HandlebarsApplicationMixin(ApplicationV2) {
       level: Number(target.dataset.level) || null
     });
     this.render();
+  }
+
+  /**
+   * Opens the importer's spell list on the character.
+   *
+   * This window has no item watcher of its own, so the note does not count
+   * up as spells land the way the creation panel's does; the notes are read
+   * again after the next level, or by opening the panel. The count shown is
+   * right at the moment the level finished, which is when it is needed.
+   */
+  static async onAddSpells() {
+    if (!this.actor) return;
+    await openSpellImporter(this.actor);
   }
 
   static async onFinish() {

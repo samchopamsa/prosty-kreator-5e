@@ -51,13 +51,15 @@ const { STEP_CONFIG } = await import("../scripts/sheet-actions.mjs");
 const { hasPlaceholderName } = await import("../scripts/guide.mjs");
 const { takeSnapshot, levelChange } = await import("../scripts/snapshot.mjs");
 const { readGains, diffGains, gainSections, levelGainTitle, levelGainGroups, classesIn,
-  dropLevelGainsFor } = await import("../scripts/gains.mjs");
+  dropLevelGainsFor, recordSpellChange } = await import("../scripts/gains.mjs");
 const { uniqueActorName, tokenNameUpdate } = await import("../scripts/naming.mjs");
 const { isPlaceholderImage, portraitUpdate } = await import("../scripts/portrait.mjs");
 const { buildSteps } = await import("../scripts/steps.mjs");
 const { selectClass, selectSubclass, featuresAtLevel, subclassFeaturesAtLevel, equipmentOptions, stripTags,
-  featureHash, missingFeatures, countChoices, subclassIntro } =
+  featureHash, missingFeatures, countChoices, subclassIntro, spellChoice, spellsOnSheet, maxSpellLevel,
+  ownSpells, allSpells, spellOrigin } =
   await import("../scripts/rules-data.mjs");
+const { mergeChecks, attachSpellNotes, spellsAboveCap } = await import("../scripts/checkup.mjs");
 const { STANDARD_ARRAY, POINT_BUY_TOTAL, newState, setMethod, stepAbility, baseValue,
   pointsSpent, isReady, existingBonus, buildRows, applyAbilities } =
   await import("../scripts/abilities-core.mjs");
@@ -824,6 +826,274 @@ group("rules-data: starting equipment", () => {
   );
   check("quantities survive", options[0].items[2].quantity, 8);
   check("a class without the field gives no options", equipmentOptions({}), []);
+});
+
+group("rules-data: spells the importer leaves to the player", () => {
+  // The fields as they stand in the importer's class data (2026-09-11),
+  // trimmed to the first levels. The rule under test mirrors the importer's
+  // own "Populate Spellbook" condition, so each class here is one whose
+  // outcome was read off Bundle.js rather than guessed.
+  const bard2024 = {
+    name: "Bard", source: "XPHB", casterProgression: "full",
+    preparedSpellsProgression: [4, 5, 6, 7, 9],
+    cantripProgression: [2, 2, 2, 3, 3],
+    preparedSpellsChange: "level"
+  };
+  const bard2014 = {
+    name: "Bard", source: "PHB", casterProgression: "full",
+    spellsKnownProgression: [4, 5, 6, 7, 8],
+    cantripProgression: [2, 2, 2, 3, 3]
+  };
+  const cleric2024 = {
+    name: "Cleric", source: "XPHB", casterProgression: "full",
+    preparedSpellsProgression: [4, 5, 6, 7, 9],
+    cantripProgression: [3, 3, 3, 4, 4],
+    preparedSpellsChange: "restLong"
+  };
+  const cleric2014 = {
+    name: "Cleric", source: "PHB", casterProgression: "full",
+    preparedSpells: "<$level$> + <$wis_mod$>",
+    cantripProgression: [3, 3, 3, 4, 4],
+    preparedSpellsChange: "restLong"
+  };
+  const wizard2024 = {
+    name: "Wizard", source: "XPHB", casterProgression: "full",
+    preparedSpellsProgression: [4, 5, 6, 7, 9],
+    spellsKnownProgressionFixed: [6, 2, 2, 2, 2],
+    cantripProgression: [3, 3, 3, 4, 4],
+    preparedSpellsChange: "restLong"
+  };
+  const fighter = { name: "Fighter", source: "XPHB" };
+  const eldritchKnight = {
+    name: "Eldritch Knight", source: "XPHB", className: "Fighter", casterProgression: "1/3",
+    preparedSpellsProgression: [0, 0, 3, 4, 4],
+    cantripProgression: [0, 0, 2, 2, 2],
+    preparedSpellsChange: "level"
+  };
+
+  const bard1 = spellChoice(bard2024, null, 1);
+  check("a 2024 Bard prepares, and the importer leaves it alone",
+    [bard1.kind, bard1.spells, bard1.cantrips, bard1.importerPicks], ["prepared", 4, 2, false]);
+  check("the level moves the numbers", spellChoice(bard2024, null, 5).spells, 9);
+  check("a 2014 Bard knows its spells instead",
+    [spellChoice(bard2014, null, 2).kind, spellChoice(bard2014, null, 2).spells], ["known", 5]);
+  check("a 2024 Cleric is filled in by the importer", spellChoice(cleric2024, null, 1).importerPicks, true);
+  check("so is a 2014 Cleric, whose count is a formula and gives no number",
+    [spellChoice(cleric2014, null, 1).importerPicks, spellChoice(cleric2014, null, 1).spells], [true, null]);
+
+  const wizard3 = spellChoice(wizard2024, null, 3);
+  check("a Wizard's number is its spellbook - the fixed steps summed",
+    [wizard3.kind, wizard3.spells], ["spellbook", 10]);
+  check("and the fixed spellbook keeps the importer out even on a long-rest class",
+    wizard3.importerPicks, false);
+
+  check("a Fighter alone casts nothing", spellChoice(fighter, null, 3), null);
+  const ek3 = spellChoice(fighter, eldritchKnight, 3);
+  check("an Eldritch Knight's numbers come from the subclass",
+    [ek3.className, ek3.subclassName, ek3.spells, ek3.cantrips], ["Fighter", "Eldritch Knight", 3, 2]);
+  check("and before its subclass level there is nothing to pick yet",
+    [spellChoice(fighter, eldritchKnight, 1).spells, spellChoice(fighter, eldritchKnight, 1).cantrips], [0, 0]);
+  check("level 0 is not a level", spellChoice(bard2024, null, 0), null);
+
+  // Counting the sheet: dnd5e 5 spelling (method + numeric prepared) and the
+  // dnd5e 4 spelling (preparation.mode) side by side, plus the ones that come
+  // from somewhere other than the class list.
+  const sheet = {
+    items: [
+      // A cantrip as the importer writes it: "always prepared", because it
+      // needs no preparing - and stamped with the class. Still the class's
+      // own pick.
+      { type: "spell", system: { level: 0, method: "spell", prepared: 2, sourceClass: "bard" } },
+      { type: "spell", system: { level: 0, method: "innate", prepared: 0 } },
+      // A species' cantrip the importer's additionalSpells wrote: always
+      // prepared, no stamp. Not the class's, whatever its level.
+      { type: "spell", system: { level: 0, method: "spell", prepared: 2 } },
+      { type: "spell", system: { level: 0, preparation: { mode: "always" } } },
+      { type: "spell", system: { level: 1, method: "spell", prepared: 1 } },
+      { type: "spell", system: { level: 1, method: "spell", prepared: 2 } },
+      { type: "spell", system: { level: 2, method: "pact", prepared: 0, sourceClass: "warlock" } },
+      { type: "spell", system: { level: 1, preparation: { mode: "prepared" } } },
+      { type: "spell", system: { level: 1, preparation: { mode: "atwill" } } },
+      { type: "feat", system: { level: 1 } }
+    ]
+  };
+  check("innate, at-will and always-prepared spells are not the class's choice",
+    spellsOnSheet(sheet), { cantrips: 1, spells: 3 });
+  check("a spell tagged with another class is not counted for this one",
+    spellsOnSheet(sheet, "bard"), { cantrips: 1, spells: 2 });
+  check("an untagged spell counts for whichever class asks",
+    spellsOnSheet(sheet, "warlock"), { cantrips: 0, spells: 3 });
+  check("no items, no spells", spellsOnSheet({ items: [] }), { cantrips: 0, spells: 0 });
+});
+
+group("checkup: a rules check can stand in for a sheet check", () => {
+  const fromSheet = [
+    { ok: false, label: "Hit points", key: "hp" },
+    { ok: false, label: "Spells on the sheet", key: "spells" },
+    { ok: false, label: "Languages" }
+  ];
+  const fromRules = [{ ok: false, label: "Bard 1: spells to pick", supersedes: "spells" }];
+
+  check("the superseded line goes, everything else stays, rules last",
+    mergeChecks(fromSheet, fromRules).map((c) => c.label),
+    ["Hit points", "Languages", "Bard 1: spells to pick"]);
+  check("nothing from the rules leaves the sheet list alone",
+    mergeChecks(fromSheet, []).map((c) => c.label),
+    ["Hit points", "Spells on the sheet", "Languages"]);
+  check("a rules check without a claim replaces nothing",
+    mergeChecks(fromSheet, [{ ok: true, label: "Features match" }]).length, 4);
+  check("missing lists are empty lists", mergeChecks(undefined, undefined), []);
+});
+
+
+group("rules-data: the highest spell level a progression reaches", () => {
+  check("a full caster: 1st at level 1", maxSpellLevel("full", 1), 1);
+  check("2nd at level 3", maxSpellLevel("full", 3), 2);
+  check("5th at level 9", maxSpellLevel("full", 9), 5);
+  check("9th at level 17, and no higher", [maxSpellLevel("full", 17), maxSpellLevel("full", 20)], [9, 9]);
+  check("a 2014 half caster has nothing at level 1", maxSpellLevel("1/2", 1), 0);
+  check("and 1st at level 2, 2nd at level 5", [maxSpellLevel("1/2", 2), maxSpellLevel("1/2", 5)], [1, 2]);
+  check("the artificer kind starts at level 1", maxSpellLevel("artificer", 1), 1);
+  check("a third caster: 1st at 3, 2nd at 7, 4th at 19",
+    [maxSpellLevel("1/3", 3), maxSpellLevel("1/3", 7), maxSpellLevel("1/3", 19)], [1, 2, 4]);
+  check("pact magic tops out at 5th", [maxSpellLevel("pact", 9), maxSpellLevel("pact", 20)], [5, 5]);
+  check("no progression, no answer", maxSpellLevel(null, 5), null);
+  check("the class reading carries it", spellChoice({ name: "Bard", casterProgression: "full",
+    preparedSpellsProgression: [4, 5, 6], preparedSpellsChange: "level" }, null, 3).maxSpellLevel, 2);
+});
+
+group("rules-data: the sheet's own spells, listed", () => {
+  const sheet = {
+    items: [
+      { id: "c", name: "Vicious Mockery", type: "spell", system: { level: 0, method: "spell", prepared: 2, sourceItem: "class:bard" } },
+      { id: "b", name: "Healing Word", type: "spell", system: { level: 1, method: "spell", prepared: 1 } },
+      { id: "a", name: "Charm Person", type: "spell", system: { level: 1, method: "spell", prepared: 0 } },
+      { id: "x", name: "Dancing Lights", type: "spell", system: { level: 0, method: "innate", prepared: 0 } },
+      { id: "f", name: "Bardic Inspiration", type: "feat", system: {} }
+    ]
+  };
+  check("lowest level first, then by name",
+    ownSpells(sheet).map((i) => i.id), ["c", "a", "b"]);
+  check("innate spells and features are not listed", ownSpells(sheet).some((i) => ["x", "f"].includes(i.id)), false);
+  check("no actor, no spells", ownSpells(null), []);
+});
+
+group("checkup: the note goes into the spells section", () => {
+  const notes = [{ className: "Bard", level: 1, text: "0 of 4" }];
+  const sections = [{ key: "features", entries: [{ label: "Bardic Inspiration" }] }];
+  attachSpellNotes(sections, notes);
+  check("a card without a spells section gets one, at the end",
+    sections.map((s) => s.key), ["features", "spells"]);
+  check("carrying the notes", sections[1].spellNotes, notes);
+  check("and no pills of its own", sections[1].entries, []);
+
+  const withSpells = [
+    { key: "spells", entries: [{ label: "Vicious Mockery" }] },
+    { key: "gear", entries: [{ label: "Lute" }] }
+  ];
+  attachSpellNotes(withSpells, notes);
+  check("an existing spells section keeps its place and its pills",
+    [withSpells.map((s) => s.key), withSpells[0].entries.length], [["spells", "gear"], 1]);
+  check("and carries the notes", withSpells[0].spellNotes === notes, true);
+  check("no notes, nothing added", attachSpellNotes([{ key: "gear", entries: [] }], []).length, 1);
+  check("nothing to attach to is an empty list", attachSpellNotes(undefined, notes), []);
+});
+
+
+group("rules-data: where a spell came from", () => {
+  // Shapes read off live characters (dnd5e 5.3.3, importer 2.18.3).
+  const items = [
+    { id: "elf", type: "race", name: "High Elf" },
+    { id: "bg", type: "background", name: "Acolyte" },
+    { id: "cls", type: "class", name: "Bard" },
+    { id: "s1", type: "spell", name: "Charm Person", system: { level: 1, method: "spell", prepared: 1, sourceClass: "bard", sourceItem: "class:bard" } },
+    { id: "s2", type: "spell", name: "Fire Bolt", system: { level: 0, method: "spell", prepared: 2 }, flags: { dnd5e: { advancementOrigin: "elf.abc" } } },
+    { id: "s3", type: "spell", name: "Light", system: { level: 0, method: "atwill", prepared: 2 } },
+    { id: "s4", type: "spell", name: "Bless", system: { level: 1, method: "spell", prepared: 2 } },
+    { id: "s5", type: "spell", name: "Animal Friendship", system: { level: 1, method: "spell", prepared: 0, sourceItem: "consumable:potion" } },
+    { id: "s6", type: "spell", name: "Sleep", system: { level: 1, method: "spell", prepared: 0 } },
+    { id: "s7", type: "spell", name: "Guidance", system: { level: 0, method: "spell", prepared: 2, sourceClass: "bard" }, flags: { dnd5e: { advancementOrigin: "cls.xyz" } } },
+    { id: "s8", type: "spell", name: "Thaumaturgy", system: { level: 0, method: "spell", prepared: 2 } }
+  ];
+  items.get = (id) => items.find((i) => i.id === id);
+  const actor = { items };
+  const by = (id) => spellOrigin(items.get(id), actor);
+
+  check("the importer's class spell is the class's", by("s1").kind, "class");
+  check("a spell an advancement gave names its giver",
+    [by("s2").kind, by("s2").giver, by("s2").giverType], ["granted", "High Elf", "race"]);
+  check("an at-will spell without a stamp is granted too", [by("s3").kind, by("s3").giverType], ["granted", "atwill"]);
+  check("a levelled always-prepared spell with no class is a subclass list", [by("s4").kind, by("s4").giverType], ["granted", "subclass"]);
+  check("a potion's spell is an item", [by("s5").kind, by("s5").giverType], ["item", "consumable"]);
+  check("a spell added by hand is the class's choice", by("s6").kind, "class");
+  check("an advancement of the class itself is still the class", by("s7").kind, "class");
+  check("a species' cantrip - always prepared, no class stamp - is granted",
+    [by("s8").kind, by("s8").giverType], ["granted", "other"]);
+  check("the sheet lists every spell", allSpells(actor).length, 8);
+  check("and the class's own are those alone", ownSpells(actor).map((i) => i.id), ["s7", "s1", "s6"]);
+});
+
+group("checkup: spells above what the class can cast", () => {
+  const items = [
+    { id: "a", type: "spell", name: "Fireball", system: { level: 3, method: "spell", prepared: 0, sourceClass: "bard" } },
+    { id: "b", type: "spell", name: "Sleep", system: { level: 1, method: "spell", prepared: 0, sourceClass: "bard" } },
+    { id: "c", type: "spell", name: "Wish", system: { level: 9, method: "spell", prepared: 0 } },
+    { id: "d", type: "spell", name: "Eldritch Blast", system: { level: 0, method: "pact", prepared: 2, sourceClass: "warlock" } },
+    { id: "e", type: "spell", name: "Hex", system: { level: 1, method: "pact", prepared: 0, sourceClass: "warlock" } },
+    { id: "f", type: "spell", name: "Hold Person", system: { level: 2, method: "spell", prepared: 2 } }
+  ];
+  items.get = (id) => items.find((i) => i.id === id);
+  const actor = { items };
+  const bard = { className: "Bard", identifier: "bard", maxSpellLevel: 2 };
+  const warlock = { className: "Warlock", identifier: "warlock", maxSpellLevel: 1 };
+
+  const high = spellsAboveCap(actor, [bard, warlock]);
+  check("each class's spells against its own cap, untagged against the highest",
+    high.map((h) => `${h.item.name}>${h.cap}`), ["Fireball>2", "Wish>2"]);
+  check("a granted spell is not the class's to answer for", high.some((h) => h.item.id === "f"), false);
+  check("no cap known, nothing to say", spellsAboveCap(actor, [{ className: "X", maxSpellLevel: null }]), []);
+  check("no actor, nothing", spellsAboveCap(null, [bard]), []);
+});
+
+
+await group("gains: a spell picked after the import joins the latest block", async () => {
+  const flagged = (flags) => {
+    const store = structuredClone(flags);
+    return {
+      flags: store,
+      getFlag: (scope, key) => store[key],
+      setFlag: async (scope, key, value) => { store[key] = value; return true; },
+      items: []
+    };
+  };
+  const spell = { type: "spell", name: "Sleep", img: "s.webp", flags: {} };
+
+  const levelled = flagged({
+    gains: { class: { items: [{ type: "feat", name: "Bardic Inspiration" }] } },
+    levelGains: [
+      { level: 2, record: { items: [] } },
+      { level: 3, record: { items: [{ type: "subclass", name: "College of Dance" }] } }
+    ]
+  });
+  const written = await recordSpellChange(levelled, spell);
+  check("written onto the last level, not the class step", written, true);
+    check("the last level's record now lists it",
+      levelled.flags.levelGains[1].record.items.map((i) => i.name), ["College of Dance", "Sleep"]);
+    check("earlier levels and the class step are untouched",
+      [levelled.flags.levelGains[0].record.items.length, levelled.flags.gains.class.items.length], [0, 1]);
+    check("a second arrival of the same spell changes nothing", await recordSpellChange(levelled, spell), false);
+    check("and removing it takes it out again",
+      [await recordSpellChange(levelled, spell, true), levelled.flags.levelGains[1].record.items.length], [true, 1]);
+    check("removing what is not there is a no-op", await recordSpellChange(levelled, spell, true), false);
+
+    const fresh = flagged({ gains: { class: { items: [] } } });
+    await recordSpellChange(fresh, spell);
+    check("with no level taken, the class step's record takes it",
+      fresh.flags.gains.class.items.map((i) => i.name), ["Sleep"]);
+
+    const bare = flagged({});
+    check("no record at all, nothing to join", await recordSpellChange(bare, spell), false);
+    check("only spells", await recordSpellChange(fresh, { type: "feat", name: "Lucky" }), false);
 });
 
 group("rules-data: stripping the importer's markup", () => {

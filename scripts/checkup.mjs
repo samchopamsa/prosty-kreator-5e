@@ -36,9 +36,183 @@
 import { MODULE_ID } from "./constants.mjs";
 import { t } from "./i18n.mjs";
 import { trace } from "./trace.mjs";
-import { verifyCharacter, isAvailable } from "./rules-data.mjs";
+import { verifyCharacter, spellExpectations, ownSpells, isAvailable } from "./rules-data.mjs";
 
 const WARNING = "warning";
+
+/**
+ * The one check that both readings can make.
+ *
+ * validate.mjs notices a caster with slots and nothing to cast; the rules
+ * reading below says how many spells are missing and offers the button. When
+ * the second is present the first is only the same news said worse, so the
+ * rules check names the key it replaces and mergeChecks() drops the other.
+ */
+export const SPELLS_KEY = "spells";
+
+/**
+ * Both checklists as one, with a rules check standing in for the sheet check
+ * it supersedes.
+ *
+ * Every window that shows the list used to concatenate the two itself, which
+ * is how one of them would have grown a duplicate line the other did not.
+ */
+export function mergeChecks(sheetChecks, fromRules) {
+  const replaced = new Set((fromRules ?? []).map((check) => check.supersedes).filter(Boolean));
+  return [
+    ...(sheetChecks ?? []).filter((check) => !check.key || !replaced.has(check.key)),
+    ...(fromRules ?? [])
+  ];
+}
+
+/**
+ * The counts of one class's spell choice, as words.
+ *
+ * Counts are said as "X of Y" rather than as sentences: Polish declines the
+ * noun with the number ("4 zaklęcia", "5 zaklęć") and i18n.mjs carries no
+ * plural rules, so the shape that needs none is the one used. The same
+ * pieces serve three places - the finding under the class, the note in the
+ * spells section of the pills, and the panel beside the importer's list - so
+ * they are built once, here.
+ */
+export function spellCountParts(expected) {
+  const parts = [];
+  if (expected.spells != null && expected.kind) {
+    parts.push(
+      t("check.spellPart", t(`spells.kind.${expected.kind}`), expected.onSheet.spells, expected.spells)
+    );
+  }
+  if (expected.cantrips != null) {
+    parts.push(t("check.cantripPart", expected.onSheet.cantrips, expected.cantrips));
+  }
+  if (expected.maxSpellLevel) parts.push(t("check.spellLevels", expected.maxSpellLevel));
+  return parts;
+}
+
+/** Whether the sheet holds fewer than the class table says. */
+export function isShort(expected) {
+  return (
+    (expected.spells != null && expected.onSheet.spells < expected.spells) ||
+    (expected.cantrips != null && expected.onSheet.cantrips < expected.cantrips)
+  );
+}
+
+/**
+ * The line for a class whose spells the player has to pick by hand.
+ */
+function spellCheck(expected) {
+  return {
+    ok: false,
+    level: WARNING,
+    label: t("check.spellCount", expected.className, expected.level),
+    hint: [...spellCountParts(expected), t("check.spellTrailer")].join(" "),
+    step: "class",
+    supersedes: SPELLS_KEY,
+    // The one check with a button on it: the fix is a window the importer
+    // opens, not something the player has to go and find.
+    action: "addSpells",
+    actionLabel: t("check.addSpells")
+  };
+}
+
+/**
+ * The note that goes under the spell pills, one per class the importer
+ * leaves to the player - short or not.
+ *
+ * The finding above appears only when something is missing, which is right
+ * for a checklist. This is not a checklist: it sits where the spells are
+ * listed, and a player looking there wants to know where they stand ("4 of
+ * 4") as much as what is missing. So it is always present for such a class,
+ * with the button beside it either way - a spell can be swapped as well as
+ * added.
+ */
+export async function spellNotes(actor) {
+  if (!actor || !isAvailable()) return [];
+  let expectations = [];
+  try {
+    expectations = await spellExpectations(actor);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not read the spell tables`, err);
+    return [];
+  }
+  const high = spellsAboveCap(actor, expectations);
+  return expectations.map((expected) => {
+    const short = isShort(expected);
+    const above = high.filter((entry) => entry.className === expected.className);
+    return {
+      className: expected.className,
+      itemId: expected.itemId ?? null,
+      identifier: expected.identifier ?? null,
+      maxSpellLevel: expected.maxSpellLevel ?? null,
+      level: expected.level,
+      short,
+      // Spells the class cannot cast yet, named once, in one line.
+      highText: above.length
+        ? t("check.spellHighLine", above.map((entry) => `${entry.item.name} (${entry.level})`).join(", "), expected.maxSpellLevel)
+        : "",
+      // Done when the count is there and nothing is above the cap. The
+      // button stays either way - a spell can be swapped after the count
+      // matches - and only its wording and colour follow the state.
+      complete: !short && !above.length,
+      text: spellCountParts(expected).join(" "),
+      hint: short ? t("check.spellTrailer") : "",
+      action: "addSpells",
+      actionLabel: short ? t("check.addSpells") : t("check.changeSpells")
+    };
+  });
+}
+
+/**
+ * Spells on the sheet above what the class can cast at its level.
+ *
+ * The importer's list offers every level at once and imports a ticked row
+ * whatever the character's level - a Bard 3 can bring in Fireball with one
+ * click. Each of the class's own spells is measured against the cap the
+ * class table gives (`maxSpellLevel`); a spell tagged with a class is
+ * measured against that class, an untagged one against the highest cap on
+ * the sheet, which is the generous reading a single-class character makes
+ * exact.
+ *
+ * @param {Actor}    actor
+ * @param {object[]} expectations  from spellExpectations() / spellNotes()
+ * @returns {{item: Item, level: number, cap: number, className: string}[]}
+ */
+export function spellsAboveCap(actor, expectations) {
+  const capped = (expectations ?? []).filter((e) => e.maxSpellLevel != null);
+  if (!actor || !capped.length) return [];
+
+  const highest = capped.reduce((best, e) => (e.maxSpellLevel > best.maxSpellLevel ? e : best));
+  const found = [];
+  for (const item of ownSpells(actor)) {
+    const level = Number(item.system?.level) || 0;
+    if (!level) continue;
+    const tag = item.system?.sourceClass ? String(item.system.sourceClass) : "";
+    const against = (tag && capped.find((e) => e.identifier === tag)) || highest;
+    if (level > against.maxSpellLevel) {
+      found.push({ item, level, cap: against.maxSpellLevel, className: against.className });
+    }
+  }
+  return found;
+}
+
+/**
+ * Puts the notes into the "spells" section of a card's pills, making that
+ * section when the card has none.
+ *
+ * The section is where a player looks for their spells; a class that has none
+ * yet has no such section, and the note is the reason it should. Sections are
+ * the ones gainSections() builds (gains.mjs), and the key is its own.
+ */
+export function attachSpellNotes(sections, notes) {
+  if (!Array.isArray(sections) || !notes?.length) return sections ?? [];
+  let target = sections.find((section) => section.key === "spells");
+  if (!target) {
+    target = { key: "spells", label: t("gains.spells"), entries: [] };
+    sections.push(target);
+  }
+  target.spellNotes = notes;
+  return sections;
+}
 
 /**
  * Rules-based checks for a character, in the checklist's own shape.
@@ -57,17 +231,53 @@ export async function rulesChecks(actor) {
   if (!actor || actor.type !== "character") return [];
   if (!isAvailable()) return [];
 
-  let report;
+  let report = null;
   try {
     report = await verifyCharacter(actor);
   } catch (err) {
     console.warn(`${MODULE_ID} | The rules comparison failed`, err);
-    return [];
   }
-
-  if (!report || report.refused || !report.levels?.length) return [];
+  if (!report || report.refused || !report.levels?.length) report = null;
 
   const checks = [];
+
+  // Spells first, and independently of the feature comparison: a class the
+  // feature reading refuses is still one whose spell table can be read, and a
+  // Bard with nothing to cast is the more urgent line of the two.
+  let expectations = [];
+  try {
+    expectations = await spellExpectations(actor);
+  } catch (err) {
+    console.warn(`${MODULE_ID} | Could not read the spell tables`, err);
+  }
+  for (const expected of expectations) {
+    if (isShort(expected)) checks.push(spellCheck(expected));
+  }
+  // One line per class, naming every spell above its cap, rather than one
+  // per spell: a batch import of six high spells is one mistake, not six.
+  const high = spellsAboveCap(actor, expectations);
+  for (const expected of expectations) {
+    const above = high.filter((entry) => entry.className === expected.className);
+    if (!above.length) continue;
+    checks.push({
+      ok: false,
+      level: WARNING,
+      label: t("check.spellHigh", expected.className, expected.level),
+      hint: t(
+        "check.spellHighLine",
+        above.map((entry) => `${entry.item.name} (${entry.level})`).join(", "),
+        expected.maxSpellLevel
+      ),
+      step: "class",
+      action: "addSpells",
+      actionLabel: t("check.changeSpells")
+    });
+  }
+
+  if (!report) {
+    trace(`rules comparison: no feature report; ${checks.length} spell note(s)`);
+    return checks;
+  }
 
   for (const feature of report.missing) {
     checks.push({
@@ -95,7 +305,11 @@ export async function rulesChecks(actor) {
   // silent pass is indistinguishable from the check not happening - and given
   // how often that distinction mattered while building this, the player
   // deserves to see which one it was.
-  if (!checks.length) {
+  //
+  // Counted against the feature notes alone: a Bard short of spells still has
+  // every feature in place, and the line says so.
+  const featureNotes = report.missing.length + report.incompleteChoices.length;
+  if (!featureNotes) {
     const levels = report.levels.length;
     checks.push({
       ok: true,

@@ -61,14 +61,36 @@ import { trace } from "./trace.mjs";
  */
 export const SOURCE_PREFERENCE = ["XPHB", "EFA", "TCE", "PHB"];
 
-/** Loaded once. The libraries cache internally too, but this saves the await. */
-let cache = null;
+/**
+ * Loaded once each - but "once" only counts a load that brought something.
+ *
+ * THE CACHE THAT FROZE WITHOUT THE HOMEBREW (2026-09-11). A player's panel
+ * described every PHB'24 subclass and shrugged at College of Masks and
+ * College of Cuisine - both homebrew - with "Bard is not in the available
+ * compendiums". Their tab had 30 classes and 330 subclasses in this cache;
+ * a fresh tab had 32 and 385. The first call had run before the importer
+ * had its brew ready, loadBrew() came back empty (or threw, into the catch
+ * below), and the merged result was kept for the life of the tab - so the
+ * panel fell back to the compendiums, which hold the 2024 books and nothing
+ * else. Which is exactly the "PHB works, the rest does not" a player sees.
+ *
+ * So each part is cached on its own, and only once it has returned
+ * something: an official load that is empty, or a brew load that failed, is
+ * asked for again on the next call rather than remembered as "nothing".
+ * A world with no brew at all pays for that with one cheap call per lookup,
+ * which the importer answers from its own cache.
+ */
+const parts = { official: null, brew: null, prerelease: null };
 let pending = null;
 
 /** Whether the importer's rules libraries are on the page at all. */
 export function isAvailable() {
   return typeof globalThis.DataUtil?.class?.loadJSON === "function";
 }
+
+const hasEntries = (part) =>
+  Boolean(part) && ((Array.isArray(part.class) && part.class.length > 0) ||
+    (Array.isArray(part.subclass) && part.subclass.length > 0));
 
 /**
  * The class and subclass data, or null if the libraries are not there.
@@ -77,7 +99,6 @@ export function isAvailable() {
  * every caller is an extra on top of something that already works.
  */
 export async function loadRules() {
-  if (cache) return cache;
   if (pending) return pending;
   if (!isAvailable()) return null;
 
@@ -91,23 +112,39 @@ export async function loadRules() {
       // Unearthed Arcana. The importer offers all of them side by side, so a
       // panel that only knows the first has nothing to say about exactly the
       // entries a player is least likely to recognise.
-      const loaders = [
-        api.loadJSON?.(),
-        api.loadBrew?.().catch(() => null),
-        api.loadPrerelease?.().catch(() => null)
-      ];
-      const parts = (await Promise.all(loaders)).filter(Boolean);
+      const load = async (key, loader) => {
+        if (hasEntries(parts[key])) return parts[key];
+        try {
+          const loaded = await loader?.();
+          if (hasEntries(loaded)) parts[key] = loaded;
+          return loaded ?? null;
+        } catch (err) {
+          trace(`rules data: ${key} not loaded this time`, err);
+          return null;
+        }
+      };
 
-      cache = {
-        classes: parts.flatMap((part) => (Array.isArray(part.class) ? part.class : [])),
-        subclasses: parts.flatMap((part) => (Array.isArray(part.subclass) ? part.subclass : []))
+      const official = await load("official", () => api.loadJSON?.());
+      if (!official) {
+        console.warn(`${MODULE_ID} | Could not read the importer's class data`);
+        return null;
+      }
+      const [brew, prerelease] = await Promise.all([
+        load("brew", () => api.loadBrew?.()),
+        load("prerelease", () => api.loadPrerelease?.())
+      ]);
+
+      const sets = [official, brew, prerelease].filter(Boolean);
+      const rules = {
+        classes: sets.flatMap((part) => (Array.isArray(part.class) ? part.class : [])),
+        subclasses: sets.flatMap((part) => (Array.isArray(part.subclass) ? part.subclass : []))
       };
 
       trace(
-        `rules data: ${cache.classes.length} classes, ${cache.subclasses.length} subclasses ` +
-          `from ${parts.length} source set(s)`
+        `rules data: ${rules.classes.length} classes, ${rules.subclasses.length} subclasses ` +
+          `from ${sets.length} source set(s)`
       );
-      return cache;
+      return rules;
     } catch (err) {
       console.warn(`${MODULE_ID} | Could not read the importer's class data`, err);
       return null;
@@ -121,7 +158,9 @@ export async function loadRules() {
 
 /** Forgets the loaded data. For the console, and for tests. */
 export function clearCache() {
-  cache = null;
+  parts.official = null;
+  parts.brew = null;
+  parts.prerelease = null;
   pending = null;
 }
 
@@ -801,6 +840,298 @@ export function classesOn(actor) {
           other.system?.classIdentifier === item.system?.identifier
       )?.name ?? null
     }));
+}
+
+// --- spells the class leaves to the player ---------------------------------
+//
+// WHY THIS IS HERE AT ALL
+//
+// A Bard imported through the panel arrived with cantrips and not one levelled
+// spell, and nothing on screen said so. Read out of the importer's own source
+// (free build 2.18.3, Bundle.js, 2026-09-11), its class import puts up exactly
+// two spell dialogs: "Select Cantrips", and a "Populate Spellbook" yes/no that
+// then adds EVERY preparable spell at once. The second runs only for a class
+// that prepares from its whole list and re-picks on a long rest:
+//
+//   (cls.preparedSpells || cls.preparedSpellsProgression)
+//     && !cls.spellsKnownProgressionFixed
+//     && (cls.preparedSpellsChange || "restLong") !== "level"
+//
+// Cleric, Druid, Paladin, Artificer and the 2024 Ranger pass. A Bard, Sorcerer
+// or Warlock of either edition, a Wizard (its spellbook is the fixed
+// progression), the 2014 Ranger, and every third-caster subclass do not: the
+// import ends with the cantrips, and the choosing of levelled spells is a
+// feature of the paid Charactermancer this build does not carry.
+//
+// So the condition is mirrored exactly, read off the class alone the way the
+// importer reads it, and the numbers come from the same progressions it
+// ignores. Nothing here decides what to do about it.
+
+/** The entry from a progression array for a level, or null without one. */
+function progressionAt(progression, level) {
+  if (!Array.isArray(progression)) return null;
+  return Number(progression[Number(level) - 1]) || 0;
+}
+
+/**
+ * The highest spell level a caster of this progression can cast at a level.
+ *
+ * The rules as printed, not read from the sheet: this is asked before the
+ * class is on the character (the description panel, deciding) and after
+ * (the note under the class, picking), and only the first has no sheet to
+ * read. The importer names its progressions as the class files do: "full",
+ * "1/2", "1/3", "pact", "artificer" (a half caster that starts at level 1,
+ * which is also what the 2024 Paladin and Ranger declare).
+ *
+ * Slot level from caster level is the one table every full caster shares -
+ * a new spell level at every odd caster level to 9 at 17 - and the fractional
+ * casters map onto it by their OWN class tables, not the multiclass rule: a
+ * Paladin reaches 2nd-level spells at level 5 and an Eldritch Knight at 7,
+ * which is half and a third rounded UP (the multiclass table rounds down,
+ * and is about a different question). The only difference between "1/2"
+ * and "artificer" is level 1, where the 2014 half caster has nothing and
+ * the artificer kind - and the 2024 Paladin and Ranger - already cast. A
+ * third caster starts at 3. Pact magic keeps its own short ladder, topping
+ * out at 5.
+ */
+export function maxSpellLevel(casterProgression, level) {
+  const at = Number(level) || 0;
+  if (!at || !casterProgression) return null;
+
+  const kind = String(casterProgression).toLowerCase();
+  if (kind === "pact") return Math.min(5, Math.ceil(at / 2));
+
+  let casterLevel = 0;
+  if (kind === "full") casterLevel = at;
+  else if (kind === "artificer") casterLevel = Math.ceil(at / 2);
+  else if (kind === "1/2" || kind === "half") casterLevel = at < 2 ? 0 : Math.ceil(at / 2);
+  else if (kind === "1/3" || kind === "third") casterLevel = at < 3 ? 0 : Math.ceil(at / 3);
+
+  if (!casterLevel) return 0;
+  return Math.min(9, Math.ceil(casterLevel / 2));
+}
+
+/**
+ * How many spells a class hands its player to choose at a level, and whether
+ * the importer's class import chooses them itself.
+ *
+ * `spells` is the number the sheet should show: for a Wizard the spellbook
+ * (the fixed progression summed up to the level - 6, 8, 10...), for a 2024
+ * class its prepared count, for a 2014 known caster its known count. `kind`
+ * says which, so the wording can follow. A class that prepares by formula
+ * ("<$level$> + <$wis_mod$>", the 2014 Cleric) has no fixed number and gives
+ * null - the importer fills those in anyway.
+ *
+ * The subclass is consulted only when the class itself does not cast: an
+ * Eldritch Knight's numbers live on the subclass, a Bard's on the class.
+ *
+ * @returns {object|null} null when neither class nor subclass casts
+ */
+export function spellChoice(cls, sc, level) {
+  const caster = cls?.casterProgression ? cls : sc?.casterProgression ? sc : null;
+  if (!caster) return null;
+
+  const at = Number(level);
+  if (!at) return null;
+
+  let kind = null;
+  let spells = null;
+  if (Array.isArray(caster.spellsKnownProgressionFixed)) {
+    kind = "spellbook";
+    spells = caster.spellsKnownProgressionFixed
+      .slice(0, at)
+      .reduce((sum, step) => sum + (Number(step) || 0), 0);
+  } else if (Array.isArray(caster.preparedSpellsProgression)) {
+    kind = "prepared";
+    spells = progressionAt(caster.preparedSpellsProgression, at);
+  } else if (Array.isArray(caster.spellsKnownProgression)) {
+    kind = "known";
+    spells = progressionAt(caster.spellsKnownProgression, at);
+  }
+
+  // The importer's own test, on the class alone, exactly as it runs it.
+  const importerPicks =
+    Boolean(cls?.preparedSpells || cls?.preparedSpellsProgression) &&
+    !cls?.spellsKnownProgressionFixed &&
+    (cls?.preparedSpellsChange || "restLong") !== "level";
+
+  return {
+    className: cls?.name ?? "",
+    source: cls?.source ?? "",
+    subclassName: sc?.name ?? null,
+    level: at,
+    kind,
+    spells,
+    cantrips: progressionAt(caster.cantripProgression, at),
+    maxSpellLevel: maxSpellLevel(caster.casterProgression, at),
+    importerPicks
+  };
+}
+
+/**
+ * Where a spell on the sheet came from.
+ *
+ * Read off live characters (2026-09-11, dnd5e 5.3.3, importer 2.18.3), where
+ * every spell fell into one of these:
+ *
+ *   class      the importer's class import and its spell list both write
+ *              `system.sourceItem: "class:bard"` and `system.sourceClass`
+ *              (and its own `flags.plutonium.parentClassName`); a spell
+ *              dragged in from a compendium by hand carries none of that and
+ *              is taken as the class's choice too - it is what a player
+ *              adding a spell means;
+ *   granted    a species, background, feat or subclass gave it through a
+ *              dnd5e advancement, which stamps `flags.dnd5e.advancementOrigin`
+ *              with the giving item's id - so the giver is looked up and its
+ *              type says which; innate and at-will spells without that stamp
+ *              are the same thing written the importer's way; and a levelled
+ *              spell marked "always prepared" with no class on it is a
+ *              subclass list (Domain spells, Oath spells);
+ *   item       `sourceItem: "consumable:..."` - a potion or scroll.
+ *
+ * Only the first kind is the player's to pick, count and remove from the
+ * spell panel; the others are shown there locked, with their giver named,
+ * so the list is the whole sheet without offering to delete what a feature
+ * granted. Both spellings of preparation are read - dnd5e 5 keeps `method`
+ * and a numeric `prepared`, dnd5e 4 kept `preparation.mode` - because the
+ * world's system version is not ours to pick.
+ *
+ * "Always prepared" alone is not enough to say granted: the importer's own
+ * "Select Cantrips" writes the class's cantrips as `method: "spell",
+ * prepared: 2` too (a cantrip needs no preparing, so that is the system's
+ * word for it), and reading the flag literally counted the cantrips the
+ * importer had just picked as zero. What separates them is the class stamp:
+ * every spell the class import or the spell list writes carries
+ * `sourceItem: "class:..."`, and a species' or background's cantrip carries
+ * none (measured 2026-09-11: "Speak with Animals", `spell/2`, no stamp, no
+ * advancement - the importer's additionalSpells route). So: always prepared
+ * AND unstamped is granted, cantrip or not. A cantrip added by hand comes in
+ * as `prepared: 0` and stays the class's.
+ *
+ * @returns {{kind: "class"|"granted"|"item", giver: string|null, giverType: string|null}}
+ */
+export function spellOrigin(item, actor = null) {
+  const system = item?.system ?? {};
+  const cantrip = Number(system.level) === 0;
+  const sourceItem = String(system.sourceItem ?? "");
+
+  const origin = item?.flags?.dnd5e?.advancementOrigin;
+  if (origin) {
+    const giverId = String(origin).split(".")[0];
+    const giver = actor?.items?.get?.(giverId) ?? null;
+    if (giver?.type !== "class") {
+      return { kind: "granted", giver: giver?.name ?? null, giverType: giver?.type ?? null };
+    }
+  }
+
+  if (sourceItem && !sourceItem.startsWith("class:")) {
+    return { kind: "item", giver: null, giverType: sourceItem.split(":")[0] || null };
+  }
+
+  const method =
+    system.method !== undefined ? String(system.method ?? "") : String(system.preparation?.mode ?? "");
+  if (["innate", "atwill"].includes(method)) {
+    return { kind: "granted", giver: null, giverType: method };
+  }
+
+  const always =
+    system.method !== undefined ? Number(system.prepared) === 2 : method === "always";
+  const fromClass = Boolean(
+    sourceItem.startsWith("class:") || system.sourceClass || item?.flags?.[IMPORTER_FLAG]?.parentClassName
+  );
+  if (always && !fromClass) {
+    return { kind: "granted", giver: null, giverType: cantrip ? "other" : "subclass" };
+  }
+
+  return { kind: "class", giver: null, giverType: "class" };
+}
+
+/**
+ * Spells on the sheet that a class's own choice accounts for.
+ *
+ * A spell tagged with a class (`sourceClass` - the importer does write it)
+ * counts only for that class; one without a tag counts for whichever class
+ * asks, which is right for the single-class character this is almost always
+ * about and merely generous beyond that.
+ */
+export function isOwnSpell(item, classIdentifier = null, actor = null) {
+  if (item?.type !== "spell") return false;
+  if (spellOrigin(item, actor).kind !== "class") return false;
+  const tag = item.system?.sourceClass ? String(item.system.sourceClass) : "";
+  return !(tag && classIdentifier && tag !== String(classIdentifier));
+}
+
+/** Every spell on the sheet, lowest level first, then by name. */
+export function allSpells(actor) {
+  return Array.from(actor?.items ?? [])
+    .filter((item) => item.type === "spell")
+    .sort(
+      (a, b) =>
+        (Number(a.system?.level) || 0) - (Number(b.system?.level) || 0) ||
+        String(a.name).localeCompare(String(b.name))
+    );
+}
+
+/** The class's own spells, in the same order. */
+export function ownSpells(actor, classIdentifier = null) {
+  return allSpells(actor).filter((item) => isOwnSpell(item, classIdentifier, actor));
+}
+
+export function spellsOnSheet(actor, classIdentifier = null) {
+  const counts = { cantrips: 0, spells: 0 };
+  for (const item of ownSpells(actor, classIdentifier)) {
+    if (Number(item.system?.level) === 0) counts.cantrips += 1;
+    else counts.spells += 1;
+  }
+  return counts;
+}
+
+/**
+ * For each class on a character whose spells the importer leaves unpicked:
+ * how many it should have at its level, and how many the sheet holds.
+ *
+ * The class is looked up under the book the importer wrote on the item, so a
+ * 2014 Bard is measured against the 2014 table rather than the preferred
+ * edition - the two differ by a spell at several levels. A class the rules
+ * data does not know, or one whose spells the importer does choose, is left
+ * out rather than reported on.
+ */
+export async function spellExpectations(actor) {
+  if (!actor) return [];
+  const rules = await loadRules();
+  if (!rules) return [];
+
+  const bookOf = (item) => item?.flags?.[IMPORTER_FLAG]?.source ?? null;
+  const out = [];
+
+  for (const item of actor.items) {
+    if (item.type !== "class") continue;
+    const level = Number(item.system?.levels) || 0;
+    if (!level) continue;
+
+    const cls =
+      selectClass(rules.classes, item.name, bookOf(item)) ?? selectClass(rules.classes, item.name);
+    if (!cls) continue;
+
+    const subItem = actor.items.find(
+      (other) =>
+        other.type === "subclass" && other.system?.classIdentifier === item.system?.identifier
+    );
+    const sc = subItem
+      ? selectSubclass(rules.subclasses, cls.name, subItem.name, bookOf(subItem)) ??
+        selectSubclass(rules.subclasses, cls.name, subItem.name)
+      : null;
+
+    const choice = spellChoice(cls, sc, level);
+    if (!choice || choice.importerPicks) continue;
+    // A third caster before its subclass level has nothing to pick yet.
+    if (!choice.spells && !choice.cantrips) continue;
+
+    const identifier = item.system?.identifier ?? null;
+    out.push({ ...choice, identifier, itemId: item.id ?? null, onSheet: spellsOnSheet(actor, identifier) });
+  }
+
+  return out;
 }
 
 /**

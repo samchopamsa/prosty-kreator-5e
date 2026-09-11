@@ -85,6 +85,8 @@ Layers, roughly outward-in:
   actor), `languages.mjs`, `levelup.mjs`, `reference.mjs` (wide compendium
   reader), `importer-panel.mjs` (narrow panel docked inside the importer's class list;
   it is opened only by the host watch in `dock.mjs` and never floats),
+  `spell-panel.mjs` (its sibling, docked inside the importer's spell list: the
+  character's spells with a remove button each, opened by its own host watch),
   `reference-config.mjs`.
 - **`sheet-actions.mjs`** — all DOM plumbing: finding sheet markup, waiting for
   windows, clicking. Timing-dependent and the most likely thing to break when
@@ -108,7 +110,12 @@ They are blind in different places and all are kept on purpose (see the header o
   against what the class actually grants at that level. `class-text.mjs` builds
   class and subclass descriptions from the same data — source codes (`XPHB` vs
   `PHB`) are always passed explicitly, since asking without a book returns the 2014
-  text, which is a wrong description rather than a missing one.
+  text, which is a wrong description rather than a missing one. The same file
+  reads the spell tables (`spellChoice`), because the free importer picks no
+  levelled spells for a Bard, Sorcerer, Warlock or Wizard - it mirrors the
+  importer's own "Populate Spellbook" condition exactly, so it speaks only where
+  the importer is silent, and the fix is the importer's own spell list opened
+  through its public API (`openSpellImporter` in `sheet-actions.mjs`).
 - **Watching dialogs** — `option-watch.mjs` catches the choices the importer's own
   dialogs record nowhere (Fighting Style, cantrips): a skipped one leaves no trace
   in the data, so what was seen is written to an actor flag. Deliberately a second

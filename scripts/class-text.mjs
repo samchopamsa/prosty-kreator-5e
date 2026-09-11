@@ -35,7 +35,9 @@ import {
   subclassFeaturesAtLevel,
   subclassIntro,
   renderEntries,
-  isAvailable
+  isAvailable,
+  spellChoice,
+  spellsOnSheet
 } from "./rules-data.mjs";
 
 /** Fluff lives in its own files, one per kind. Loaded on demand, then kept. */
@@ -186,12 +188,68 @@ function featuresHtml(entry, isSubclass) {
 }
 
 /**
+ * The block at the foot of a caster's description: what the player will have
+ * to pick themselves once the class is in, because the importer will not.
+ *
+ * WHY AT THE FOOT, AND WHY HERE
+ * The panel beside the importer's list is the last thing a player reads
+ * before pressing Import, and a Bard imported with no spells (see
+ * rules-data.mjs, "spells the class leaves to the player") is the surprise
+ * this is meant to remove. The creation panel says the same afterwards, with
+ * a button; this says it before, so the count and the levels are already in
+ * mind when the list of six hundred spells opens.
+ *
+ * `level` is the level the import would land on - 1 for a new class, one
+ * above the current for a level-up - and `actor` lets the block say how many
+ * are already on the sheet, when there is a sheet to read.
+ */
+function spellChoiceHtml(cls, sc, { level = 1, actor = null } = {}) {
+  const choice = spellChoice(cls, sc, level);
+  if (!choice || choice.importerPicks) return "";
+  if (!choice.spells && !choice.cantrips) return "";
+
+  const identifier = actor
+    ? actor.items?.find((item) => item.type === "class" && same(item.name, cls.name))?.system
+        ?.identifier ?? null
+    : null;
+  const onSheet = actor ? spellsOnSheet(actor, identifier) : null;
+
+  const lines = [];
+  if (choice.spells != null && choice.kind) {
+    lines.push(
+      onSheet
+        ? t("text.spellsOf", t(`spells.kind.${choice.kind}`), onSheet.spells, choice.spells)
+        : t("text.spellsAt", t(`spells.kind.${choice.kind}`), choice.spells)
+    );
+  }
+  if (choice.cantrips != null) {
+    lines.push(
+      onSheet
+        ? t("text.cantripsOf", onSheet.cantrips, choice.cantrips)
+        : t("text.cantripsAt", choice.cantrips)
+    );
+  }
+  if (choice.maxSpellLevel) lines.push(t("check.spellLevels", choice.maxSpellLevel));
+
+  return (
+    `<section class="pk5e-text-spells">` +
+    `<h4 class="pk5e-text-level">${t("text.spellsHead", level)}</h4>` +
+    `<p>${lines.join(" ")}</p>` +
+    `<p class="pk5e-text-spells-note">${t("text.spellsNote")}</p>` +
+    `</section>`
+  );
+}
+
+/**
  * Everything worth reading about one importer row.
  *
  * @param {object} row  { name, type, parentName, code } from importer-watch
+ * @param {object} [options]
+ * @param {number} [options.level]  the level the import would land on
+ * @param {Actor}  [options.actor]  the character it lands on, if known
  * @returns {Promise<{title: string, subtitle: string, html: string}|null>}
  */
-export async function describeRow(row) {
+export async function describeRow(row, { level = 1, actor = null } = {}) {
   if (!isAvailable() || !row?.name) return null;
 
   const rules = await loadRules();
@@ -225,12 +283,17 @@ export async function describeRow(row) {
     // description inside the level they arrive at rather than in a fluff entry.
     const intro = fluffHtml(fluff) || renderEntries(subclassIntro(subclass));
 
+    // A third-caster subclass (Eldritch Knight, Arcane Trickster) is where
+    // the spells come from, and its parent is what the choice is read against.
+    const parent = selectClass(rules.classes, subclass.className, subclass.classSource);
+
     return {
       title: subclass.name,
       subtitle: t("text.subclassOf", subclass.className, subclass.source),
       html: [
         intro ? `<div class="pk5e-text-intro">${intro}</div>` : "",
-        featuresHtml(subclass, true)
+        featuresHtml(subclass, true),
+        spellChoiceHtml(parent, subclass, { level, actor })
       ]
         .filter(Boolean)
         .join("")
@@ -260,7 +323,8 @@ export async function describeRow(row) {
     html: [
       fluffHtml(fluff),
       tableHtml(cls),
-      featuresHtml(cls, false)
+      featuresHtml(cls, false),
+      spellChoiceHtml(cls, null, { level, actor })
     ]
       .filter(Boolean)
       .join("")

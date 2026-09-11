@@ -169,6 +169,93 @@ export function findImporterWindow({ visible = false } = {}) {
 const findImporter = () => findImporterWindow();
 
 /**
+ * The importer's spell list, by the same rule.
+ *
+ * Read off a live window (2.18.3, 2026-09-11): a `.ve-app` titled "Import
+ * Spells", body `div.ve-flex-col.ve-h-100.ve-window` holding the filter
+ * bar, the pill strip, the search row, then `div.veapp__list` of
+ * `.veapp__list-row` rows (212 of them, already narrowed to the character's
+ * class), then the footer with `button.ve-btn-primary[name="btn-run"]`
+ * reading Import. The same list component as the class window, which is why
+ * dock.mjs can put a panel beside it with the same moves. The wizard window
+ * that opened it ("Import Wizard: Importing to Actor ...") stays in the page
+ * behind it, and is where the character's name is read from.
+ *
+ * Attempts to capture that window into a fixture the way the class list was
+ * captured ran into the browser bridge refusing to carry the markup out, so
+ * the shape above is a reading, not a file; tests/markup.mjs rebuilds it from
+ * this description and says so.
+ */
+const SPELL_TITLE_MATCH = /^import\s+spells/i;
+
+/**
+ * The character an importer window is importing into, or null.
+ *
+ * TWO SOURCES, IN ORDER. The importer's list windows are Foundry
+ * applications, and the object behind one (`ui.windows[id]`, id from the
+ * element's `app-NNN`) carries the target as `_actor` - read off a live
+ * ImportListClass (2.18.3, 2026-09-11), where it was the only field holding
+ * an Actor. A private field of somebody else's object, so it is read
+ * defensively and only trusted when it is an Actor.
+ *
+ * The fallback is the wizard title, "Import Wizard: Importing to Actor
+ * "..."", which option-watch.mjs reads for its own purposes. It is the
+ * fallback and not the rule because the wizard window is not always there:
+ * with "Keep Window Open" off it closes as the list opens, and the class
+ * list then sits alone on the page with no name anywhere in its markup -
+ * which is how the description panel came to describe level 1 to a
+ * character already at 3. A name is only trusted when exactly one actor
+ * bears it.
+ */
+const ACTOR_IN_TITLE = /importing to actor\s+["“]([^"”]+)["”]/i;
+
+export function importTargetOf(app) {
+  if (!app) return null;
+
+  try {
+    const id = String(app.id ?? "").replace(/^app-/, "");
+    const instance =
+      (id && globalThis.ui?.windows?.[id]) ??
+      Array.from(globalThis.foundry?.applications?.instances?.values?.() ?? []).find(
+        (candidate) => candidate.element === app || candidate.element?.[0] === app
+      );
+    const held = instance?._actor ?? instance?.actor ?? null;
+    if (held?.documentName === "Actor") return held;
+  } catch (err) {
+    trace("could not read the importer window's actor", err);
+  }
+
+  const name = String(importerTitleOf(app)).match(ACTOR_IN_TITLE)?.[1]?.trim();
+  if (!name) return null;
+  const matches = globalThis.game?.actors?.filter?.((candidate) => candidate.name === name) ?? [];
+  return matches.length === 1 ? matches[0] : null;
+}
+
+/**
+ * The character the importer is aiming at right now, from whichever of its
+ * windows says: the newest first, since that is the one being used.
+ */
+export function importTargetActor() {
+  const apps = Array.from(document.querySelectorAll(".ve-app")).reverse();
+  for (const app of apps) {
+    const actor = importTargetOf(app);
+    if (actor) return actor;
+  }
+  return null;
+}
+
+export const matchesSpellListTitle = (title) => SPELL_TITLE_MATCH.test(title ?? "");
+
+export function findSpellListWindow({ visible = false } = {}) {
+  const matching = Array.from(document.querySelectorAll(".ve-app")).filter((app) =>
+    SPELL_TITLE_MATCH.test(importerTitleOf(app))
+  );
+  const shown = matching.filter((app) => app.offsetParent);
+  const pool = visible || shown.length ? shown : matching;
+  return pool[pool.length - 1];
+}
+
+/**
  * Reports, once, that the markup no longer looks like we expect.
  *
  * `stage` says how far recognition got, which is the useful part: no window at
