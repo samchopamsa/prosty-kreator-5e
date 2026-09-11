@@ -34,6 +34,28 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const PANEL_WIDTH = 340;
 
+/**
+ * The one panel, from the moment it is constructed rather than from the moment
+ * it has rendered.
+ *
+ * foundry.applications.instances is where an ApplicationV2 is normally found
+ * by id, and it is not enough here: an application registers there when it
+ * renders, not when it is made. Two openers fire on the same DOM mutation when
+ * the class list appears - the host watch in dock.mjs and
+ * openImporterPanelWithList() below - and between the first constructing a
+ * panel and that panel rendering, the second looks up the id, finds nothing,
+ * and constructs another. Both then dock into the same window, the second
+ * wrapping the first, which a player sees as two panels side by side (2.3.3).
+ *
+ * So the reference is taken at construction and released at close, and the
+ * registry is only the fallback for a panel this module did not open.
+ */
+let current = null;
+
+function openPanel() {
+  return current ?? foundry.applications.instances?.get(ImporterPanel.DEFAULT_OPTIONS.id) ?? null;
+}
+
 export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) {
     // v14 freezes options once super() has run, so the position has to be
@@ -61,6 +83,8 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this._limitTo = null;
     this._stopWatching = null;
     this._stopDocking = null;
+
+    current = this;
   }
 
   static DEFAULT_OPTIONS = {
@@ -103,8 +127,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static closeIfOpen() {
     try {
-      const open = foundry.applications.instances?.get(this.DEFAULT_OPTIONS.id);
-      if (open) open.close();
+      openPanel()?.close();
     } catch (err) {
       console.warn(`${MODULE_ID} | Could not close the importer panel`, err);
     }
@@ -221,6 +244,7 @@ export class ImporterPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     } catch (err) {
       console.warn(`${MODULE_ID} | Could not undock the panel`, err);
     }
+    if (current === this) current = null;
     return super._onClose?.(options);
   }
 
@@ -417,7 +441,7 @@ export function openImporterPanelWithList({ timeout = LIST_WAIT_MS } = {}) {
 
 /** Opens the panel, or brings the existing one forward. */
 export function openImporterPanel() {
-  const open = foundry.applications.instances?.get(ImporterPanel.DEFAULT_OPTIONS.id);
+  const open = openPanel();
   if (open) {
     open.bringToFront?.();
     return open;

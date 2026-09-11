@@ -107,6 +107,13 @@ export function dockPanel(panel) {
   if (!element || !host) return false;
   if (host.contains(element)) return true;
 
+  // One panel per window. A second one docking here would wrap the row the
+  // first one made and sit beside it - two panels in one importer, which is
+  // what 2.3.3 shipped when two openers raced. The opener now makes sure there
+  // is only one panel; this makes sure that even if there were two, the window
+  // would show one.
+  if (host.querySelector(".pk5e-dock-row")) return false;
+
   // Not a selector of our own: the window the class step opens and the one a
   // level-up opens wrap their rows in different containers, and looking only
   // for the first is what left the panel floating beside a level-up

@@ -15,6 +15,23 @@ ekranie, gałąź `wariant-b`).
 
 ---
 
+## 2.3.4
+
+**Jeden panel z opisami, nie dwa.** Po 2.3.3 przy wyborze podklasy w awansie
+panel wchodził do okna importera dwukrotnie, obok siebie. Dwa obserwatory
+reagują na tę samą mutację DOM, gdy pojawia się lista klas — dokowanie z
+`dock.mjs` i nowe czekanie na listę z 2.3.3 — i oba wołały to samo otwieranie.
+Ono sprawdzało `foundry.applications.instances`, a ApplicationV2 wpisuje się tam
+dopiero po pierwszym renderze, nie przy utworzeniu; między jednym a drugim drugi
+obserwator nie widział nic i tworzył własny panel. Oba dokowały się w tym samym
+oknie, drugi zawijał wiersz pierwszego.
+
+Odniesienie do panelu jest teraz brane w konstruktorze i zwalniane przy
+zamknięciu, więc drugi otwierający dostaje ten sam panel. Niezależnie od tego
+dokowanie odmawia wejścia do okna, w którym już jeden panel siedzi.
+
+---
+
 ## 2.3.3
 
 **Panel z opisami klas nie pokazuje się przy zwykłym awansie.** Przy przejściu

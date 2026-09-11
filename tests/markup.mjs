@@ -737,6 +737,21 @@ group("importer: lista otwierana przez level up", () => {
   check("lista wjechala do wiersza dokujacego obok panelu",
     element.parentElement?.classList.contains("pk5e-dock-row"), true);
 
+  // Dwa panele w jednym oknie - tak wygladalo 2.3.3, gdy dwa obserwatory
+  // zareagowaly na te sama mutacje i kazdy otworzyl wlasny panel. Drugi
+  // zawijal wiersz pierwszego i siadal obok. Otwieranie juz tego pilnuje;
+  // tu pilnuje tego samo dokowanie, zeby okno pokazalo jeden panel nawet
+  // wtedy, gdyby panele byly dwa.
+  const drugi = document.createElement("div");
+  drugi.className = "application";
+  document.body.appendChild(drugi);
+  check("drugi panel nie wchodzi do okna, w ktorym juz jeden siedzi",
+    dockPanel({ element: drugi }), false);
+  check("i wierszy dokujacych jest nadal jeden",
+    modal.querySelectorAll(".pk5e-dock-row").length, 1);
+  check("a pierwszy panel dalej jest na miejscu", modal.contains(element), true);
+  drugi.remove();
+
   undockPanel(panel);
   check("po oddokowaniu lista wraca na swoje miejsce",
     modal.querySelectorAll(".ve-ui-list__wrp").length, 1);
